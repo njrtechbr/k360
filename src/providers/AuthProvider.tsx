@@ -24,7 +24,7 @@ interface AuthContextType {
   hasSuperAdmin: () => boolean;
   modules: Module[];
   addModule: (moduleData: Omit<Module, "id" | "active">) => Promise<void>;
-  updateModule: (moduleId: string, moduleData: Partial<Omit<Module, "id" | "active">>) => Promise<void>;
+  updateModule: (moduleId: string, moduleData: Partial<Omit<Module, "id" | "active" | "path">>) => Promise<void>;
   toggleModuleStatus: (moduleId: string) => Promise<void>;
   deleteModule: (moduleId: string) => Promise<void>;
 }

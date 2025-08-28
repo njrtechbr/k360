@@ -30,6 +30,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 const formSchema = z.object({
   name: z.string().min(3, { message: "O nome do módulo deve ter pelo menos 3 caracteres." }),
   description: z.string().min(10, { message: "A descrição deve ter pelo menos 10 caracteres." }),
+  path: z.string().min(1, { message: "O caminho é obrigatório." }).refine(val => val.startsWith('/'), { message: "O caminho deve começar com /" }),
 });
 
 export default function ModulosPage() {
@@ -42,12 +43,12 @@ export default function ModulosPage() {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { name: "", description: "" },
+    defaultValues: { name: "", description: "", path: "" },
   });
 
   const editForm = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { name: "", description: "" },
+    defaultValues: { name: "", description: "", path: "" },
   });
 
   useEffect(() => {
@@ -61,6 +62,7 @@ export default function ModulosPage() {
       editForm.reset({
         name: selectedModule.name,
         description: selectedModule.description,
+        path: selectedModule.path,
       });
     }
   }, [selectedModule, editForm]);
@@ -127,9 +129,9 @@ export default function ModulosPage() {
                     <CardTitle>Adicionar Novo Módulo</CardTitle>
                     <CardDescription>Crie um novo módulo para o sistema.</CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onAddSubmit)} className="space-y-6">
+                 <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onAddSubmit)}>
+                        <CardContent className="space-y-6">
                             <FormField 
                                 control={form.control} 
                                 name="name" 
@@ -138,6 +140,19 @@ export default function ModulosPage() {
                                         <FormLabel>Nome do Módulo</FormLabel> 
                                         <FormControl> 
                                             <Input placeholder="Ex: Contabilidade" {...field} /> 
+                                        </FormControl> 
+                                        <FormMessage /> 
+                                    </FormItem> 
+                                )}
+                            />
+                             <FormField 
+                                control={form.control} 
+                                name="path" 
+                                render={({ field }) => ( 
+                                    <FormItem> 
+                                        <FormLabel>Caminho do Módulo</FormLabel> 
+                                        <FormControl> 
+                                            <Input placeholder="/dashboard/contabilidade" {...field} /> 
                                         </FormControl> 
                                         <FormMessage /> 
                                     </FormItem> 
@@ -156,12 +171,14 @@ export default function ModulosPage() {
                                     </FormItem> 
                                 )}
                             />
-                            <Button type="submit" disabled={form.formState.isSubmitting}>
+                        </CardContent>
+                        <CardFooter>
+                             <Button type="submit" disabled={form.formState.isSubmitting}>
                                 {form.formState.isSubmitting ? 'Adicionando...' : 'Adicionar Módulo'}
                             </Button>
-                        </form>
-                    </Form>
-                </CardContent>
+                        </CardFooter>
+                    </form>
+                </Form>
             </Card>
 
 
@@ -175,7 +192,7 @@ export default function ModulosPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Nome</TableHead>
-                                <TableHead>Descrição</TableHead>
+                                <TableHead>Caminho</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead className="text-right">Ações</TableHead>
                             </TableRow>
@@ -184,7 +201,7 @@ export default function ModulosPage() {
                             {sortedModules.map((mod) => (
                                 <TableRow key={mod.id}>
                                     <TableCell className="font-medium capitalize">{mod.name}</TableCell>
-                                    <TableCell>{mod.description}</TableCell>
+                                    <TableCell><Badge variant="outline">{mod.path}</Badge></TableCell>
                                     <TableCell>
                                         <Badge variant={mod.active ? "secondary" : "destructive"}>
                                             {mod.active ? "Ativo" : "Inativo"}
@@ -223,7 +240,7 @@ export default function ModulosPage() {
         {/* Edit Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
             <DialogContent>
-                <DialogHeader>
+                 <DialogHeader>
                     <DialogTitle>Editar Módulo</DialogTitle>
                     <DialogDescription>Altere as informações do módulo.</DialogDescription>
                 </DialogHeader>
@@ -235,6 +252,19 @@ export default function ModulosPage() {
                             render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Nome do Módulo</FormLabel>
+                                <FormControl>
+                                <Input {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={editForm.control}
+                            name="path"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Caminho do Módulo</FormLabel>
                                 <FormControl>
                                 <Input {...field} />
                                 </FormControl>
@@ -280,7 +310,7 @@ export default function ModulosPage() {
                 <AlertDialogFooter>
                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
                     <AlertDialogAction onClick={onDeleteConfirm} className="bg-destructive hover:bg-destructive/90">
-                        Excluir
+                       Excluir
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
