@@ -49,6 +49,7 @@ export default function CreateSuperAdminPage() {
     }
   }
 
+  /*
   if (superAdminExists) {
     return (
         <div className="flex items-center justify-center py-12 px-4">
@@ -65,6 +66,7 @@ export default function CreateSuperAdminPage() {
         </div>
     )
   }
+  */
 
   return (
     <div className="flex items-center justify-center py-12 px-4">
