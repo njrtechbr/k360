@@ -12,6 +12,51 @@ const USERS_STORAGE_KEY = "controle_acesso_users";
 const SESSION_STORAGE_KEY = "controle_acesso_session";
 const MODULES_STORAGE_KEY = "controle_acesso_modules";
 
+// Dummy users for initial seeding
+const INITIAL_USERS: User[] = [
+    {
+      id: 'superadmin-01',
+      name: 'Nereu Super Admin',
+      email: 'super@email.com',
+      password: 'password',
+      role: ROLES.SUPERADMIN,
+      modules: ['financeiro', 'rh', 'estoque', 'vendas'],
+    },
+    {
+      id: 'admin-01',
+      name: 'Ana Admin',
+      email: 'admin@email.com',
+      password: 'password',
+      role: ROLES.ADMIN,
+      modules: ['financeiro', 'rh', 'estoque', 'vendas'],
+    },
+    {
+      id: 'supervisor-01',
+      name: 'Carlos Supervisor',
+      email: 'supervisor@email.com',
+      password: 'password',
+      role: ROLES.SUPERVISOR,
+      modules: ['vendas', 'estoque'],
+    },
+    {
+      id: 'user-01',
+      name: 'Beatriz Usuário',
+      email: 'usuario@email.com',
+      password: 'password',
+      role: ROLES.USER,
+      modules: ['vendas'],
+    },
+     {
+      id: 'user-02',
+      name: 'Daniel Usuário',
+      email: 'daniel@email.com',
+      password: 'password',
+      role: ROLES.USER,
+      modules: ['financeiro'],
+    }
+];
+
+
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
@@ -43,7 +88,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const getUsersFromStorage = (): User[] => {
     if (typeof window === "undefined") return [];
     const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
-    return usersJson ? JSON.parse(usersJson) : [];
+    if (usersJson) {
+        return JSON.parse(usersJson);
+    }
+    // If no users, seed with initial data
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(INITIAL_USERS));
+    return INITIAL_USERS;
   };
 
   const getModulesFromStorage = useCallback((): Module[] => {
@@ -347,3 +397,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    
