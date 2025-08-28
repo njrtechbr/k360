@@ -4,7 +4,7 @@
 import { useAuth } from "@/providers/AuthProvider";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo } from "react";
-import { Award, BarChart, BadgeCent, Star as StarIcon, TrendingUp, Crown, Sparkles, Target, Trophy } from "lucide-react";
+import { Award, BarChart, BadgeCent, Star as StarIcon, TrendingUp, Crown, Sparkles, Target, Trophy, Zap, Rocket, StarHalf, Users } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import type { Attendant, Evaluation } from "@/lib/types";
@@ -15,7 +15,7 @@ type Achievement = {
   description: string;
   icon: React.ElementType;
   color: string;
-  isUnlocked: (attendant: Attendant, evaluations: Evaluation[], allEvaluations: Evaluation[]) => boolean;
+  isUnlocked: (attendant: Attendant, evaluations: Evaluation[], allEvaluations: Evaluation[], allAttendants: Attendant[]) => boolean;
 };
 
 const achievements: Achievement[] = [
@@ -50,6 +50,22 @@ const achievements: Achievement[] = [
     icon: Trophy,
     color: "text-yellow-500",
     isUnlocked: (attendant, evaluations) => evaluations.length >= 100,
+  },
+  {
+    id: "imparavel",
+    title: "Imparável",
+    description: "Receba 250 avaliações",
+    icon: Zap,
+    color: "text-blue-500",
+    isUnlocked: (attendant, evaluations) => evaluations.length >= 250,
+  },
+  {
+    id: "lenda",
+    title: "Lenda do Atendimento",
+    description: "Receba 500 avaliações",
+    icon: Rocket,
+    color: "text-red-500",
+    isUnlocked: (attendant, evaluations) => evaluations.length >= 500,
   },
   {
     id: "perfeicao",
@@ -87,15 +103,83 @@ const achievements: Achievement[] = [
       return (positiveCount / evaluations.length) * 100 >= 90;
     },
   },
-    {
+  {
+    id: "favorito-da-galera",
+    title: "Favorito da Galera",
+    description: "Seja o atendente com o maior número de avaliações",
+    icon: Users,
+    color: "text-pink-500",
+    isUnlocked: (attendant, evaluations, allEvaluations) => {
+      if (evaluations.length === 0) return false;
+      const evaluationCounts = allEvaluations.reduce((acc, ev) => {
+        acc[ev.attendantId] = (acc[ev.attendantId] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const maxEvaluations = Math.max(...Object.values(evaluationCounts));
+      
+      return evaluationCounts[attendant.id] === maxEvaluations;
+    }
+  },
+  {
+    id: 'astro-em-ascensao',
+    title: 'Astro em Ascensão',
+    description: 'Tenha a melhor nota média (mínimo 20 avaliações)',
+    icon: StarHalf,
+    color: 'text-teal-500',
+    isUnlocked: (attendant, evaluations, allEvaluations, allAttendants) => {
+      if (evaluations.length < 20) return false;
+
+      const attendantStats = allAttendants.map(att => {
+        const attEvals = allEvaluations.filter(e => e.attendantId === att.id);
+        if (attEvals.length === 0) return { id: att.id, avgRating: 0, count: 0 };
+        const totalRating = attEvals.reduce((sum, ev) => sum + ev.nota, 0);
+        return { id: att.id, avgRating: totalRating / attEvals.length, count: attEvals.length };
+      });
+
+      const eligibleAttendants = attendantStats.filter(s => s.count >= 20);
+      if (eligibleAttendants.length === 0) return false;
+
+      const maxAvgRating = Math.max(...eligibleAttendants.map(a => a.avgRating));
+      const currentAttendantAvg = attendantStats.find(a => a.id === attendant.id)?.avgRating;
+
+      return currentAttendantAvg === maxAvgRating;
+    },
+  },
+  {
     id: "consistente",
     title: "Consistente",
     description: "Receba avaliações por 7 dias consecutivos",
     icon: BarChart,
     color: "text-indigo-500",
     isUnlocked: (attendant, evaluations) => {
-      // This is a more complex logic, we can implement it later
-      // For now, it will always be false
+      if (evaluations.length < 7) return false;
+        
+      const dates = evaluations.map(e => new Date(e.data).toDateString()).sort();
+      const uniqueDates = [...new Set(dates)];
+      
+      if (uniqueDates.length < 7) return false;
+
+      for (let i = 0; i < uniqueDates.length - 6; i++) {
+        let consecutiveDays = 1;
+        let lastDate = new Date(uniqueDates[i]);
+
+        for (let j = i + 1; j < uniqueDates.length; j++) {
+            const currentDate = new Date(uniqueDates[j]);
+            const diffTime = lastDate.getTime() - currentDate.getTime();
+            const diffDays = diffTime / (1000 * 3600 * 24);
+
+            if (diffDays === 1) {
+                consecutiveDays++;
+                lastDate = currentDate;
+            } else if (diffDays > 1) {
+                consecutiveDays = 1;
+                lastDate = currentDate;
+            }
+            if (consecutiveDays >= 7) return true;
+        }
+      }
+
       return false;
     },
   },
@@ -116,7 +200,7 @@ export default function AchievementsPage() {
       let unlockedCount = 0;
       attendants.forEach(attendant => {
         const attendantEvaluations = evaluations.filter(ev => ev.attendantId === attendant.id);
-        if (achievement.isUnlocked(attendant, attendantEvaluations, evaluations)) {
+        if (achievement.isUnlocked(attendant, attendantEvaluations, evaluations, attendants)) {
           unlockedCount++;
         }
       });
