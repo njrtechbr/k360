@@ -4,7 +4,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/providers/AuthProvider";
-import { Users, LayoutDashboard, ListChecks } from "lucide-react";
+import { Users, LayoutDashboard, ListChecks, Trophy } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -56,7 +56,7 @@ export default function PesquisaSatisfacaoPage() {
                          <Button asChild>
                             <Link href="/dashboard/pesquisa-satisfacao/avaliacoes">
                                 <ListChecks className="mr-2 h-4 w-4" />
-                                Ver Avaliações
+                                Ver Histórico
                             </Link>
                         </Button>
                     </CardContent>
@@ -78,9 +78,24 @@ export default function PesquisaSatisfacaoPage() {
                         </Button>
                     </CardContent>
                 </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Gamificação e Ranking</CardTitle>
+                        <CardDescription>Acompanhe a pontuação e a classificação dos atendentes.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground mb-4">
+                            Incentive a equipe com um sistema de pontos baseado nas avaliações.
+                        </p>
+                        <Button asChild>
+                            <Link href="/dashboard/pesquisa-satisfacao/gamificacao">
+                                <Trophy className="mr-2 h-4 w-4" />
+                                Ver Ranking
+                            </Link>
+                        </Button>
+                    </CardContent>
+                </Card>
             </div>
         </div>
     )
 }
-
-    
