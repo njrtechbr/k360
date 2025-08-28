@@ -31,14 +31,14 @@ export default function RootLayout({
       <body className={cn('font-sans antialiased')}>
         <AuthProvider>
           <SidebarProvider>
-            <div className="relative flex min-h-screen flex-col">
-               <SiteHeader />
-               <div className="flex-1 flex">
-                <AppSidebar />
-                <main className="flex-1 p-4 md:p-8 ml-0 md:ml-[var(--sidebar-width-icon)] group-data-[state=expanded]:md:ml-[var(--sidebar-width)] transition-[margin-left] duration-300 ease-in-out">
-                    {children}
+            <div className="flex min-h-screen w-full flex-col bg-muted/40">
+              <AppSidebar />
+              <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
+                <SiteHeader />
+                <main className="flex-1 p-4 md:p-8 pt-0">
+                  {children}
                 </main>
-               </div>
+              </div>
             </div>
             <Toaster />
           </SidebarProvider>

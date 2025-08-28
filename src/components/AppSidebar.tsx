@@ -2,18 +2,15 @@
 "use client"
 
 import { useAuth } from "@/providers/AuthProvider";
-import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, useSidebar } from "./ui/sidebar";
+import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "./ui/sidebar";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, Wrench, CircleUser, Settings, ShieldCheck, PanelLeft } from "lucide-react";
+import { LayoutDashboard, Wrench, CircleUser, Settings, ShieldCheck } from "lucide-react";
 import { ROLES } from "@/lib/types";
-import { Button } from "./ui/button";
 
 export default function AppSidebar() {
     const { isAuthenticated, user, modules } = useAuth();
     const pathname = usePathname();
-    const { toggleSidebar, state } = useSidebar();
-
 
     if (!isAuthenticated || !user) {
         return null;
@@ -25,16 +22,13 @@ export default function AppSidebar() {
 
     return (
         <Sidebar>
-            <SidebarHeader className="h-16 flex items-center justify-between px-4">
-                <Link href="/dashboard" className="flex items-center gap-2 text-primary group-data-[state=collapsed]:hidden">
+            <SidebarHeader>
+                <Link href="/dashboard" className="flex items-center gap-2 text-primary">
                     <ShieldCheck className="h-7 w-7"/>
-                    <h1 className="text-xl font-semibold">
+                    <h1 className="text-xl font-semibold group-data-[state=collapsed]:hidden">
                         Menu
                     </h1>
                 </Link>
-                <Button variant="ghost" size="icon" onClick={toggleSidebar}>
-                    <PanelLeft />
-                </Button>
             </SidebarHeader>
             <SidebarContent>
                 <SidebarMenu>
@@ -42,7 +36,7 @@ export default function AppSidebar() {
                         <SidebarMenuButton asChild isActive={pathname === '/dashboard'} tooltip={{children: "Dashboard"}}>
                             <Link href="/dashboard">
                                 <LayoutDashboard/>
-                                <span>Dashboard</span>
+                                <span className="group-data-[state=collapsed]:hidden">Dashboard</span>
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -52,7 +46,7 @@ export default function AppSidebar() {
                             <SidebarMenuButton asChild isActive={pathname.startsWith(mod.path)} tooltip={{children: mod.name}}>
                                 <Link href={mod.path}>
                                     <Settings/>
-                                    <span className="capitalize">{mod.name}</span>
+                                    <span className="capitalize group-data-[state=collapsed]:hidden">{mod.name}</span>
                                 </Link>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
@@ -63,7 +57,7 @@ export default function AppSidebar() {
                             <SidebarMenuButton asChild isActive={pathname === '/dashboard/modulos'} tooltip={{children: "Gerenciar Módulos"}}>
                                 <Link href="/dashboard/modulos">
                                     <Wrench />
-                                    <span>Módulos</span>
+                                    <span className="group-data-[state=collapsed]:hidden">Módulos</span>
                                 </Link>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
@@ -72,7 +66,7 @@ export default function AppSidebar() {
                         <SidebarMenuButton asChild isActive={pathname === '/perfil'} tooltip={{children: "Perfil"}}>
                             <Link href="/perfil">
                                 <CircleUser />
-                                <span>Perfil</span>
+                                <span className="group-data-[state=collapsed]:hidden">Perfil</span>
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
