@@ -205,9 +205,25 @@ export default function ModulosPage() {
                     <DialogDescription>Altere as informações do módulo.</DialogDescription>
                 </DialogHeader>
                  <Form {...editForm}>
-                    <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
-                        <FormField control={editForm.control} name="name" render={({ field }) => ( <FormItem> <FormLabel>Nome do Módulo</FormLabel> <FormControl> <Input {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
-                        <FormField control={editForm.control} name="description" render={({ field }) => ( <FormItem> <FormLabel>Descrição</FormLabel> <FormControl> <Textarea {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
+                    <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4 pt-4">
+                        <FormField control={editForm.control} name="name" render={({ field }) => ( 
+                            <FormItem> 
+                                <FormLabel>Nome do Módulo</FormLabel> 
+                                <FormControl> 
+                                    <Input {...field} /> 
+                                </FormControl> 
+                                <FormMessage /> 
+                            </FormItem> 
+                        )}/>
+                        <FormField control={editForm.control} name="description" render={({ field }) => ( 
+                            <FormItem> 
+                                <FormLabel>Descrição</FormLabel> 
+                                <FormControl> 
+                                    <Textarea {...field} /> 
+                                </FormControl> 
+                                <FormMessage /> 
+                            </FormItem> 
+                        )}/>
                         <DialogFooter>
                             <Button type="button" variant="secondary" onClick={() => setIsEditDialogOpen(false)}>Cancelar</Button>
                             <Button type="submit" disabled={editForm.formState.isSubmitting}>
