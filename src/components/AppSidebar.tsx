@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { LayoutDashboard, Wrench, CircleUser, Settings, ShieldCheck } from "lucide-react";
 import { ROLES } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export default function AppSidebar() {
     const { isAuthenticated, user, modules } = useAuth();
