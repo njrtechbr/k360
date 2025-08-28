@@ -12,12 +12,18 @@ export default function SiteHeader() {
   const { toggleSidebar } = useSidebar();
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:px-6">
        <Button size="icon" variant="outline" className="sm:hidden" onClick={toggleSidebar}>
           <PanelLeft className="h-5 w-5" />
           <span className="sr-only">Toggle Menu</span>
         </Button>
-      <div className="flex items-center gap-2">
+        
+       <Button size="icon" variant="ghost" className="hidden sm:flex" onClick={toggleSidebar}>
+          <PanelLeft className="h-5 w-5" />
+          <span className="sr-only">Toggle Menu</span>
+        </Button>
+        
+      <div className="flex items-center gap-2 md:ml-auto">
           <Link href="/" className="flex items-center gap-2 font-bold text-lg text-primary">
               <ShieldCheck className="h-6 w-6" />
               <span className="hidden sm:inline">Controle de Acesso</span>
