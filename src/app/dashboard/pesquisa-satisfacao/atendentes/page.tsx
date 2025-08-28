@@ -3,7 +3,7 @@
 
 import { useAuth } from "@/providers/AuthProvider";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -18,43 +18,59 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { type Attendant } from "@/lib/types";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { type Attendant, ATTENDANT_STATUS, AttendantStatus } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2, PlusCircle, Power, PowerOff } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, PlusCircle, CalendarIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
   email: z.string().email({ message: "Por favor, insira um email válido." }),
+  funcao: z.string().min(2, { message: "A função é obrigatória." }),
+  setor: z.string().min(2, { message: "O setor é obrigatório." }),
+  status: z.nativeEnum(ATTENDANT_STATUS),
+  avatarUrl: z.string().url({ message: "Por favor, insira uma URL válida." }).or(z.literal("")),
+  telefone: z.string().min(10, { message: "O telefone deve ter pelo menos 10 dígitos." }),
+  portaria: z.string().optional(),
+  situacao: z.string().optional(),
+  dataAdmissao: z.date({ required_error: "A data de admissão é obrigatória." }),
+  dataNascimento: z.date({ required_error: "A data de nascimento é obrigatória." }),
+  rg: z.string().min(5, { message: "O RG é obrigatório." }),
+  cpf: z.string().min(11, { message: "O CPF é obrigatório." }),
 });
-
-const editFormSchema = formSchema.extend({
-    active: z.boolean(),
-})
-
 
 export default function AtendentesPage() {
   const { user, isAuthenticated, loading, attendants, addAttendant, updateAttendant, deleteAttendant } = useAuth();
   const router = useRouter();
 
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedAttendant, setSelectedAttendant] = useState<Attendant | null>(null);
 
-  const addForm = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { name: "", email: "" },
-  });
-
-  const editForm = useForm<z.infer<typeof editFormSchema>>({
-    resolver: zodResolver(editFormSchema),
-    defaultValues: { name: "", email: "", active: true },
+    defaultValues: {
+      name: "",
+      email: "",
+      funcao: "",
+      setor: "",
+      status: ATTENDANT_STATUS.ACTIVE,
+      avatarUrl: "",
+      telefone: "",
+      portaria: "",
+      situacao: "",
+      rg: "",
+      cpf: ""
+    },
   });
 
   useEffect(() => {
@@ -65,27 +81,35 @@ export default function AtendentesPage() {
 
   useEffect(() => {
     if (selectedAttendant) {
-      editForm.reset({
-        name: selectedAttendant.name,
-        email: selectedAttendant.email,
-        active: selectedAttendant.active,
+      form.reset({
+        ...selectedAttendant,
+        dataAdmissao: new Date(selectedAttendant.dataAdmissao),
+        dataNascimento: new Date(selectedAttendant.dataNascimento),
       });
+    } else {
+        form.reset({
+          name: "", email: "", funcao: "", setor: "", status: ATTENDANT_STATUS.ACTIVE,
+          avatarUrl: "", telefone: "", portaria: "", situacao: "", rg: "", cpf: "",
+          dataAdmissao: undefined, dataNascimento: undefined
+        });
     }
-  }, [selectedAttendant, editForm]);
+  }, [selectedAttendant, form, isFormDialogOpen]);
 
-  async function onAddSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      await addAttendant(values);
-      addForm.reset();
-      setIsAddDialogOpen(false);
-    } catch (error) { /* toast handled */ }
-  }
+      const dataToSave = {
+          ...values,
+          dataAdmissao: values.dataAdmissao.toISOString(),
+          dataNascimento: values.dataNascimento.toISOString(),
+      }
 
-  async function onEditSubmit(values: z.infer<typeof editFormSchema>) {
-    if (!selectedAttendant) return;
-    try {
-      await updateAttendant(selectedAttendant.id, values);
-      setIsEditDialogOpen(false);
+      if (selectedAttendant) {
+        await updateAttendant(selectedAttendant.id, dataToSave);
+      } else {
+        await addAttendant(dataToSave);
+      }
+      form.reset();
+      setIsFormDialogOpen(false);
       setSelectedAttendant(null);
     } catch (error) { /* toast handled */ }
   }
@@ -101,17 +125,18 @@ export default function AtendentesPage() {
 
   const handleEditClick = (attendant: Attendant) => {
     setSelectedAttendant(attendant);
-    setIsEditDialogOpen(true);
+    setIsFormDialogOpen(true);
   };
+
+  const handleAddClick = () => {
+    setSelectedAttendant(null);
+    setIsFormDialogOpen(true);
+  }
 
   const handleDeleteClick = (attendant: Attendant) => {
     setSelectedAttendant(attendant);
     setIsDeleteDialogOpen(true);
   };
-
-  const handleToggleStatus = (attendant: Attendant) => {
-    updateAttendant(attendant.id, { active: !attendant.active });
-  }
 
   if (loading || !user) {
     return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
@@ -123,53 +148,7 @@ export default function AtendentesPage() {
     <div className="space-y-8">
         <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold">Gerenciamento de Atendentes</h1>
-             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                <DialogTrigger asChild>
-                     <Button><PlusCircle className="mr-2 h-4 w-4" /> Adicionar Atendente</Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
-                     <DialogHeader>
-                        <DialogTitle>Adicionar Novo Atendente</DialogTitle>
-                        <DialogDescription>Cadastre um novo atendente para as pesquisas.</DialogDescription>
-                    </DialogHeader>
-                    <Form {...addForm}>
-                        <form onSubmit={addForm.handleSubmit(onAddSubmit)} className="space-y-4 py-4">
-                            <FormField
-                                control={addForm.control}
-                                name="name"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Nome</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="Nome completo do atendente" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={addForm.control}
-                                name="email"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Email</FormLabel>
-                                    <FormControl>
-                                        <Input type="email" placeholder="email@exemplo.com" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                             <DialogFooter>
-                                <Button type="button" variant="secondary" onClick={() => setIsAddDialogOpen(false)}>Cancelar</Button>
-                                <Button type="submit" disabled={addForm.formState.isSubmitting}>
-                                    {addForm.formState.isSubmitting ? 'Adicionando...' : 'Adicionar Atendente'}
-                                </Button>
-                            </DialogFooter>
-                        </form>
-                    </Form>
-                </DialogContent>
-            </Dialog>
+            <Button onClick={handleAddClick}><PlusCircle className="mr-2 h-4 w-4" /> Adicionar Atendente</Button>
         </div>
 
         <Card className="shadow-lg">
@@ -182,7 +161,8 @@ export default function AtendentesPage() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Nome</TableHead>
-                            <TableHead>Email</TableHead>
+                            <TableHead>Função</TableHead>
+                            <TableHead>Setor</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
@@ -191,10 +171,11 @@ export default function AtendentesPage() {
                         {sortedAttendants.map((att) => (
                             <TableRow key={att.id}>
                                 <TableCell className="font-medium">{att.name}</TableCell>
-                                <TableCell className="text-muted-foreground">{att.email}</TableCell>
+                                <TableCell>{att.funcao}</TableCell>
+                                <TableCell>{att.setor}</TableCell>
                                 <TableCell>
-                                    <Badge variant={att.active ? "secondary" : "destructive"}>
-                                        {att.active ? "Ativo" : "Inativo"}
+                                    <Badge variant={att.status === 'Ativo' ? "secondary" : "outline"}>
+                                        {att.status}
                                     </Badge>
                                 </TableCell>
                                 <TableCell className="text-right">
@@ -209,10 +190,6 @@ export default function AtendentesPage() {
                                             <DropdownMenuItem onClick={() => handleEditClick(att)}>
                                                 <Pencil className="mr-2 h-4 w-4" /> Editar
                                             </DropdownMenuItem>
-                                             <DropdownMenuItem onClick={() => handleToggleStatus(att)}>
-                                                {att.active ? <PowerOff className="mr-2 h-4 w-4" /> : <Power className="mr-2 h-4 w-4" />}
-                                                {att.active ? 'Desativar' : 'Ativar'}
-                                            </DropdownMenuItem>
                                             <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(att)}>
                                                 <Trash2 className="mr-2 h-4 w-4" /> Excluir
                                             </DropdownMenuItem>
@@ -226,65 +203,149 @@ export default function AtendentesPage() {
             </CardContent>
         </Card>
 
-        {/* Edit Dialog */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-            <DialogContent>
+        {/* Add/Edit Dialog */}
+        <Dialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen}>
+            <DialogContent className="sm:max-w-4xl">
                  <DialogHeader>
-                    <DialogTitle>Editar Atendente</DialogTitle>
-                    <DialogDescription>Altere as informações do atendente.</DialogDescription>
+                    <DialogTitle>{selectedAttendant ? 'Editar Atendente' : 'Adicionar Novo Atendente'}</DialogTitle>
+                    <DialogDescription>
+                      {selectedAttendant ? 'Altere as informações do atendente.' : 'Preencha os dados do novo atendente.'}
+                    </DialogDescription>
                 </DialogHeader>
-                <Form {...editForm}>
-                    <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4 py-4">
-                        <FormField
-                            control={editForm.control}
-                            name="name"
-                            render={({ field }) => (
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-6 pl-2">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <FormField control={form.control} name="name" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Nome Completo</FormLabel>
+                            <FormControl><Input {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <FormField control={form.control} name="email" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl><Input type="email" {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                         <FormField control={form.control} name="telefone" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Telefone</FormLabel>
+                            <FormControl><Input {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <FormField control={form.control} name="funcao" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Função</FormLabel>
+                            <FormControl><Input {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <FormField control={form.control} name="setor" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Setor</FormLabel>
+                            <FormControl><Input {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                         <FormField control={form.control} name="status" render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Nome do Atendente</FormLabel>
+                              <FormLabel>Status</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
-                                    <Input {...field} />
+                                  <SelectTrigger><SelectValue placeholder="Selecione o status" /></SelectTrigger>
                                 </FormControl>
-                                <FormMessage />
+                                <SelectContent>
+                                  {Object.values(ATTENDANT_STATUS).map((status) => (
+                                    <SelectItem key={status} value={status}>{status}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
                             </FormItem>
-                            )}
+                          )}
                         />
-                         <FormField
-                            control={editForm.control}
-                            name="email"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Email</FormLabel>
+                        <FormField control={form.control} name="cpf" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>CPF</FormLabel>
+                            <FormControl><Input {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                         <FormField control={form.control} name="rg" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>RG</FormLabel>
+                            <FormControl><Input {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                         <FormField control={form.control} name="dataNascimento" render={({ field }) => (
+                          <FormItem className="flex flex-col">
+                            <FormLabel>Data de Nascimento</FormLabel>
+                            <Popover>
+                              <PopoverTrigger asChild>
                                 <FormControl>
-                                    <Input type="email" {...field} />
+                                  <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                    {field.value ? (format(field.value, "dd/MM/yyyy")) : (<span>Escolha uma data</span>)}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                  </Button>
                                 </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={editForm.control}
-                            name="active"
-                            render={({ field }) => (
-                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                                <div className="space-y-0.5">
-                                <FormLabel>Status</FormLabel>
-                                <FormDescription>
-                                    Atendentes inativos não aparecem nas pesquisas.
-                                </FormDescription>
-                                </div>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date("1900-01-01")} initialFocus />
+                              </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <FormField control={form.control} name="dataAdmissao" render={({ field }) => (
+                          <FormItem className="flex flex-col">
+                            <FormLabel>Data de Admissão</FormLabel>
+                            <Popover>
+                              <PopoverTrigger asChild>
                                 <FormControl>
-                                <Switch
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                />
+                                  <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                    {field.value ? (format(field.value, "dd/MM/yyyy")) : (<span>Escolha uma data</span>)}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                  </Button>
                                 </FormControl>
-                            </FormItem>
-                            )}
-                        />
-                        <DialogFooter>
-                            <Button type="button" variant="secondary" onClick={() => setIsEditDialogOpen(false)}>Cancelar</Button>
-                            <Button type="submit" disabled={editForm.formState.isSubmitting}>
-                                {editForm.formState.isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus />
+                              </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <FormField control={form.control} name="situacao" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Situação</FormLabel>
+                            <FormControl><Input {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                        <FormField control={form.control} name="portaria" render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Informações de Portaria</FormLabel>
+                            <FormControl><Input {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                         <FormField control={form.control} name="avatarUrl" render={({ field }) => (
+                          <FormItem className="md:col-span-2 lg:col-span-3">
+                            <FormLabel>URL do Avatar</FormLabel>
+                            <FormControl><Input placeholder="https://exemplo.com/avatar.png" {...field} /></FormControl>
+                             <FormDescription>URL da imagem de perfil do atendente.</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
+                      </div>
+                        <DialogFooter className="pt-4">
+                            <Button type="button" variant="secondary" onClick={() => setIsFormDialogOpen(false)}>Cancelar</Button>
+                            <Button type="submit" disabled={form.formState.isSubmitting}>
+                                {form.formState.isSubmitting ? 'Salvando...' : 'Salvar Atendente'}
                             </Button>
                         </DialogFooter>
                     </form>

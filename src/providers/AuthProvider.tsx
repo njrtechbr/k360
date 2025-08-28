@@ -4,7 +4,7 @@
 import type { ReactNode } from "react";
 import React, { useCallback, useState } from "react";
 import type { User, Module, Role, Attendant } from "@/lib/types";
-import { INITIAL_MODULES, ROLES } from "@/lib/types";
+import { INITIAL_MODULES, ROLES, ATTENDANT_STATUS } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 
@@ -58,9 +58,54 @@ const INITIAL_USERS: User[] = [
 ];
 
 const INITIAL_ATTENDANTS: Attendant[] = [
-    { id: 'atendente-01', name: 'João da Silva', email: 'joao.silva@example.com', active: true },
-    { id: 'atendente-02', name: 'Maria Oliveira', email: 'maria.oliveira@example.com', active: true },
-    { id: 'atendente-03', name: 'Pedro Santos', email: 'pedro.santos@example.com', active: false },
+    { 
+      id: 'atendente-01', 
+      name: 'João da Silva', 
+      email: 'joao.silva@example.com',
+      funcao: 'Atendente de Call Center',
+      setor: 'Suporte Técnico',
+      status: ATTENDANT_STATUS.ACTIVE,
+      avatarUrl: '',
+      telefone: '11999998888',
+      portaria: 'Acesso liberado',
+      situacao: 'Ativo na empresa',
+      dataAdmissao: new Date('2022-01-15').toISOString(),
+      dataNascimento: new Date('1990-05-20').toISOString(),
+      rg: '12.345.678-9',
+      cpf: '123.456.789-00'
+    },
+    { 
+      id: 'atendente-02', 
+      name: 'Maria Oliveira', 
+      email: 'maria.oliveira@example.com',
+      funcao: 'Recepcionista',
+      setor: 'Administrativo',
+      status: ATTENDANT_STATUS.ON_VACATION,
+      avatarUrl: '',
+      telefone: '21987654321',
+      portaria: 'Acesso restrito ao setor',
+      situacao: 'Férias',
+      dataAdmissao: new Date('2021-03-10').toISOString(),
+      dataNascimento: new Date('1995-11-30').toISOString(),
+      rg: '98.765.432-1',
+      cpf: '098.765.432-11'
+    },
+    { 
+      id: 'atendente-03', 
+      name: 'Pedro Santos', 
+      email: 'pedro.santos@example.com',
+      funcao: 'Técnico de Manutenção',
+      setor: 'Operações',
+      status: ATTENDANT_STATUS.INACTIVE,
+      avatarUrl: '',
+      telefone: '31912345678',
+      portaria: 'Acesso bloqueado',
+      situacao: 'Desligado',
+      dataAdmissao: new Date('2023-08-01').toISOString(),
+      dataNascimento: new Date('1988-02-10').toISOString(),
+      rg: '11.222.333-4',
+      cpf: '111.222.333-44'
+    },
 ]
 
 
@@ -82,7 +127,7 @@ interface AuthContextType {
   toggleModuleStatus: (moduleId: string) => Promise<void>;
   deleteModule: (moduleId: string) => Promise<void>;
   attendants: Attendant[];
-  addAttendant: (attendantData: Omit<Attendant, 'id' | 'active'>) => Promise<void>;
+  addAttendant: (attendantData: Omit<Attendant, 'id'>) => Promise<void>;
   updateAttendant: (attendantId: string, attendantData: Partial<Omit<Attendant, 'id'>>) => Promise<void>;
   deleteAttendant: (attendantId: string) => Promise<void>;
 }
@@ -398,7 +443,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
   }
 
-  const addAttendant = async (attendantData: Omit<Attendant, 'id' | 'active'>) => {
+  const addAttendant = async (attendantData: Omit<Attendant, 'id'>) => {
     const currentAttendants = getAttendantsFromStorage();
     if (currentAttendants.some(a => a.email.toLowerCase() === attendantData.email.toLowerCase())) {
         toast({
@@ -408,11 +453,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
         throw new Error("Atendente já existe");
     }
+     if (currentAttendants.some(a => a.cpf === attendantData.cpf)) {
+        toast({
+            variant: "destructive",
+            title: "Erro ao adicionar atendente",
+            description: "Um atendente com este CPF já existe.",
+        });
+        throw new Error("CPF já existe");
+    }
 
     const newAttendant: Attendant = {
         ...attendantData,
         id: new Date().toISOString(),
-        active: true,
     }
 
     const newAttendants = [...currentAttendants, newAttendant];
@@ -425,6 +477,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const updateAttendant = async (attendantId: string, attendantData: Partial<Omit<Attendant, 'id'>>) => {
       const currentAttendants = getAttendantsFromStorage();
+
+      if (attendantData.email && currentAttendants.some(a => a.id !== attendantId && a.email.toLowerCase() === attendantData.email?.toLowerCase())) {
+        toast({ variant: "destructive", title: "Erro", description: "Email já cadastrado." });
+        throw new Error("Email já existe");
+      }
+      if (attendantData.cpf && currentAttendants.some(a => a.id !== attendantId && a.cpf === attendantData.cpf)) {
+        toast({ variant: "destructive", title: "Erro", description: "CPF já cadastrado." });
+        throw new Error("CPF já existe");
+      }
+
       const newAttendants = currentAttendants.map(a =>
           a.id === attendantId ? { ...a, ...attendantData } : a
       );

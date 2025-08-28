@@ -34,9 +34,28 @@ export interface User {
   modules: string[]; // Will store module ids
 }
 
+export const ATTENDANT_STATUS = {
+  ACTIVE: 'Ativo',
+  INACTIVE: 'Inativo',
+  ON_VACATION: 'Férias',
+  AWAY: 'Afastado',
+} as const;
+
+export type AttendantStatus = (typeof ATTENDANT_STATUS)[keyof typeof ATTENDANT_STATUS];
+
 export interface Attendant {
   id: string;
   name: string;
   email: string;
-  active: boolean;
+  funcao: string;
+  setor: string;
+  status: AttendantStatus;
+  avatarUrl: string;
+  telefone: string;
+  portaria: string;
+  situacao: string;
+  dataAdmissao: string; // Storing as ISO string
+  dataNascimento: string; // Storing as ISO string
+  rg: string;
+  cpf: string;
 }
