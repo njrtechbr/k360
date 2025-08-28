@@ -4,7 +4,7 @@
 import { useAuth } from "@/providers/AuthProvider";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo } from "react";
-import { Award, BarChart, BadgeCent, Star as StarIcon, TrendingUp, Crown, Sparkles, Target, Trophy, Zap, Rocket, StarHalf, Users } from "lucide-react";
+import { Award, BarChart, BadgeCent, Star as StarIcon, TrendingUp, Crown, Sparkles, Target, Trophy, Zap, Rocket, StarHalf, Users, Smile, HeartHandshake, Gem, Medal } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import type { Attendant, Evaluation } from "@/lib/types";
@@ -67,7 +67,7 @@ const achievements: Achievement[] = [
     color: "text-red-500",
     isUnlocked: (attendant, evaluations) => evaluations.length >= 500,
   },
-  {
+    {
     id: "perfeicao",
     title: "Perfeição",
     description: "Mantenha nota média 5.0 com pelo menos 10 avaliações",
@@ -101,6 +101,46 @@ const achievements: Achievement[] = [
       if (evaluations.length === 0) return false;
       const positiveCount = evaluations.filter(ev => ev.nota >= 4).length;
       return (positiveCount / evaluations.length) * 100 >= 90;
+    },
+  },
+  {
+    id: 'trinca-perfeita',
+    title: 'Trinca Perfeita',
+    description: 'Receba 3 avaliações de 5 estrelas consecutivas',
+    icon: Smile,
+    color: 'text-pink-400',
+    isUnlocked: (attendant, evaluations) => {
+      const sortedEvals = [...evaluations].sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
+      let consecutiveFives = 0;
+      for (const ev of sortedEvals) {
+        if (ev.nota === 5) {
+          consecutiveFives++;
+          if (consecutiveFives >= 3) return true;
+        } else {
+          consecutiveFives = 0;
+        }
+      }
+      return false;
+    },
+  },
+  {
+    id: 'cliente-satisfeito',
+    title: 'Cliente Satisfeito',
+    description: 'Receba 10 avaliações de 5 estrelas',
+    icon: HeartHandshake,
+    color: 'text-rose-500',
+    isUnlocked: (attendant, evaluations) => {
+      return evaluations.filter(ev => ev.nota === 5).length >= 10;
+    },
+  },
+  {
+    id: 'mestre-qualidade',
+    title: 'Mestre da Qualidade',
+    description: 'Receba 50 avaliações de 5 estrelas',
+    icon: Gem,
+    color: 'text-sky-400',
+    isUnlocked: (attendant, evaluations) => {
+      return evaluations.filter(ev => ev.nota === 5).length >= 50;
     },
   },
   {
