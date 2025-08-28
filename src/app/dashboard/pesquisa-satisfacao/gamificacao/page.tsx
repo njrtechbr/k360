@@ -29,7 +29,7 @@ const getMedal = (rank: number) => {
     return <span className="text-muted-foreground font-semibold">{rank}º</span>
 };
 
-export default function RankingPage() {
+export default function GamificacaoPage() {
     const { user, isAuthenticated, loading, evaluations, attendants } = useAuth();
     const router = useRouter();
 
@@ -71,8 +71,8 @@ export default function RankingPage() {
         <div className="space-y-8">
             <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold">Ranking de Atendentes</h1>
-                    <p className="text-muted-foreground">Competição saudável baseada no desempenho.</p>
+                    <h1 className="text-3xl font-bold">Gamificação</h1>
+                    <p className="text-muted-foreground">Competição saudável baseada no desempenho e conquistas.</p>
                 </div>
             </div>
             

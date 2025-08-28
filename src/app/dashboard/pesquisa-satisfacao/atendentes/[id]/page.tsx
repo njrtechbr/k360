@@ -11,9 +11,115 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, BarChart3, Calendar, FileText, Hash, Mail, Phone, Star, UserCircle, UserCog } from "lucide-react";
+import { ArrowLeft, BarChart3, Calendar, FileText, Hash, Mail, Phone, Star, UserCircle, UserCog, Award, BadgeCent, TrendingUp, Crown, Sparkles, Target, Trophy, BarChart, Gem, Medal } from "lucide-react";
 import Link from "next/link";
+import type { Attendant, Evaluation } from "@/lib/types";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
+
+const achievements: Achievement[] = [
+  {
+    id: "primeira-impressao",
+    title: "Primeira Impressão",
+    description: "Receba sua primeira avaliação",
+    icon: Sparkles,
+    color: "text-orange-500",
+    isUnlocked: (attendant, evaluations) => evaluations.length >= 1,
+  },
+  {
+    id: "ganhando-ritmo",
+    title: "Ganhando Ritmo",
+    description: "Receba 10 avaliações",
+    icon: Target,
+    color: "text-cyan-500",
+    isUnlocked: (attendant, evaluations) => evaluations.length >= 10,
+  },
+  {
+    id: "veterano",
+    title: "Veterano",
+    description: "Receba 50 avaliações",
+    icon: BadgeCent,
+    color: "text-gray-500",
+    isUnlocked: (attendant, evaluations) => evaluations.length >= 50,
+  },
+  {
+    id: "centuriao",
+    title: "Centurião",
+    description: "Receba 100 avaliações",
+    icon: Trophy,
+    color: "text-yellow-500",
+    isUnlocked: (attendant, evaluations) => evaluations.length >= 100,
+  },
+  {
+    id: "perfeicao",
+    title: "Perfeição",
+    description: "Mantenha nota média 5.0 com pelo menos 10 avaliações",
+    icon: Crown,
+    color: "text-purple-500",
+    isUnlocked: (attendant, evaluations) => {
+      if (evaluations.length < 10) return false;
+      const avg = evaluations.reduce((sum, ev) => sum + ev.nota, 0) / evaluations.length;
+      return avg === 5;
+    },
+  },
+  {
+    id: "excelencia",
+    title: "Excelência",
+    description: "Mantenha nota média acima de 4.5",
+    icon: Award,
+    color: "text-yellow-600",
+    isUnlocked: (attendant, evaluations) => {
+      if (evaluations.length === 0) return false;
+      const avg = evaluations.reduce((sum, ev) => sum + ev.nota, 0) / evaluations.length;
+      return avg > 4.5;
+    },
+  },
+  {
+    id: "satisfacao-garantida",
+    title: "Satisfação Garantida",
+    description: "90% de avaliações positivas (4-5 estrelas)",
+    icon: TrendingUp,
+    color: "text-green-500",
+    isUnlocked: (attendant, evaluations) => {
+      if (evaluations.length === 0) return false;
+      const positiveCount = evaluations.filter(ev => ev.nota >= 4).length;
+      return (positiveCount / evaluations.length) * 100 >= 90;
+    },
+  },
+    {
+    id: "consistente",
+    title: "Consistente",
+    description: "Receba avaliações por 7 dias consecutivos",
+    icon: BarChart,
+    color: "text-indigo-500",
+    isUnlocked: (attendant, evaluations) => {
+      // This is a more complex logic, we can implement it later
+      // For now, it will always be false
+      return false;
+    },
+  },
+];
+
+
+const getScoreFromRating = (rating: number): number => {
+    switch (rating) {
+        case 5: return 5;
+        case 4: return 3;
+        case 3: return 1;
+        case 2: return -2;
+        case 1: return -5;
+        default: return 0;
+    }
+};
+
+type Achievement = {
+  id: string;
+  title: string;
+  description: string;
+  icon: React.ElementType;
+  color: string;
+  isUnlocked: (attendant: Attendant, evaluations: Evaluation[]) => boolean;
+};
 
 const RatingStars = ({ rating, className }: { rating: number, className?: string }) => {
     const totalStars = 5;
@@ -52,6 +158,36 @@ export default function AttendantProfilePage() {
             .filter(e => e.attendantId === id)
             .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
     }, [evaluations, id]);
+
+    const gamificationStats = useMemo(() => {
+        const attendantScores: Record<string, { totalScore: number, evaluationCount: number }> = {};
+        evaluations.forEach(ev => {
+            if (!attendantScores[ev.attendantId]) {
+                attendantScores[ev.attendantId] = { totalScore: 0, evaluationCount: 0 };
+            }
+            attendantScores[ev.attendantId].totalScore += getScoreFromRating(ev.nota);
+            attendantScores[ev.attendantId].evaluationCount++;
+        });
+
+        const rankedAttendants = attendants
+            .map(att => ({
+                ...att,
+                score: attendantScores[att.id]?.totalScore ?? 0,
+            }))
+            .sort((a, b) => b.score - a.score);
+
+        const currentAttendantRank = rankedAttendants.findIndex(a => a.id === id) + 1;
+        const currentAttendantScore = attendantScores[id as string]?.totalScore ?? 0;
+        
+        const unlockedAchievements = achievements.filter(ach => ach.isUnlocked(attendant!, attendantEvaluations));
+
+        return {
+            rank: currentAttendantRank,
+            score: currentAttendantScore,
+            unlockedAchievements
+        }
+
+    }, [attendant, attendants, evaluations, attendantEvaluations, id]);
 
     const stats = useMemo(() => {
         if (attendantEvaluations.length === 0) {
@@ -153,7 +289,48 @@ export default function AttendantProfilePage() {
                         </CardContent>
                     </Card>
                 </div>
-                <div className="lg:col-span-2">
+                <div className="lg:col-span-2 space-y-8">
+                     <Card>
+                        <CardHeader>
+                            <CardTitle>Gamificação e Conquistas</CardTitle>
+                            <CardDescription>Pontuação e medalhas recebidas</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex justify-around items-center text-center mb-6">
+                                <div>
+                                    <p className="text-sm text-muted-foreground">Pontuação Total</p>
+                                    <p className="text-3xl font-bold flex items-center justify-center gap-2"><Gem className="h-6 w-6 text-blue-500"/> {gamificationStats.score}</p>
+                                </div>
+                                 <div>
+                                    <p className="text-sm text-muted-foreground">Posição no Ranking</p>
+                                    <p className="text-3xl font-bold flex items-center justify-center gap-2"><Medal className="h-6 w-6 text-amber-500"/> {gamificationStats.rank > 0 ? `${gamificationStats.rank}º` : 'N/A'}</p>
+                                </div>
+                            </div>
+                            <h4 className="font-semibold mb-2">Conquistas</h4>
+                            <TooltipProvider>
+                                <div className="flex flex-wrap gap-4">
+                                {achievements.map(ach => {
+                                    const isUnlocked = gamificationStats.unlockedAchievements.some(unlocked => unlocked.id === ach.id);
+                                    return (
+                                        <Tooltip key={ach.id}>
+                                            <TooltipTrigger>
+                                                <div className={`p-3 rounded-full border-2 ${isUnlocked ? `${ach.color} bg-background` : 'text-muted-foreground bg-muted'}`}>
+                                                     <ach.icon className="h-6 w-6" />
+                                                </div>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <p className="font-bold">{ach.title}</p>
+                                                <p className="text-sm text-muted-foreground">{ach.description}</p>
+                                                {isUnlocked ? <p className="text-xs text-green-500 font-bold">Desbloqueado!</p> : <p className="text-xs text-red-500 font-bold">Bloqueado</p>}
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    )
+                                })}
+                                </div>
+                            </TooltipProvider>
+                        </CardContent>
+                    </Card>
+
                     <Card>
                         <CardHeader>
                             <CardTitle>Histórico de Avaliações</CardTitle>

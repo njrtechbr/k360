@@ -81,7 +81,7 @@ export default function PesquisaSatisfacaoPage() {
                 </Card>
                 <Card>
                     <CardHeader>
-                        <CardTitle>Ranking</CardTitle>
+                        <CardTitle>Gamificação</CardTitle>
                         <CardDescription>Acompanhe a pontuação e a classificação dos atendentes.</CardDescription>
                     </CardHeader>
                     <CardContent>
