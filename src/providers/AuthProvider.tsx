@@ -3,7 +3,7 @@
 
 import type { ReactNode } from "react";
 import React, { useCallback, useState } from "react";
-import type { User, Module, Role } from "@/lib/types";
+import type { User, Module, Role, Attendant } from "@/lib/types";
 import { INITIAL_MODULES, ROLES } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 const USERS_STORAGE_KEY = "controle_acesso_users";
 const SESSION_STORAGE_KEY = "controle_acesso_session";
 const MODULES_STORAGE_KEY = "controle_acesso_modules";
+const ATTENDANTS_STORAGE_KEY = "controle_acesso_attendants";
 
 // Dummy users for initial seeding
 const INITIAL_USERS: User[] = [
@@ -20,7 +21,7 @@ const INITIAL_USERS: User[] = [
       email: 'super@email.com',
       password: 'password',
       role: ROLES.SUPERADMIN,
-      modules: ['financeiro', 'rh', 'estoque', 'vendas'],
+      modules: ['financeiro', 'rh', 'estoque', 'vendas', 'pesquisa-satisfacao'],
     },
     {
       id: 'admin-01',
@@ -28,7 +29,7 @@ const INITIAL_USERS: User[] = [
       email: 'admin@email.com',
       password: 'password',
       role: ROLES.ADMIN,
-      modules: ['financeiro', 'rh', 'estoque', 'vendas'],
+      modules: ['financeiro', 'rh', 'estoque', 'vendas', 'pesquisa-satisfacao'],
     },
     {
       id: 'supervisor-01',
@@ -56,6 +57,12 @@ const INITIAL_USERS: User[] = [
     }
 ];
 
+const INITIAL_ATTENDANTS: Attendant[] = [
+    { id: 'atendente-01', name: 'João da Silva', email: 'joao.silva@example.com', active: true },
+    { id: 'atendente-02', name: 'Maria Oliveira', email: 'maria.oliveira@example.com', active: true },
+    { id: 'atendente-03', name: 'Pedro Santos', email: 'pedro.santos@example.com', active: false },
+]
+
 
 interface AuthContextType {
   user: User | null;
@@ -74,6 +81,10 @@ interface AuthContextType {
   updateModule: (moduleId: string, moduleData: Partial<Omit<Module, "id" | "active">>) => Promise<void>;
   toggleModuleStatus: (moduleId: string) => Promise<void>;
   deleteModule: (moduleId: string) => Promise<void>;
+  attendants: Attendant[];
+  addAttendant: (attendantData: Omit<Attendant, 'id' | 'active'>) => Promise<void>;
+  updateAttendant: (attendantId: string, attendantData: Partial<Omit<Attendant, 'id'>>) => Promise<void>;
+  deleteAttendant: (attendantId: string) => Promise<void>;
 }
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
@@ -82,6 +93,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [modules, setModules] = useState<Module[]>([]);
+  const [attendants, setAttendants] = useState<Attendant[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
@@ -118,6 +130,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  const getAttendantsFromStorage = useCallback((): Attendant[] => {
+    if (typeof window === "undefined") return [];
+    try {
+      const attendantsJson = localStorage.getItem(ATTENDANTS_STORAGE_KEY);
+      if (attendantsJson) {
+        return JSON.parse(attendantsJson);
+      }
+      // Initialize with default attendants if none exist
+      localStorage.setItem(ATTENDANTS_STORAGE_KEY, JSON.stringify(INITIAL_ATTENDANTS));
+      return INITIAL_ATTENDANTS;
+    } catch (error) {
+      console.error("Failed to parse attendants from localStorage", error);
+      return INITIAL_ATTENDANTS;
+    }
+  }, []);
+
   const saveUsersToStorage = (users: User[]) => {
     localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
     setAllUsers(users);
@@ -127,6 +155,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem(MODULES_STORAGE_KEY, JSON.stringify(modules));
     setModules(modules);
   };
+
+  const saveAttendantsToStorage = (attendants: Attendant[]) => {
+    localStorage.setItem(ATTENDANTS_STORAGE_KEY, JSON.stringify(attendants));
+    setAttendants(attendants);
+  }
   
   const hasSuperAdmin = (): boolean => {
     const users = getUsersFromStorage();
@@ -135,8 +168,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   React.useEffect(() => {
     if (typeof window !== "undefined") {
-      const storedUsers = getUsersFromStorage();
-      setAllUsers(storedUsers);
+      setAllUsers(getUsersFromStorage());
+      setModules(getModulesFromStorage());
+      setAttendants(getAttendantsFromStorage());
 
       const sessionJson = localStorage.getItem(SESSION_STORAGE_KEY);
       if (sessionJson) {
@@ -147,13 +181,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           localStorage.removeItem(SESSION_STORAGE_KEY);
         }
       }
-      setModules(getModulesFromStorage());
       setLoading(false);
     }
-  }, [getUsersFromStorage, getModulesFromStorage]);
+  }, [getUsersFromStorage, getModulesFromStorage, getAttendantsFromStorage]);
 
   const login = async (email: string, password: string): Promise<void> => {
-    const foundUser = allUsers.find((u) => u.email === email);
+    const users = getUsersFromStorage();
+    const foundUser = users.find((u) => u.email === email);
 
     if (foundUser && foundUser.password === password) {
       setUser(foundUser);
@@ -184,7 +218,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const register = async (userData: Omit<User, "id">): Promise<void> => {
-    if (allUsers.find((u) => u.email === userData.email)) {
+    const currentUsers = getUsersFromStorage();
+    if (currentUsers.find((u) => u.email === userData.email)) {
       toast({
         variant: "destructive",
         title: "Erro no registro",
@@ -199,21 +234,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       modules: userData.role === 'superadmin' ? modules.map(m => m.id) : userData.modules,
     };
 
-    const newUsers = [...allUsers, newUser];
+    const newUsers = [...currentUsers, newUser];
     saveUsersToStorage(newUsers);
     
-    if (!user) {
+    if (!user) { // This means a public registration
         setUser(newUser);
         localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(newUser));
+        toast({
+            title: "Registro bem-sucedido!",
+            description: `Bem-vindo, ${newUser.name}.`,
+        });
         router.push("/dashboard");
-    } else {
-        router.push("/dashboard/usuarios");
+    } else { // This means an admin is creating a user
+        toast({
+            title: "Usuário Criado!",
+            description: `O usuário ${newUser.name} foi criado com sucesso.`,
+        });
     }
-
-    toast({
-      title: "Registro bem-sucedido!",
-      description: `O usuário ${newUser.name} foi criado.`,
-    });
   };
 
   const updateProfile = async (userData: Partial<User>): Promise<void> => {
@@ -361,6 +398,53 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
   }
 
+  const addAttendant = async (attendantData: Omit<Attendant, 'id' | 'active'>) => {
+    const currentAttendants = getAttendantsFromStorage();
+    if (currentAttendants.some(a => a.email.toLowerCase() === attendantData.email.toLowerCase())) {
+        toast({
+            variant: "destructive",
+            title: "Erro ao adicionar atendente",
+            description: "Um atendente com este email já existe.",
+        });
+        throw new Error("Atendente já existe");
+    }
+
+    const newAttendant: Attendant = {
+        ...attendantData,
+        id: new Date().toISOString(),
+        active: true,
+    }
+
+    const newAttendants = [...currentAttendants, newAttendant];
+    saveAttendantsToStorage(newAttendants);
+    toast({
+        title: "Atendente Adicionado!",
+        description: `O atendente "${newAttendant.name}" foi adicionado com sucesso.`
+    });
+  };
+
+  const updateAttendant = async (attendantId: string, attendantData: Partial<Omit<Attendant, 'id'>>) => {
+      const currentAttendants = getAttendantsFromStorage();
+      const newAttendants = currentAttendants.map(a =>
+          a.id === attendantId ? { ...a, ...attendantData } : a
+      );
+      saveAttendantsToStorage(newAttendants);
+      toast({
+          title: "Atendente Atualizado!",
+          description: "Os dados do atendente foram atualizados."
+      });
+  };
+
+  const deleteAttendant = async (attendantId: string) => {
+      const currentAttendants = getAttendantsFromStorage();
+      const newAttendants = currentAttendants.filter(a => a.id !== attendantId);
+      saveAttendantsToStorage(newAttendants);
+      toast({
+          title: "Atendente Removido!",
+          description: "O atendente foi removido do sistema."
+      });
+  };
+
   const value = {
     user,
     isAuthenticated: user !== null,
@@ -378,6 +462,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     updateModule,
     toggleModuleStatus,
     deleteModule,
+    attendants,
+    addAttendant,
+    updateAttendant,
+    deleteAttendant,
   };
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
@@ -390,7 +478,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    
-
-    
