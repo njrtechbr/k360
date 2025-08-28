@@ -7,7 +7,7 @@ import { useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Star, TrendingUp, UserCheck, BarChart3, List } from "lucide-react";
+import { Star, TrendingUp, UserCheck, BarChart3, List, Users } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
@@ -65,10 +65,9 @@ export default function DashboardAvaliacoesPage() {
                 totalEvaluations: 0,
                 averageRating: 0,
                 ratingsDistribution: [],
-                bestAttendant: { name: 'N/A', avgRating: 0 },
+                bestAttendant: { name: 'N/A', avgRating: 0, count: 0 },
                 mostEvaluatedAttendant: { name: 'N/A', count: 0 },
                 recentEvaluations: [],
-                attendantStats: [],
                 topRatedAttendants: [],
             };
         }
@@ -77,12 +76,12 @@ export default function DashboardAvaliacoesPage() {
         const averageRating = totalRatingSum / totalEvaluations;
 
         const ratingsDistribution = [
-            { rating: 5, count: evaluations.filter(e => e.nota === 5).length },
-            { rating: 4, count: evaluations.filter(e => e.nota === 4).length },
-            { rating: 3, count: evaluations.filter(e => e.nota === 3).length },
-            { rating: 2, count: evaluations.filter(e => e.nota === 2).length },
-            { rating: 1, count: evaluations.filter(e => e.nota === 1).length },
-        ].map(item => ({...item, fill: `var(--color-${item.rating})`}));
+            { rating: '5 Estrelas', count: evaluations.filter(e => e.nota === 5).length, fill: 'var(--color-5)' },
+            { rating: '4 Estrelas', count: evaluations.filter(e => e.nota === 4).length, fill: 'var(--color-4)' },
+            { rating: '3 Estrelas', count: evaluations.filter(e => e.nota === 3).length, fill: 'var(--color-3)' },
+            { rating: '2 Estrelas', count: evaluations.filter(e => e.nota === 2).length, fill: 'var(--color-2)' },
+            { rating: '1 Estrela', count: evaluations.filter(e => e.nota === 1).length, fill: 'var(--color-1)' },
+        ];
 
 
         const attendantStats: Record<string, { sum: number; count: number, name: string }> = {};
@@ -101,7 +100,7 @@ export default function DashboardAvaliacoesPage() {
             count: stats.count
         }));
         
-        const bestAttendant = [...attendantRanking].sort((a,b) => b.avgRating - a.avgRating)[0] ?? { name: 'N/A', avgRating: 0 };
+        const bestAttendant = [...attendantRanking].sort((a,b) => b.avgRating - a.avgRating)[0] ?? { name: 'N/A', avgRating: 0, count: 0 };
         const mostEvaluatedAttendant = [...attendantRanking].sort((a,b) => b.count - a.count)[0] ?? { name: 'N/A', count: 0 };
         const topRatedAttendants = [...attendantRanking].sort((a,b) => b.avgRating - a.avgRating).slice(0, 5);
 
@@ -140,7 +139,7 @@ export default function DashboardAvaliacoesPage() {
                 </Button>
             </div>
             
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total de Avaliações</CardTitle>
@@ -168,7 +167,17 @@ export default function DashboardAvaliacoesPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold truncate">{dashboardData.bestAttendant.name}</div>
-                        <p className="text-xs text-muted-foreground">com nota média de {dashboardData.bestAttendant.avgRating.toFixed(2)}</p>
+                        <p className="text-xs text-muted-foreground">Nota média de {dashboardData.bestAttendant.avgRating.toFixed(2)}</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Mais Avaliado</CardTitle>
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold truncate">{dashboardData.mostEvaluatedAttendant.name}</div>
+                        <p className="text-xs text-muted-foreground">{dashboardData.mostEvaluatedAttendant.count} avaliações recebidas</p>
                     </CardContent>
                 </Card>
             </div>
@@ -182,9 +191,12 @@ export default function DashboardAvaliacoesPage() {
                     <CardContent>
                          <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
                             <BarChart accessibilityLayer data={dashboardData.ratingsDistribution} layout="vertical" margin={{ left: 10 }}>
-                                <YAxis dataKey="rating" type="category" tickLine={false} tickMargin={10} axisLine={false} tickFormatter={(value) => `${value} Estrelas`}/>
+                                <YAxis dataKey="rating" type="category" tickLine={false} tickMargin={10} axisLine={false} />
                                 <XAxis dataKey="count" type="number" hide />
-                                <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                                <ChartTooltip 
+                                    cursor={false} 
+                                    content={<ChartTooltipContent labelKey="rating" hideIndicator />}
+                                />
                                 <Bar dataKey="count" radius={5} />
                             </BarChart>
                         </ChartContainer>
@@ -200,16 +212,19 @@ export default function DashboardAvaliacoesPage() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Atendente</TableHead>
-                                    <TableHead className="text-right">Nota Média</TableHead>
+                                    <TableHead className="text-right">Nota / Avaliações</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {dashboardData.topRatedAttendants.map(att => (
                                     <TableRow key={att.id}>
                                         <TableCell className="font-medium">{att.name}</TableCell>
-                                        <TableCell className="text-right flex justify-end items-center gap-2">
-                                            {att.avgRating.toFixed(2)}
-                                            <Star className="h-4 w-4 text-yellow-400" />
+                                        <TableCell className="text-right">
+                                           <div className="flex justify-end items-center gap-2">
+                                                <span className="font-semibold">{att.avgRating.toFixed(2)}</span>
+                                                <Star className="h-4 w-4 text-yellow-400" />
+                                                <span className="text-xs text-muted-foreground">({att.count})</span>
+                                           </div>
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -259,6 +274,3 @@ export default function DashboardAvaliacoesPage() {
         </div>
     );
 }
-
-
-    
