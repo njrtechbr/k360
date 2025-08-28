@@ -19,12 +19,12 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { type Attendant, ATTENDANT_STATUS, AttendantStatus } from "@/lib/types";
+import { type Attendant, ATTENDANT_STATUS } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Pencil, Trash2, PlusCircle, CalendarIcon } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -48,6 +48,22 @@ const formSchema = z.object({
   cpf: z.string().min(11, { message: "O CPF é obrigatório." }),
 });
 
+const defaultFormValues = {
+  name: "",
+  email: "",
+  funcao: "",
+  setor: "",
+  status: ATTENDANT_STATUS.ACTIVE,
+  avatarUrl: "",
+  telefone: "",
+  portaria: "",
+  situacao: "",
+  rg: "",
+  cpf: "",
+  dataAdmissao: undefined,
+  dataNascimento: undefined,
+}
+
 export default function AtendentesPage() {
   const { user, isAuthenticated, loading, attendants, addAttendant, updateAttendant, deleteAttendant } = useAuth();
   const router = useRouter();
@@ -58,19 +74,7 @@ export default function AtendentesPage() {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      funcao: "",
-      setor: "",
-      status: ATTENDANT_STATUS.ACTIVE,
-      avatarUrl: "",
-      telefone: "",
-      portaria: "",
-      situacao: "",
-      rg: "",
-      cpf: ""
-    },
+    defaultValues: defaultFormValues,
   });
 
   useEffect(() => {
@@ -80,21 +84,18 @@ export default function AtendentesPage() {
   }, [isAuthenticated, loading, router]);
 
   useEffect(() => {
-    if (selectedAttendant && isFormDialogOpen) {
-      form.reset({
-        ...selectedAttendant,
-        dataAdmissao: new Date(selectedAttendant.dataAdmissao),
-        dataNascimento: new Date(selectedAttendant.dataNascimento),
-      });
-    } else if (!isFormDialogOpen) {
-      setSelectedAttendant(null);
-      form.reset({
-        name: "", email: "", funcao: "", setor: "", status: ATTENDANT_STATUS.ACTIVE,
-        avatarUrl: "", telefone: "", portaria: "", situacao: "", rg: "", cpf: "",
-        dataAdmissao: undefined, dataNascimento: undefined
-      });
+    if (isFormDialogOpen) {
+      if (selectedAttendant) {
+        form.reset({
+          ...selectedAttendant,
+          dataAdmissao: new Date(selectedAttendant.dataAdmissao),
+          dataNascimento: new Date(selectedAttendant.dataNascimento),
+        });
+      } else {
+        form.reset(defaultFormValues);
+      }
     }
-  }, [selectedAttendant, form, isFormDialogOpen]);
+  }, [isFormDialogOpen, selectedAttendant, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
@@ -109,7 +110,6 @@ export default function AtendentesPage() {
       } else {
         await addAttendant(dataToSave);
       }
-      form.reset();
       setIsFormDialogOpen(false);
       setSelectedAttendant(null);
     } catch (error) { /* toast handled */ }
@@ -283,7 +283,7 @@ export default function AtendentesPage() {
                           </FormItem>
                         )} />
                          <FormField control={form.control} name="dataNascimento" render={({ field }) => (
-                          <FormItem className="flex flex-col">
+                          <FormItem className="flex flex-col pt-2">
                             <FormLabel>Data de Nascimento</FormLabel>
                             <Popover>
                               <PopoverTrigger asChild>
@@ -302,7 +302,7 @@ export default function AtendentesPage() {
                           </FormItem>
                         )} />
                         <FormField control={form.control} name="dataAdmissao" render={({ field }) => (
-                          <FormItem className="flex flex-col">
+                          <FormItem className="flex flex-col pt-2">
                             <FormLabel>Data de Admissão</FormLabel>
                             <Popover>
                               <PopoverTrigger asChild>
