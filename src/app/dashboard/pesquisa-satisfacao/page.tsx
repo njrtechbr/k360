@@ -4,7 +4,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/providers/AuthProvider";
-import { Users, SmilePlus } from "lucide-react";
+import { Users, ClipboardList } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -46,17 +46,17 @@ export default function PesquisaSatisfacaoPage() {
                 </Card>
                 <Card>
                     <CardHeader>
-                        <CardTitle>Nova Pesquisa</CardTitle>
-                        <CardDescription>Crie e envie uma nova pesquisa de satisfação para seus clientes.</CardDescription>
+                        <CardTitle>Ver Avaliações</CardTitle>
+                        <CardDescription>Visualize o histórico de avaliações de satisfação recebidas.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <p className="text-sm text-muted-foreground mb-4">
-                            Configure as perguntas, selecione os atendentes e defina o período da pesquisa.
+                           Acesse a lista completa de avaliações para monitorar o desempenho.
                         </p>
                          <Button asChild>
                             <Link href="/dashboard/pesquisa-satisfacao/nova">
-                                <SmilePlus className="mr-2 h-4 w-4" />
-                                Nova Pesquisa
+                                <ClipboardList className="mr-2 h-4 w-4" />
+                                Ver Avaliações
                             </Link>
                         </Button>
                     </CardContent>
@@ -65,3 +65,4 @@ export default function PesquisaSatisfacaoPage() {
         </div>
     )
 }
+
