@@ -23,7 +23,7 @@ import { type Attendant, ATTENDANT_STATUS } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2, PlusCircle, CalendarIcon } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, PlusCircle, CalendarIcon, UserCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -31,6 +31,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
@@ -38,7 +39,7 @@ const formSchema = z.object({
   funcao: z.string().min(2, { message: "A função é obrigatória." }),
   setor: z.string().min(2, { message: "O setor é obrigatório." }),
   status: z.nativeEnum(ATTENDANT_STATUS),
-  avatarUrl: z.string().url({ message: "Por favor, insira uma URL válida." }).or(z.literal("")),
+  avatarUrl: z.any(),
   telefone: z.string().min(10, { message: "O telefone deve ter pelo menos 10 dígitos." }),
   portaria: z.string().optional(),
   situacao: z.string().optional(),
@@ -64,6 +65,15 @@ const defaultFormValues = {
   dataNascimento: undefined,
 }
 
+const fileToDataUrl = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+};
+
 export default function AtendentesPage() {
   const { user, isAuthenticated, loading, attendants, addAttendant, updateAttendant, deleteAttendant } = useAuth();
   const router = useRouter();
@@ -71,6 +81,7 @@ export default function AtendentesPage() {
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedAttendant, setSelectedAttendant] = useState<Attendant | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -88,19 +99,28 @@ export default function AtendentesPage() {
       if (selectedAttendant) {
         form.reset({
           ...selectedAttendant,
+          avatarUrl: null, // Clear file input on open
           dataAdmissao: new Date(selectedAttendant.dataAdmissao),
           dataNascimento: new Date(selectedAttendant.dataNascimento),
         });
+        setAvatarPreview(selectedAttendant.avatarUrl);
       } else {
         form.reset(defaultFormValues);
+        setAvatarPreview(null);
       }
     }
   }, [isFormDialogOpen, selectedAttendant, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
+      let avatarUrl = selectedAttendant?.avatarUrl || "";
+      if (values.avatarUrl && values.avatarUrl[0]) {
+          avatarUrl = await fileToDataUrl(values.avatarUrl[0]);
+      }
+        
       const dataToSave = {
           ...values,
+          avatarUrl,
           dataAdmissao: values.dataAdmissao.toISOString(),
           dataNascimento: values.dataNascimento.toISOString(),
       }
@@ -112,6 +132,7 @@ export default function AtendentesPage() {
       }
       setIsFormDialogOpen(false);
       setSelectedAttendant(null);
+      setAvatarPreview(null);
     } catch (error) { /* toast handled */ }
   }
 
@@ -171,7 +192,13 @@ export default function AtendentesPage() {
                     <TableBody>
                         {sortedAttendants.map((att) => (
                             <TableRow key={att.id}>
-                                <TableCell className="font-medium">{att.name}</TableCell>
+                                <TableCell className="font-medium flex items-center gap-3">
+                                    <Avatar>
+                                        <AvatarImage src={att.avatarUrl} alt={att.name}/>
+                                        <AvatarFallback><UserCircle /></AvatarFallback>
+                                    </Avatar>
+                                    {att.name}
+                                </TableCell>
                                 <TableCell>{att.funcao}</TableCell>
                                 <TableCell>{att.setor}</TableCell>
                                 <TableCell>
@@ -215,7 +242,7 @@ export default function AtendentesPage() {
                 </DialogHeader>
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-6 pl-2">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <FormField control={form.control} name="name" render={({ field }) => (
                           <FormItem>
                             <FormLabel>Nome Completo</FormLabel>
@@ -335,15 +362,40 @@ export default function AtendentesPage() {
                           </FormItem>
                         )} />
                          <FormField control={form.control} name="avatarUrl" render={({ field }) => (
-                          <FormItem className="md:col-span-2 lg:col-span-3">
-                            <FormLabel>URL do Avatar</FormLabel>
-                            <FormControl><Input placeholder="https://exemplo.com/avatar.png" {...field} /></FormControl>
-                             <FormDescription>URL da imagem de perfil do atendente.</FormDescription>
+                          <FormItem className="md:col-span-1 lg:col-span-3">
+                             <FormLabel>Avatar</FormLabel>
+                             <div className="flex items-center gap-4">
+                                <Avatar className="h-20 w-20">
+                                    <AvatarImage src={avatarPreview ?? undefined} />
+                                    <AvatarFallback><UserCircle className="h-10 w-10" /></AvatarFallback>
+                                </Avatar>
+                                <FormControl>
+                                  <Input 
+                                      type="file" 
+                                      accept="image/*"
+                                      className="max-w-xs"
+                                      onChange={(e) => {
+                                          field.onChange(e.target.files);
+                                          if (e.target.files && e.target.files[0]) {
+                                              const file = e.target.files[0];
+                                              const reader = new FileReader();
+                                              reader.onloadend = () => {
+                                                  setAvatarPreview(reader.result as string);
+                                              };
+                                              reader.readAsDataURL(file);
+                                          }
+                                      }}
+                                  />
+                                </FormControl>
+                             </div>
+                            <FormDescription>
+                                {selectedAttendant ? "Faça upload de uma nova foto para alterar o avatar." : "Faça upload da foto do atendente."}
+                            </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )} />
                       </div>
-                        <DialogFooter className="pt-4">
+                        <DialogFooter className="pt-8">
                             <Button type="button" variant="secondary" onClick={() => setIsFormDialogOpen(false)}>Cancelar</Button>
                             <Button type="submit" disabled={form.formState.isSubmitting}>
                                 {form.formState.isSubmitting ? 'Salvando...' : 'Salvar Atendente'}
