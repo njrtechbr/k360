@@ -62,7 +62,7 @@ export default function DashboardPage() {
   const userModules = user.modules?.map(moduleId => moduleMap[moduleId]).filter(Boolean) || [];
 
   return (
-    <div className="container mx-auto p-4 md:p-8 space-y-8">
+    <div className="space-y-8">
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold font-heading">Dashboard</h1>

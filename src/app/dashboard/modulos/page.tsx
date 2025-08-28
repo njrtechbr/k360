@@ -121,64 +121,62 @@ export default function ModulosPage() {
   const sortedModules = [...modules].sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <div className="container mx-auto p-4 md:p-8">
-        <h1 className="text-3xl font-bold mb-8">Gerenciamento de Módulos</h1>
+    <div className="space-y-8">
+        <h1 className="text-3xl font-bold">Gerenciamento de Módulos</h1>
         <div className="grid md:grid-cols-3 gap-8 items-start">
             <Card className="md:col-span-1 shadow-lg">
                 <CardHeader>
                     <CardTitle>Adicionar Novo Módulo</CardTitle>
                     <CardDescription>Crie um novo módulo para o sistema.</CardDescription>
                 </CardHeader>
+                <CardContent>
                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onAddSubmit)}>
-                        <CardContent className="space-y-6">
-                            <FormField 
-                                control={form.control} 
-                                name="name" 
-                                render={({ field }) => ( 
-                                    <FormItem> 
-                                        <FormLabel>Nome do Módulo</FormLabel> 
-                                        <FormControl> 
-                                            <Input placeholder="Ex: Contabilidade" {...field} /> 
-                                        </FormControl> 
-                                        <FormMessage /> 
-                                    </FormItem> 
-                                )}
-                            />
-                             <FormField 
-                                control={form.control} 
-                                name="path" 
-                                render={({ field }) => ( 
-                                    <FormItem> 
-                                        <FormLabel>Caminho do Módulo</FormLabel> 
-                                        <FormControl> 
-                                            <Input placeholder="/dashboard/contabilidade" {...field} /> 
-                                        </FormControl> 
-                                        <FormMessage /> 
-                                    </FormItem> 
-                                )}
-                            />
-                            <FormField 
-                                control={form.control} 
-                                name="description" 
-                                render={({ field }) => ( 
-                                    <FormItem> 
-                                        <FormLabel>Descrição</FormLabel> 
-                                        <FormControl> 
-                                            <Textarea placeholder="Descreva o que este módulo faz." {...field} /> 
-                                        </FormControl> 
-                                        <FormMessage /> 
-                                    </FormItem> 
-                                )}
-                            />
-                        </CardContent>
-                        <CardFooter>
-                             <Button type="submit" disabled={form.formState.isSubmitting}>
-                                {form.formState.isSubmitting ? 'Adicionando...' : 'Adicionar Módulo'}
-                            </Button>
-                        </CardFooter>
+                    <form onSubmit={form.handleSubmit(onAddSubmit)} className="space-y-6">
+                        <FormField 
+                            control={form.control} 
+                            name="name" 
+                            render={({ field }) => ( 
+                                <FormItem> 
+                                    <FormLabel>Nome do Módulo</FormLabel> 
+                                    <FormControl> 
+                                        <Input placeholder="Ex: Contabilidade" {...field} /> 
+                                    </FormControl> 
+                                    <FormMessage /> 
+                                </FormItem> 
+                            )}
+                        />
+                         <FormField 
+                            control={form.control} 
+                            name="path" 
+                            render={({ field }) => ( 
+                                <FormItem> 
+                                    <FormLabel>Caminho do Módulo</FormLabel> 
+                                    <FormControl> 
+                                        <Input placeholder="/dashboard/contabilidade" {...field} /> 
+                                    </FormControl> 
+                                    <FormMessage /> 
+                                </FormItem> 
+                            )}
+                        />
+                        <FormField 
+                            control={form.control} 
+                            name="description" 
+                            render={({ field }) => ( 
+                                <FormItem> 
+                                    <FormLabel>Descrição</FormLabel> 
+                                    <FormControl> 
+                                        <Textarea placeholder="Descreva o que este módulo faz." {...field} /> 
+                                    </FormControl> 
+                                    <FormMessage /> 
+                                </FormItem> 
+                            )}
+                        />
+                         <Button type="submit" disabled={form.formState.isSubmitting} className="w-full">
+                            {form.formState.isSubmitting ? 'Adicionando...' : 'Adicionar Módulo'}
+                        </Button>
                     </form>
                 </Form>
+                </CardContent>
             </Card>
 
 

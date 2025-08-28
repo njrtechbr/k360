@@ -31,11 +31,11 @@ export default function RootLayout({
       <body className={cn('font-sans antialiased')}>
         <AuthProvider>
           <SidebarProvider>
-            <div className="relative flex min-h-screen flex-col">
+            <div className="relative flex min-h-screen">
               <AppSidebar />
-              <div className="flex flex-col flex-1 md:ml-[var(--sidebar-width-icon)] group-data-[collapsible=offcanvas]:ml-0">
+              <div className="flex flex-1 flex-col transition-[margin-left] duration-300 ease-in-out md:ml-[var(--sidebar-width-icon)] group-data-[state=expanded]:md:ml-[var(--sidebar-width)]">
                 <SiteHeader />
-                <main className="flex-1">{children}</main>
+                <main className="flex-1 p-4 md:p-8">{children}</main>
               </div>
             </div>
             <Toaster />

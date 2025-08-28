@@ -4,7 +4,7 @@
 import { useAuth } from "@/providers/AuthProvider";
 import Link from "next/link";
 import { Button } from "./ui/button";
-import { ShieldCheck, LogOut, UserCircle, LayoutDashboard } from "lucide-react";
+import { ShieldCheck, LogOut, UserCircle } from "lucide-react";
 import { SidebarTrigger } from "./ui/sidebar";
 
 export default function SiteHeader() {
@@ -15,34 +15,32 @@ export default function SiteHeader() {
       <div className="container mx-auto flex items-center justify-between h-16 px-4">
         <div className="flex items-center gap-2">
             <SidebarTrigger className="md:hidden"/>
-            <Link href="/" className="flex items-center gap-2 font-bold text-lg">
-                <ShieldCheck className="h-6 w-6 text-primary" />
+            <Link href="/" className="flex items-center gap-2 font-bold text-lg text-primary">
+                <ShieldCheck className="h-6 w-6" />
                 <span className="hidden sm:inline">Controle de Acesso</span>
             </Link>
         </div>
-        <nav className="flex items-center gap-4">
-          {isAuthenticated ? (
+        <nav className="flex items-center gap-2">
+          {isAuthenticated && user ? (
             <>
               <span className="text-sm text-muted-foreground hidden sm:inline">
-                Olá, {user?.name}
+                Olá, {user.name}
               </span>
-               <Button variant="ghost" size="sm" asChild>
-                <Link href="/perfil">
-                  <UserCircle className="mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">Perfil</span>
+               <Button variant="ghost" size="icon" asChild>
+                <Link href="/perfil" title="Perfil">
+                  <UserCircle />
                 </Link>
               </Button>
-              <Button variant="outline" size="sm" onClick={logout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Sair</span>
+              <Button variant="outline" size="icon" onClick={logout} title="Sair">
+                <LogOut/>
               </Button>
             </>
           ) : (
             <>
-              <Button variant="ghost" size="sm" asChild>
+              <Button variant="ghost" asChild>
                 <Link href="/login">Login</Link>
               </Button>
-              <Button size="sm" asChild>
+              <Button asChild>
                 <Link href="/registrar">Registrar</Link>
               </Button>
             </>

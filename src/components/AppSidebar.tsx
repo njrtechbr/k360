@@ -2,15 +2,18 @@
 "use client"
 
 import { useAuth } from "@/providers/AuthProvider";
-import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "./ui/sidebar";
+import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, useSidebar } from "./ui/sidebar";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, Wrench, CircleUser, Settings, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Wrench, CircleUser, Settings, ShieldCheck, PanelLeft } from "lucide-react";
 import { ROLES } from "@/lib/types";
+import { Button } from "./ui/button";
 
 export default function AppSidebar() {
     const { isAuthenticated, user, modules } = useAuth();
     const pathname = usePathname();
+    const { toggleSidebar, state } = useSidebar();
+
 
     if (!isAuthenticated || !user) {
         return null;
@@ -22,13 +25,18 @@ export default function AppSidebar() {
 
     return (
         <Sidebar>
-            <SidebarContent>
-                <SidebarHeader className="h-16 justify-center">
-                    <h1 className="text-xl font-semibold text-primary flex items-center gap-2">
-                        <ShieldCheck className="h-7 w-7"/>
-                        <span className="group-data-[collapsible=icon]:hidden">Menu</span>
+            <SidebarHeader className="h-16 flex items-center justify-between px-4">
+                <Link href="/dashboard" className="flex items-center gap-2 text-primary group-data-[state=collapsed]:hidden">
+                    <ShieldCheck className="h-7 w-7"/>
+                    <h1 className="text-xl font-semibold">
+                        Menu
                     </h1>
-                </SidebarHeader>
+                </Link>
+                <Button variant="ghost" size="icon" onClick={toggleSidebar}>
+                    <PanelLeft />
+                </Button>
+            </SidebarHeader>
+            <SidebarContent>
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton asChild isActive={pathname === '/dashboard'} tooltip={{children: "Dashboard"}}>
