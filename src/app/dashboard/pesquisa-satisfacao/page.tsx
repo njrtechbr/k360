@@ -4,7 +4,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/providers/AuthProvider";
-import { Users, LayoutDashboard } from "lucide-react";
+import { Users, LayoutDashboard, ListChecks } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -26,7 +26,7 @@ export default function PesquisaSatisfacaoPage() {
     return (
         <div className="space-y-8">
             <h1 className="text-3xl font-bold">Módulo de Pesquisa de Satisfação</h1>
-            <div className="grid md:grid-cols-2 gap-8">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                  <Card>
                     <CardHeader>
                         <CardTitle>Dashboard de Avaliações</CardTitle>
@@ -40,6 +40,23 @@ export default function PesquisaSatisfacaoPage() {
                             <Link href="/dashboard/pesquisa-satisfacao/dashboard">
                                 <LayoutDashboard className="mr-2 h-4 w-4" />
                                 Ver Dashboard
+                            </Link>
+                        </Button>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Todas as Avaliações</CardTitle>
+                        <CardDescription>Veja a lista completa com todas as avaliações recebidas.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Navegue e filtre por todo o histórico de avaliações.
+                        </p>
+                         <Button asChild>
+                            <Link href="/dashboard/pesquisa-satisfacao/avaliacoes">
+                                <ListChecks className="mr-2 h-4 w-4" />
+                                Ver Avaliações
                             </Link>
                         </Button>
                     </CardContent>
@@ -65,3 +82,5 @@ export default function PesquisaSatisfacaoPage() {
         </div>
     )
 }
+
+    

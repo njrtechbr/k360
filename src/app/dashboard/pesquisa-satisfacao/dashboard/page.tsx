@@ -69,6 +69,7 @@ export default function DashboardAvaliacoesPage() {
                 mostEvaluatedAttendant: { name: 'N/A', count: 0 },
                 recentEvaluations: [],
                 attendantStats: [],
+                topRatedAttendants: [],
             };
         }
 
@@ -100,8 +101,8 @@ export default function DashboardAvaliacoesPage() {
             count: stats.count
         }));
         
-        const bestAttendant = [...attendantRanking].sort((a,b) => b.avgRating - a.avgRating)[0];
-        const mostEvaluatedAttendant = [...attendantRanking].sort((a,b) => b.count - a.count)[0];
+        const bestAttendant = [...attendantRanking].sort((a,b) => b.avgRating - a.avgRating)[0] ?? { name: 'N/A', avgRating: 0 };
+        const mostEvaluatedAttendant = [...attendantRanking].sort((a,b) => b.count - a.count)[0] ?? { name: 'N/A', count: 0 };
         const topRatedAttendants = [...attendantRanking].sort((a,b) => b.avgRating - a.avgRating).slice(0, 5);
 
         const recentEvaluations = [...evaluations]
@@ -259,3 +260,5 @@ export default function DashboardAvaliacoesPage() {
     );
 }
 
+
+    
