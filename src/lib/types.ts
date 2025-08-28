@@ -53,16 +53,26 @@ export const FUNCOES = [
   'Assistente administrativo',
 ] as const;
 
+export const SETORES = [
+    'escritura',
+    'protesto',
+    'procuração',
+    'balcão',
+    'agile',
+    'administrativo',
+] as const;
+
 
 export type AttendantStatus = (typeof ATTENDANT_STATUS)[keyof typeof ATTENDANT_STATUS];
 export type Funcao = (typeof FUNCOES)[number];
+export type Setor = (typeof SETORES)[number];
 
 export interface Attendant {
   id: string;
   name: string;
   email: string;
   funcao: Funcao;
-  setor: string;
+  setor: Setor;
   status: AttendantStatus;
   avatarUrl: string;
   telefone: string;

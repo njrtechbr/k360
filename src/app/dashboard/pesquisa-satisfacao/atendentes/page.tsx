@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { type Attendant, ATTENDANT_STATUS, FUNCOES } from "@/lib/types";
+import { type Attendant, ATTENDANT_STATUS, FUNCOES, SETORES } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -37,7 +37,7 @@ const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
   email: z.string().email({ message: "Por favor, insira um email válido." }),
   funcao: z.string({ required_error: "A função é obrigatória." }).min(2, { message: "A função é obrigatória." }),
-  setor: z.string().min(2, { message: "O setor é obrigatório." }),
+  setor: z.string({ required_error: "O setor é obrigatório." }).min(2, { message: "O setor é obrigatório." }),
   status: z.nativeEnum(ATTENDANT_STATUS),
   avatarUrl: z.any(),
   telefone: z.string().min(10, { message: "O telefone deve ter pelo menos 10 dígitos." }),
@@ -53,7 +53,7 @@ const defaultFormValues = {
   name: "",
   email: "",
   funcao: "" as any,
-  setor: "",
+  setor: "" as any,
   status: ATTENDANT_STATUS.ACTIVE,
   avatarUrl: "",
   telefone: "",
@@ -79,6 +79,14 @@ const formatCPF = (cpf: string) => {
     const match = cleaned.match(/^(\d{0,3})(\d{0,3})(\d{0,3})(\d{0,2})$/);
     if (!match) return cpf;
     return [match[1], match[2], match[3]].filter(Boolean).join('.') + (match[4] ? `-${match[4]}` : '');
+};
+
+const formatTelefone = (tel: string) => {
+    const cleaned = tel.replace(/\D/g, '');
+    if (cleaned.length <= 10) {
+        return cleaned.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+    }
+    return cleaned.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
 };
 
 
@@ -108,6 +116,7 @@ export default function AtendentesPage() {
         form.reset({
           ...selectedAttendant,
           cpf: formatCPF(selectedAttendant.cpf),
+          telefone: formatTelefone(selectedAttendant.telefone),
           avatarUrl: null, // Clear file input on open
           dataAdmissao: new Date(selectedAttendant.dataAdmissao),
           dataNascimento: new Date(selectedAttendant.dataNascimento),
@@ -130,6 +139,7 @@ export default function AtendentesPage() {
       const dataToSave = {
           ...values,
           cpf: values.cpf.replace(/\D/g, ''), // Save unformatted CPF
+          telefone: values.telefone.replace(/\D/g, ''), // Save unformatted phone
           avatarUrl,
           dataAdmissao: values.dataAdmissao.toISOString(),
           dataNascimento: values.dataNascimento.toISOString(),
@@ -210,7 +220,7 @@ export default function AtendentesPage() {
                                     {att.name}
                                 </TableCell>
                                 <TableCell>{att.funcao}</TableCell>
-                                <TableCell>{att.setor}</TableCell>
+                                <TableCell className="capitalize">{att.setor}</TableCell>
                                 <TableCell>
                                     <Badge variant={att.status === 'Ativo' ? "secondary" : "outline"}>
                                         {att.status}
@@ -270,7 +280,7 @@ export default function AtendentesPage() {
                          <FormField control={form.control} name="telefone" render={({ field }) => (
                           <FormItem>
                             <FormLabel>Telefone</FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
+                            <FormControl><Input {...field} onChange={e => field.onChange(formatTelefone(e.target.value))} maxLength={15} /></FormControl>
                             <FormMessage />
                           </FormItem>
                         )} />
@@ -294,7 +304,16 @@ export default function AtendentesPage() {
                         <FormField control={form.control} name="setor" render={({ field }) => (
                           <FormItem>
                             <FormLabel>Setor</FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
+                             <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger><SelectValue placeholder="Selecione o setor" /></SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {SETORES.map((setor) => (
+                                    <SelectItem key={setor} value={setor} className="capitalize">{setor}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             <FormMessage />
                           </FormItem>
                         )} />
