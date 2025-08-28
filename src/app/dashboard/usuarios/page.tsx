@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ROLES, type User, type Module, Role } from "@/lib/types";
+import { ROLES, type User, type Role } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -39,10 +39,9 @@ const formSchema = z.object({
 });
 
 export default function UsuariosPage() {
-  const { user, isAuthenticated, loading, getUsers, modules, updateUser, deleteUser } = useAuth();
+  const { user, isAuthenticated, loading, allUsers, modules, updateUser, deleteUser } = useAuth();
   const router = useRouter();
 
-  const [users, setUsers] = useState<User[]>([]);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -55,10 +54,7 @@ export default function UsuariosPage() {
   useEffect(() => {
     if (!loading && (!isAuthenticated || (user?.role !== ROLES.ADMIN && user?.role !== ROLES.SUPERADMIN))) {
       router.push("/dashboard");
-    } else if (isAuthenticated) {
-        setUsers(getUsers());
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, loading, router, user]);
 
   useEffect(() => {
@@ -86,7 +82,6 @@ export default function UsuariosPage() {
       await updateUser(selectedUser.id, values);
       setIsEditDialogOpen(false);
       setSelectedUser(null);
-      setUsers(getUsers()); // Refresh users list
     } catch (error) { /* toast handled in auth provider */ }
   }
 
@@ -96,7 +91,6 @@ export default function UsuariosPage() {
         await deleteUser(selectedUser.id);
         setIsDeleteDialogOpen(false);
         setSelectedUser(null);
-        setUsers(getUsers()); // Refresh users list
     } catch(error) { /* toast handled */ }
   }
 
@@ -114,7 +108,7 @@ export default function UsuariosPage() {
     return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
   }
   
-  const sortedUsers = [...users].sort((a, b) => a.name.localeCompare(b.name));
+  const sortedUsers = [...allUsers].sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <div className="space-y-8">
@@ -157,7 +151,7 @@ export default function UsuariosPage() {
                                 <TableCell className="text-right">
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" className="h-8 w-8 p-0" disabled={u.role === ROLES.SUPERADMIN && user.role !== ROLES.SUPERADMIN}>
+                                            <Button variant="ghost" className="h-8 w-8 p-0" disabled={u.id === user.id || (u.role === ROLES.SUPERADMIN && user.role !== ROLES.SUPERADMIN)}>
                                                 <span className="sr-only">Abrir menu</span>
                                                 <MoreHorizontal className="h-4 w-4" />
                                             </Button>
@@ -307,5 +301,7 @@ export default function UsuariosPage() {
     </div>
   );
 }
+
+    
 
     

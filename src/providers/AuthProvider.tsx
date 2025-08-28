@@ -2,7 +2,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import type { User, Module, Role } from "@/lib/types";
 import { INITIAL_MODULES, ROLES } from "@/lib/types";
 import { useRouter } from "next/navigation";
@@ -65,7 +65,7 @@ interface AuthContextType {
   logout: () => void;
   register: (userData: Omit<User, "id">) => Promise<void>;
   updateProfile: (userData: Partial<User>) => Promise<void>;
-  getUsers: () => User[];
+  allUsers: User[];
   updateUser: (userId: string, userData: { name: string; role: Role; modules: string[] }) => Promise<void>;
   deleteUser: (userId: string) => Promise<void>;
   hasSuperAdmin: () => boolean;
@@ -79,36 +79,48 @@ interface AuthContextType {
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = React.useState<User | null>(null);
-  const [modules, setModules] = React.useState<Module[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [modules, setModules] = useState<Module[]>([]);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
 
   const getUsersFromStorage = useCallback((): User[] => {
     if (typeof window === "undefined") return [];
-    const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
-    if (usersJson && usersJson !== '[]') {
-        return JSON.parse(usersJson);
+    try {
+      const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
+      if (usersJson && usersJson !== '[]') {
+          return JSON.parse(usersJson);
+      }
+      // If no users, seed with initial data
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(INITIAL_USERS));
+      return INITIAL_USERS;
+    } catch (error) {
+      console.error("Failed to parse users from localStorage", error);
+      return INITIAL_USERS; // Fallback to initial users
     }
-    // If no users, seed with initial data
-    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(INITIAL_USERS));
-    return INITIAL_USERS;
   }, []);
 
   const getModulesFromStorage = useCallback((): Module[] => {
     if (typeof window === "undefined") return [];
-    const modulesJson = localStorage.getItem(MODULES_STORAGE_KEY);
-    if (modulesJson) {
-      return JSON.parse(modulesJson);
+    try {
+      const modulesJson = localStorage.getItem(MODULES_STORAGE_KEY);
+      if (modulesJson) {
+        return JSON.parse(modulesJson);
+      }
+      // Initialize with default modules if none exist
+      localStorage.setItem(MODULES_STORAGE_KEY, JSON.stringify(INITIAL_MODULES));
+      return INITIAL_MODULES;
+    } catch (error) {
+      console.error("Failed to parse modules from localStorage", error);
+      return INITIAL_MODULES;
     }
-    // Initialize with default modules if none exist
-    localStorage.setItem(MODULES_STORAGE_KEY, JSON.stringify(INITIAL_MODULES));
-    return INITIAL_MODULES;
   }, []);
 
   const saveUsersToStorage = (users: User[]) => {
     localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+    setAllUsers(users);
   };
 
   const saveModulesToStorage = (modules: Module[]) => {
@@ -123,10 +135,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   React.useEffect(() => {
     if (typeof window !== "undefined") {
-      getUsersFromStorage(); // Seed users on initial load if necessary
+      const storedUsers = getUsersFromStorage();
+      setAllUsers(storedUsers);
+
       const sessionJson = localStorage.getItem(SESSION_STORAGE_KEY);
       if (sessionJson) {
-        setUser(JSON.parse(sessionJson));
+        try {
+          setUser(JSON.parse(sessionJson));
+        } catch (error) {
+          console.error("Failed to parse session from localStorage", error);
+          localStorage.removeItem(SESSION_STORAGE_KEY);
+        }
       }
       setModules(getModulesFromStorage());
       setLoading(false);
@@ -134,8 +153,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [getUsersFromStorage, getModulesFromStorage]);
 
   const login = async (email: string, password: string): Promise<void> => {
-    const users = getUsersFromStorage();
-    const foundUser = users.find((u) => u.email === email);
+    const foundUser = allUsers.find((u) => u.email === email);
 
     if (foundUser && foundUser.password === password) {
       setUser(foundUser);
@@ -166,8 +184,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const register = async (userData: Omit<User, "id">): Promise<void> => {
-    const users = getUsersFromStorage();
-    if (users.find((u) => u.email === userData.email)) {
+    if (allUsers.find((u) => u.email === userData.email)) {
       toast({
         variant: "destructive",
         title: "Erro no registro",
@@ -182,11 +199,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       modules: userData.role === 'superadmin' ? modules.map(m => m.id) : userData.modules,
     };
 
-    const newUsers = [...users, newUser];
+    const newUsers = [...allUsers, newUser];
     saveUsersToStorage(newUsers);
     
-    // Auto-login after registration only if it's the first user (superadmin)
-    // Or if an admin is registering another user, don't switch sessions
     if (!user) {
         setUser(newUser);
         localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(newUser));
@@ -194,7 +209,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } else {
         router.push("/dashboard/usuarios");
     }
-
 
     toast({
       title: "Registro bem-sucedido!",
@@ -207,23 +221,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error("Usuário não autenticado");
     }
     
-    let users = getUsersFromStorage();
-    let sessionUser = user;
-
-    // Update user in users list
-    users = users.map(u => {
+    let updatedUsers = allUsers.map(u => {
         if(u.id === user.id) {
-            const updatedUser = { ...u, ...userData };
-            // In a real app, this would be handled differently.
-            sessionUser = {...updatedUser};
-            return updatedUser;
+            return { ...u, ...userData };
         }
         return u;
     });
 
-    saveUsersToStorage(users);
+    saveUsersToStorage(updatedUsers);
     
-    // Update current session
     const updatedSessionUser = { ...user, ...userData };
     setUser(updatedSessionUser);
     localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(updatedSessionUser));
@@ -235,11 +241,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateUser = async (userId: string, userData: { name: string; role: Role; modules: string[] }) => {
-    let users = getUsersFromStorage();
-    users = users.map(u => u.id === userId ? { ...u, ...userData } : u);
-    saveUsersToStorage(users);
+    let updatedUsers = allUsers.map(u => u.id === userId ? { ...u, ...userData } : u);
+    saveUsersToStorage(updatedUsers);
 
-    // If the admin is editing their own account, update the session
     if (user && user.id === userId) {
       const updatedSessionUser = { ...user, ...userData };
       setUser(updatedSessionUser);
@@ -262,20 +266,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       throw new Error("Auto-exclusão não é permitida");
     }
     
-    let users = getUsersFromStorage();
-    users = users.filter(u => u.id !== userId);
-    saveUsersToStorage(users);
+    let updatedUsers = allUsers.filter(u => u.id !== userId);
+    saveUsersToStorage(updatedUsers);
 
     toast({
       title: "Usuário Excluído!",
       description: "O usuário foi removido do sistema.",
     });
   };
-
-
-  const getUsers = (): User[] => {
-    return getUsersFromStorage();
-  }
 
   const addModule = async (moduleData: Omit<Module, 'id' | 'active'>) => {
     const currentModules = getModulesFromStorage();
@@ -319,9 +317,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     );
     saveModulesToStorage(newModules);
 
-    // When a module's path is updated, we need to update it for users too if we store it there.
-    // Currently, we only store IDs, so this is not an issue.
-
     toast({
         title: "Módulo Atualizado!",
         description: `O módulo foi atualizado com sucesso.`
@@ -345,15 +340,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const newModules = currentModules.filter(m => m.id !== moduleId);
     saveModulesToStorage(newModules);
 
-    // Remove module from all users
-    const users = getUsersFromStorage();
-    const updatedUsers = users.map(u => ({
+    const updatedUsers = allUsers.map(u => ({
         ...u,
         modules: u.modules.filter(mId => mId !== moduleId),
     }));
     saveUsersToStorage(updatedUsers);
 
-    // If the currently logged-in user was affected, update their session
     if (user && user.modules.includes(moduleId)) {
       const updatedUser = {
         ...user,
@@ -377,7 +369,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     logout,
     register,
     updateProfile,
-    getUsers,
+    allUsers,
     updateUser,
     deleteUser,
     hasSuperAdmin,
@@ -398,5 +390,7 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    
 
     
