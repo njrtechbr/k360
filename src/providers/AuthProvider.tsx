@@ -105,12 +105,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const newUsers = [...users, newUser];
     saveUsersToStorage(newUsers);
+    
+    // Auto-login after registration
+    setUser(newUser);
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(newUser));
 
     toast({
       title: "Registro bem-sucedido!",
-      description: "Sua conta foi criada. Faça o login para continuar.",
+      description: `Bem-vindo, ${newUser.name}!`,
     });
-    router.push("/login");
+    router.push("/dashboard");
   };
 
   const updateProfile = async (userData: Partial<User>): Promise<void> => {
