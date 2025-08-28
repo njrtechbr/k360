@@ -51,12 +51,12 @@ export default function AvaliacoesPage() {
 
     return (
         <div className="space-y-8">
-            <h1 className="text-3xl font-bold">Resultados das Pesquisas</h1>
+            <h1 className="text-3xl font-bold">Todas as Avaliações</h1>
 
             <Card className="shadow-lg">
                 <CardHeader>
-                    <CardTitle>Avaliações Recebidas</CardTitle>
-                    <CardDescription>Lista de todas as avaliações de satisfação registradas.</CardDescription>
+                    <CardTitle>Histórico Completo</CardTitle>
+                    <CardDescription>Lista de todas as avaliações de satisfação registradas no sistema.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Table>

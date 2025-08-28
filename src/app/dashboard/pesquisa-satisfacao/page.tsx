@@ -4,7 +4,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/providers/AuthProvider";
-import { Users, ClipboardList } from "lucide-react";
+import { Users, LayoutDashboard } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -27,6 +27,23 @@ export default function PesquisaSatisfacaoPage() {
         <div className="space-y-8">
             <h1 className="text-3xl font-bold">Módulo de Pesquisa de Satisfação</h1>
             <div className="grid md:grid-cols-2 gap-8">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Dashboard de Avaliações</CardTitle>
+                        <CardDescription>Visualize gráficos e métricas sobre o desempenho dos atendentes.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground mb-4">
+                           Acesse o dashboard completo para monitorar a satisfação.
+                        </p>
+                         <Button asChild>
+                            <Link href="/dashboard/pesquisa-satisfacao/dashboard">
+                                <LayoutDashboard className="mr-2 h-4 w-4" />
+                                Ver Dashboard
+                            </Link>
+                        </Button>
+                    </CardContent>
+                </Card>
                 <Card>
                     <CardHeader>
                         <CardTitle>Gerenciar Atendentes</CardTitle>
@@ -44,25 +61,7 @@ export default function PesquisaSatisfacaoPage() {
                         </Button>
                     </CardContent>
                 </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Ver Avaliações</CardTitle>
-                        <CardDescription>Visualize o histórico de avaliações de satisfação recebidas.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-sm text-muted-foreground mb-4">
-                           Acesse a lista completa de avaliações para monitorar o desempenho.
-                        </p>
-                         <Button asChild>
-                            <Link href="/dashboard/pesquisa-satisfacao/nova">
-                                <ClipboardList className="mr-2 h-4 w-4" />
-                                Ver Avaliações
-                            </Link>
-                        </Button>
-                    </CardContent>
-                </Card>
             </div>
         </div>
     )
 }
-
