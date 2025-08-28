@@ -18,19 +18,18 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { ROLES, type User, type Role } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Pencil, Trash2, PlusCircle } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import Link from "next/link";
 
-const formSchema = z.object({
+const editFormSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
   role: z.nativeEnum(ROLES),
   modules: z.array(z.string()).refine((value) => value.some((item) => item), {
@@ -38,17 +37,40 @@ const formSchema = z.object({
   }),
 });
 
+const addFormSchema = z.object({
+  name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
+  email: z.string().email({ message: "Por favor, insira um email válido." }),
+  password: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres." }),
+  role: z.nativeEnum(ROLES),
+  modules: z.array(z.string()).refine((value) => value.some((item) => item), {
+    message: "Você deve selecionar pelo menos um módulo.",
+  }),
+});
+
+
 export default function UsuariosPage() {
-  const { user, isAuthenticated, loading, allUsers, modules, updateUser, deleteUser } = useAuth();
+  const { user, isAuthenticated, loading, allUsers, modules, updateUser, deleteUser, register } = useAuth();
   const router = useRouter();
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const editForm = useForm<z.infer<typeof editFormSchema>>({
+    resolver: zodResolver(editFormSchema),
     defaultValues: { name: "", role: ROLES.USER, modules: [] },
+  });
+
+  const addForm = useForm<z.infer<typeof addFormSchema>>({
+    resolver: zodResolver(addFormSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+      role: ROLES.USER,
+      modules: [],
+    },
   });
 
   useEffect(() => {
@@ -59,13 +81,13 @@ export default function UsuariosPage() {
 
   useEffect(() => {
     if (selectedUser) {
-      form.reset({
+      editForm.reset({
         name: selectedUser.name,
         role: selectedUser.role,
         modules: selectedUser.modules,
       });
     }
-  }, [selectedUser, form]);
+  }, [selectedUser, editForm]);
 
   const activeModules = useMemo(() => modules.filter(m => m.active), [modules]);
   const moduleMap = useMemo(() => {
@@ -75,8 +97,16 @@ export default function UsuariosPage() {
     }, {} as Record<string, string>);
   }, [modules]);
 
+  async function onAddSubmit(values: z.infer<typeof addFormSchema>) {
+    try {
+      await register(values);
+      addForm.reset();
+      setIsAddDialogOpen(false);
+    } catch (error) { /* toast handled */ }
+  }
 
-  async function onEditSubmit(values: z.infer<typeof formSchema>) {
+
+  async function onEditSubmit(values: z.infer<typeof editFormSchema>) {
     if (!selectedUser) return;
     try {
       await updateUser(selectedUser.id, values);
@@ -110,19 +140,159 @@ export default function UsuariosPage() {
   
   const sortedUsers = [...allUsers].sort((a, b) => a.name.localeCompare(b.name));
 
+  const availableRoles = Object.values(ROLES).filter(role => {
+    if (user?.role === ROLES.SUPERADMIN) return true;
+    if (user?.role === ROLES.ADMIN) return role !== ROLES.SUPERADMIN;
+    return false;
+  });
+
   return (
     <div className="space-y-8">
         <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold">Gerenciamento de Usuários</h1>
-            <Button asChild>
-                <Link href="/registrar"><PlusCircle className="mr-2 h-4 w-4" /> Adicionar Usuário</Link>
-            </Button>
+             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                <DialogTrigger asChild>
+                     <Button><PlusCircle className="mr-2 h-4 w-4" /> Adicionar Usuário</Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-2xl">
+                     <DialogHeader>
+                        <DialogTitle>Adicionar Novo Usuário</DialogTitle>
+                        <DialogDescription>Crie uma nova conta e defina suas permissões.</DialogDescription>
+                    </DialogHeader>
+                    <Form {...addForm}>
+                        <form onSubmit={addForm.handleSubmit(onAddSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+                            <div className="space-y-4">
+                                 <FormField
+                                    control={addForm.control}
+                                    name="name"
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Nome</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Nome completo do usuário" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={addForm.control}
+                                    name="email"
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Email</FormLabel>
+                                        <FormControl>
+                                            <Input type="email" placeholder="email@exemplo.com" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={addForm.control}
+                                    name="password"
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Senha</FormLabel>
+                                        <FormControl>
+                                            <Input type="password" placeholder="********" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={addForm.control}
+                                    name="role"
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Nível de Acesso</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Selecione um nível" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {availableRoles.map((role) => (
+                                                    <SelectItem key={role} value={role} className="capitalize">
+                                                        {role}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                            </div>
+                             <FormField
+                                control={addForm.control}
+                                name="modules"
+                                render={() => (
+                                <FormItem className="space-y-3 rounded-lg border p-4">
+                                    <div className="mb-4">
+                                    <FormLabel className="text-base">Módulos de Acesso</FormLabel>
+                                    <FormDescription>
+                                        Selecione os módulos que este usuário poderá acessar.
+                                    </FormDescription>
+                                    </div>
+                                    <div className="max-h-60 overflow-y-auto pr-2 space-y-2">
+                                        {activeModules.map((item) => (
+                                        <FormField
+                                            key={item.id}
+                                            control={addForm.control}
+                                            name="modules"
+                                            render={({ field }) => {
+                                            return (
+                                                <FormItem
+                                                    key={item.id}
+                                                    className="flex flex-row items-start space-x-3 space-y-0"
+                                                >
+                                                    <FormControl>
+                                                        <Checkbox
+                                                        checked={field.value?.includes(item.id)}
+                                                        onCheckedChange={(checked) => {
+                                                            return checked
+                                                            ? field.onChange([...(field.value || []), item.id])
+                                                            : field.onChange(
+                                                                (field.value || [])?.filter(
+                                                                    (value) => value !== item.id
+                                                                )
+                                                                )
+                                                        }}
+                                                        />
+                                                    </FormControl>
+                                                    <FormLabel className="font-normal capitalize">
+                                                        {item.name}
+                                                    </FormLabel>
+                                                </FormItem>
+                                            )
+                                            }}
+                                        />
+                                        ))}
+                                    </div>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+
+                             <DialogFooter className="col-span-1 md:col-span-2">
+                                <Button type="button" variant="secondary" onClick={() => setIsAddDialogOpen(false)}>Cancelar</Button>
+                                <Button type="submit" disabled={addForm.formState.isSubmitting}>
+                                    {addForm.formState.isSubmitting ? 'Criando...' : 'Criar Usuário'}
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </Form>
+                </DialogContent>
+            </Dialog>
         </div>
 
         <Card className="shadow-lg">
             <CardHeader>
                 <CardTitle>Usuários do Sistema</CardTitle>
-                <CardDescription>Lista de todos os usuários cadastrados.</CardDescription>
+                <CardDescription>Lista de todos os usuários cadastrados no sistema.</CardDescription>
             </CardHeader>
             <CardContent>
                 <Table>
@@ -151,7 +321,7 @@ export default function UsuariosPage() {
                                 <TableCell className="text-right">
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" className="h-8 w-8 p-0" disabled={u.id === user.id || (u.role === ROLES.SUPERADMIN && user.role !== ROLES.SUPERADMIN)}>
+                                            <Button variant="ghost" className="h-8 w-8 p-0" disabled={u.id === user.id || u.role === ROLES.SUPERADMIN}>
                                                 <span className="sr-only">Abrir menu</span>
                                                 <MoreHorizontal className="h-4 w-4" />
                                             </Button>
@@ -180,10 +350,10 @@ export default function UsuariosPage() {
                     <DialogTitle>Editar Usuário</DialogTitle>
                     <DialogDescription>Altere as informações e permissões do usuário.</DialogDescription>
                 </DialogHeader>
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onEditSubmit)} className="space-y-4">
+                <Form {...editForm}>
+                    <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4 py-4">
                         <FormField
-                            control={form.control}
+                            control={editForm.control}
                             name="name"
                             render={({ field }) => (
                             <FormItem>
@@ -196,7 +366,7 @@ export default function UsuariosPage() {
                             )}
                         />
                          <FormField
-                            control={form.control}
+                            control={editForm.control}
                             name="role"
                             render={({ field }) => (
                             <FormItem>
@@ -208,8 +378,7 @@ export default function UsuariosPage() {
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        {Object.values(ROLES).map((role) => (
-                                            role !== ROLES.SUPERADMIN &&
+                                        {availableRoles.map((role) => (
                                             <SelectItem key={role} value={role} className="capitalize">
                                                 {role}
                                             </SelectItem>
@@ -221,7 +390,7 @@ export default function UsuariosPage() {
                             )}
                         />
                         <FormField
-                            control={form.control}
+                            control={editForm.control}
                             name="modules"
                             render={() => (
                             <FormItem>
@@ -234,7 +403,7 @@ export default function UsuariosPage() {
                                 {activeModules.map((item) => (
                                 <FormField
                                     key={item.id}
-                                    control={form.control}
+                                    control={editForm.control}
                                     name="modules"
                                     render={({ field }) => {
                                     return (
@@ -270,8 +439,8 @@ export default function UsuariosPage() {
                         />
                         <DialogFooter>
                             <Button type="button" variant="secondary" onClick={() => setIsEditDialogOpen(false)}>Cancelar</Button>
-                            <Button type="submit" disabled={form.formState.isSubmitting}>
-                                {form.formState.isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
+                            <Button type="submit" disabled={editForm.formState.isSubmitting}>
+                                {editForm.formState.isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
                             </Button>
                         </DialogFooter>
                     </form>
@@ -301,7 +470,5 @@ export default function UsuariosPage() {
     </div>
   );
 }
-
-    
 
     

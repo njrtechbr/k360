@@ -4,7 +4,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { ROLES, type Module } from "@/lib/types";
+import { ROLES } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -27,6 +27,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import Link from "next/link";
 import { useAuth } from "@/providers/AuthProvider";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
@@ -39,7 +40,9 @@ const formSchema = z.object({
 });
 
 export default function RegisterPage() {
-  const { register, modules } = useAuth();
+  const { register, modules, user, isAuthenticated } = useAuth();
+  const router = useRouter();
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -53,7 +56,12 @@ export default function RegisterPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      await register(values as any);
+      await register(values);
+      if (!isAuthenticated) {
+        router.push("/dashboard");
+      } else {
+        router.push("/dashboard/usuarios");
+      }
     } catch (error) {
       // Toast is handled in auth provider
     }
@@ -61,12 +69,16 @@ export default function RegisterPage() {
 
   const activeModules = modules.filter(m => m.active);
 
+  // Users registering publicly should only be able to select USER or SUPERVISOR roles.
+  // Admin roles should be assigned by other admins.
+  const publicRoles = [ROLES.USER, ROLES.SUPERVISOR];
+
   return (
     <div className="flex items-center justify-center py-12 px-4">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader>
           <CardTitle className="text-2xl font-bold">Criar uma conta</CardTitle>
-          <CardDescription>Insira seus dados para se registrar.</CardDescription>
+          <CardDescription>Insira seus dados para se registrar no sistema.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -123,8 +135,7 @@ export default function RegisterPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {Object.values(ROLES).map((role) => (
-                           role !== ROLES.SUPERADMIN &&
+                        {publicRoles.map((role) => (
                           <SelectItem key={role} value={role} className="capitalize">
                             {role}
                           </SelectItem>
@@ -143,7 +154,7 @@ export default function RegisterPage() {
                     <div className="mb-4">
                       <FormLabel className="text-base">Módulos</FormLabel>
                       <FormDescription>
-                        Selecione os módulos que este usuário terá acesso.
+                        Selecione os módulos que você precisará acessar.
                       </FormDescription>
                     </div>
                     {activeModules.map((item) => (
@@ -162,9 +173,9 @@ export default function RegisterPage() {
                                   checked={field.value?.includes(item.id)}
                                   onCheckedChange={(checked) => {
                                     return checked
-                                      ? field.onChange([...field.value, item.id])
+                                      ? field.onChange([...(field.value || []), item.id])
                                       : field.onChange(
-                                          field.value?.filter(
+                                          (field.value || [])?.filter(
                                             (value) => value !== item.id
                                           )
                                         )
@@ -199,3 +210,5 @@ export default function RegisterPage() {
     </div>
   );
 }
+
+    
