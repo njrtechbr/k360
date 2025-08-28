@@ -41,13 +41,27 @@ export const ATTENDANT_STATUS = {
   AWAY: 'Afastado',
 } as const;
 
+export const FUNCOES = [
+  'Escrevente II',
+  'Auxiliar de cartório',
+  'Escrevente',
+  'Admin',
+  'Escrevente I',
+  'Tabelião Substituto',
+  'Escrevente Agile',
+  'Atendente',
+  'Assistente administrativo',
+] as const;
+
+
 export type AttendantStatus = (typeof ATTENDANT_STATUS)[keyof typeof ATTENDANT_STATUS];
+export type Funcao = (typeof FUNCOES)[number];
 
 export interface Attendant {
   id: string;
   name: string;
   email: string;
-  funcao: string;
+  funcao: Funcao;
   setor: string;
   status: AttendantStatus;
   avatarUrl: string;

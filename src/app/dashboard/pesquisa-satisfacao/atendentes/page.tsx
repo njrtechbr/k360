@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { type Attendant, ATTENDANT_STATUS } from "@/lib/types";
+import { type Attendant, ATTENDANT_STATUS, FUNCOES } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -36,7 +36,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
   email: z.string().email({ message: "Por favor, insira um email válido." }),
-  funcao: z.string().min(2, { message: "A função é obrigatória." }),
+  funcao: z.string({ required_error: "A função é obrigatória." }).min(2, { message: "A função é obrigatória." }),
   setor: z.string().min(2, { message: "O setor é obrigatório." }),
   status: z.nativeEnum(ATTENDANT_STATUS),
   avatarUrl: z.any(),
@@ -52,7 +52,7 @@ const formSchema = z.object({
 const defaultFormValues = {
   name: "",
   email: "",
-  funcao: "",
+  funcao: "" as any,
   setor: "",
   status: ATTENDANT_STATUS.ACTIVE,
   avatarUrl: "",
@@ -73,6 +73,14 @@ const fileToDataUrl = (file: File): Promise<string> => {
         reader.readAsDataURL(file);
     });
 };
+
+const formatCPF = (cpf: string) => {
+    const cleaned = cpf.replace(/\D/g, '');
+    const match = cleaned.match(/^(\d{0,3})(\d{0,3})(\d{0,3})(\d{0,2})$/);
+    if (!match) return cpf;
+    return [match[1], match[2], match[3]].filter(Boolean).join('.') + (match[4] ? `-${match[4]}` : '');
+};
+
 
 export default function AtendentesPage() {
   const { user, isAuthenticated, loading, attendants, addAttendant, updateAttendant, deleteAttendant } = useAuth();
@@ -99,6 +107,7 @@ export default function AtendentesPage() {
       if (selectedAttendant) {
         form.reset({
           ...selectedAttendant,
+          cpf: formatCPF(selectedAttendant.cpf),
           avatarUrl: null, // Clear file input on open
           dataAdmissao: new Date(selectedAttendant.dataAdmissao),
           dataNascimento: new Date(selectedAttendant.dataNascimento),
@@ -120,6 +129,7 @@ export default function AtendentesPage() {
         
       const dataToSave = {
           ...values,
+          cpf: values.cpf.replace(/\D/g, ''), // Save unformatted CPF
           avatarUrl,
           dataAdmissao: values.dataAdmissao.toISOString(),
           dataNascimento: values.dataNascimento.toISOString(),
@@ -265,12 +275,22 @@ export default function AtendentesPage() {
                           </FormItem>
                         )} />
                         <FormField control={form.control} name="funcao" render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Função</FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )} />
+                            <FormItem>
+                              <FormLabel>Função</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger><SelectValue placeholder="Selecione a função" /></SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {FUNCOES.map((funcao) => (
+                                    <SelectItem key={funcao} value={funcao}>{funcao}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                         <FormField control={form.control} name="setor" render={({ field }) => (
                           <FormItem>
                             <FormLabel>Setor</FormLabel>
@@ -298,7 +318,7 @@ export default function AtendentesPage() {
                         <FormField control={form.control} name="cpf" render={({ field }) => (
                           <FormItem>
                             <FormLabel>CPF</FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
+                            <FormControl><Input {...field} onChange={e => field.onChange(formatCPF(e.target.value))} maxLength={14} /></FormControl>
                             <FormMessage />
                           </FormItem>
                         )} />
@@ -427,7 +447,3 @@ export default function AtendentesPage() {
     </div>
   );
 }
-
-    
-
-    

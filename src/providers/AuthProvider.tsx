@@ -3,8 +3,8 @@
 
 import type { ReactNode } from "react";
 import React, { useCallback, useState } from "react";
-import type { User, Module, Role, Attendant } from "@/lib/types";
-import { INITIAL_MODULES, ROLES, ATTENDANT_STATUS } from "@/lib/types";
+import type { User, Module, Role, Attendant, Funcao } from "@/lib/types";
+import { INITIAL_MODULES, ROLES, ATTENDANT_STATUS, FUNCOES } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 
@@ -660,8 +660,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (typeof window === "undefined") return [];
     try {
       const attendantsJson = localStorage.getItem(ATTENDANTS_STORAGE_KEY);
-      if (attendantsJson && attendantsJson !== '[]') {
-        return JSON.parse(attendantsJson);
+      if (attendantsJson) {
+        const parsed = JSON.parse(attendantsJson);
+        if(parsed && parsed.length > 0) return parsed;
       }
       localStorage.setItem(ATTENDANTS_STORAGE_KEY, JSON.stringify(INITIAL_ATTENDANTS));
       return INITIAL_ATTENDANTS;
@@ -1021,5 +1022,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    
