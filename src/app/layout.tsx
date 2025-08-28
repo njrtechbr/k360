@@ -28,13 +28,15 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className={cn('font-body antialiased')}>
+      <body className={cn('font-sans antialiased')}>
         <AuthProvider>
           <SidebarProvider>
-            <AppSidebar />
-            <div className="flex flex-col flex-1 md:ml-[var(--sidebar-width-icon)] group-data-[collapsible=offcanvas]:ml-0">
-               <SiteHeader />
-               <main className="flex-grow">{children}</main>
+            <div className="relative flex min-h-screen flex-col">
+              <AppSidebar />
+              <div className="flex flex-col flex-1 md:ml-[var(--sidebar-width-icon)] group-data-[collapsible=offcanvas]:ml-0">
+                <SiteHeader />
+                <main className="flex-1">{children}</main>
+              </div>
             </div>
             <Toaster />
           </SidebarProvider>
