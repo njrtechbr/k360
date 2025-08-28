@@ -68,7 +68,10 @@ export default function DashboardPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <p>Este é o seu painel de controle. Use os links de navegação para gerenciar seu perfil, usuários ou sair.</p>
+          <p>Seus módulos de acesso:</p>
+            <div className="flex gap-2 mt-2">
+                {user.modules?.map(module => <Badge key={module} className="capitalize">{module}</Badge>)}
+            </div>
         </CardContent>
       </Card>
       
@@ -90,6 +93,7 @@ export default function DashboardPage() {
                             <TableHead>Nome</TableHead>
                             <TableHead>Email</TableHead>
                             <TableHead>Nível de Acesso</TableHead>
+                            <TableHead>Módulos</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -99,6 +103,11 @@ export default function DashboardPage() {
                                 <TableCell>{u.email}</TableCell>
                                 <TableCell>
                                     <Badge variant="secondary" className="capitalize">{u.role}</Badge>
+                                </TableCell>
+                                <TableCell className="flex gap-1 flex-wrap">
+                                    {u.modules?.map(m => (
+                                        <Badge key={m} variant="outline" className="capitalize">{m}</Badge>
+                                    ))}
                                 </TableCell>
                             </TableRow>
                         ))}

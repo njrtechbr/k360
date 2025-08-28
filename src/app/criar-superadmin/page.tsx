@@ -4,7 +4,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { ROLES } from "@/lib/types";
+import { MODULES, ROLES } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -45,7 +45,7 @@ export default function CreateSuperAdminPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      await register({ ...values, role: ROLES.SUPERADMIN });
+      await register({ ...values, role: ROLES.SUPERADMIN, modules: Object.values(MODULES) });
     } catch (error) {
       // Toast handled in auth provider
     }

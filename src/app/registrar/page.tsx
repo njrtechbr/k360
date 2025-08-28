@@ -4,11 +4,12 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { ROLES, Role } from "@/lib/types";
+import { MODULES, ROLES, Role } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -25,12 +26,16 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { useAuth } from "@/providers/AuthProvider";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
   email: z.string().email({ message: "Por favor, insira um email válido." }),
   password: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres." }),
   role: z.nativeEnum(ROLES),
+  modules: z.array(z.string()).refine((value) => value.some((item) => item), {
+    message: "Você deve selecionar pelo menos um módulo.",
+  }),
 });
 
 export default function RegisterPage() {
@@ -42,12 +47,13 @@ export default function RegisterPage() {
       email: "",
       password: "",
       role: ROLES.USER,
+      modules: [],
     },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      await register(values);
+      await register(values as any);
     } catch (error) {
       // Toast is handled in auth provider
     }
@@ -122,6 +128,54 @@ export default function RegisterPage() {
                         ))}
                       </SelectContent>
                     </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="modules"
+                render={() => (
+                  <FormItem>
+                    <div className="mb-4">
+                      <FormLabel className="text-base">Módulos</FormLabel>
+                      <FormDescription>
+                        Selecione os módulos que este usuário terá acesso.
+                      </FormDescription>
+                    </div>
+                    {Object.values(MODULES).map((item) => (
+                      <FormField
+                        key={item}
+                        control={form.control}
+                        name="modules"
+                        render={({ field }) => {
+                          return (
+                            <FormItem
+                              key={item}
+                              className="flex flex-row items-start space-x-3 space-y-0"
+                            >
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes(item)}
+                                  onCheckedChange={(checked) => {
+                                    return checked
+                                      ? field.onChange([...field.value, item])
+                                      : field.onChange(
+                                          field.value?.filter(
+                                            (value) => value !== item
+                                          )
+                                        )
+                                  }}
+                                />
+                              </FormControl>
+                              <FormLabel className="font-normal capitalize">
+                                {item}
+                              </FormLabel>
+                            </FormItem>
+                          )
+                        }}
+                      />
+                    ))}
                     <FormMessage />
                   </FormItem>
                 )}
