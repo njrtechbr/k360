@@ -8,14 +8,20 @@ export const ROLES = {
 
 export type Role = (typeof ROLES)[keyof typeof ROLES];
 
-export const MODULES = {
-  FINANCEIRO: 'financeiro',
-  RH: 'rh',
-  ESTOQUE: 'estoque',
-  VENDAS: 'vendas',
-} as const;
+export interface Module {
+  id: string;
+  name: string;
+  description: string;
+}
 
-export type Module = (typeof MODULES)[keyof typeof MODULES];
+// The static MODULES object is no longer needed as it will be dynamic.
+export const INITIAL_MODULES: Module[] = [
+    { id: 'financeiro', name: 'Financeiro', description: 'Acesso a faturas e pagamentos.' },
+    { id: 'rh', name: 'Recursos Humanos', description: 'Gerenciamento de funcionários e folha de pagamento.' },
+    { id: 'estoque', name: 'Estoque', description: 'Controle de entrada e saída de produtos.' },
+    { id: 'vendas', name: 'Vendas', description: 'Acesso a relatórios e dashboards de vendas.' },
+];
+
 
 export interface User {
   id: string;
@@ -23,5 +29,5 @@ export interface User {
   email: string;
   password?: string; // Should be hashed in a real app
   role: Role;
-  modules: Module[];
+  modules: string[]; // Will store module ids
 }

@@ -4,7 +4,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { MODULES, ROLES, Role } from "@/lib/types";
+import { ROLES, type Module } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -39,7 +39,7 @@ const formSchema = z.object({
 });
 
 export default function RegisterPage() {
-  const { register } = useAuth();
+  const { register, modules } = useAuth();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -122,6 +122,7 @@ export default function RegisterPage() {
                       </FormControl>
                       <SelectContent>
                         {Object.values(ROLES).map((role) => (
+                           role !== ROLES.SUPERADMIN &&
                           <SelectItem key={role} value={role} className="capitalize">
                             {role}
                           </SelectItem>
@@ -143,33 +144,33 @@ export default function RegisterPage() {
                         Selecione os módulos que este usuário terá acesso.
                       </FormDescription>
                     </div>
-                    {Object.values(MODULES).map((item) => (
+                    {modules.map((item) => (
                       <FormField
-                        key={item}
+                        key={item.id}
                         control={form.control}
                         name="modules"
                         render={({ field }) => {
                           return (
                             <FormItem
-                              key={item}
+                              key={item.id}
                               className="flex flex-row items-start space-x-3 space-y-0"
                             >
                               <FormControl>
                                 <Checkbox
-                                  checked={field.value?.includes(item)}
+                                  checked={field.value?.includes(item.id)}
                                   onCheckedChange={(checked) => {
                                     return checked
-                                      ? field.onChange([...field.value, item])
+                                      ? field.onChange([...field.value, item.id])
                                       : field.onChange(
                                           field.value?.filter(
-                                            (value) => value !== item
+                                            (value) => value !== item.id
                                           )
                                         )
                                   }}
                                 />
                               </FormControl>
                               <FormLabel className="font-normal capitalize">
-                                {item}
+                                {item.name}
                               </FormLabel>
                             </FormItem>
                           )

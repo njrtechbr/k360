@@ -3,12 +3,12 @@
 
 import { useAuth } from "@/providers/AuthProvider";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type { User } from "@/lib/types";
+import type { User, Module } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ShieldAlert, ShieldCheck, ShieldHalf, UserIcon } from "lucide-react";
+import { ShieldAlert, ShieldCheck, ShieldHalf, UserIcon, Wrench } from "lucide-react";
 import { ROLES } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -29,7 +29,7 @@ const RoleIcon = ({ role }: { role: string }) => {
   };
 
 export default function DashboardPage() {
-  const { user, isAuthenticated, loading, getUsers } = useAuth();
+  const { user, isAuthenticated, loading, getUsers, modules } = useAuth();
   const router = useRouter();
   const [allUsers, setAllUsers] = useState<User[]>([]);
 
@@ -42,6 +42,13 @@ export default function DashboardPage() {
     }
   }, [isAuthenticated, loading, router, user, getUsers]);
 
+  const moduleMap = useMemo(() => {
+    return modules.reduce((acc, module) => {
+        acc[module.id] = module.name;
+        return acc;
+    }, {} as Record<string, string>);
+  }, [modules]);
+
   if (loading || !user) {
     return (
         <div className="flex items-center justify-center h-full">
@@ -51,6 +58,7 @@ export default function DashboardPage() {
   }
 
   const canManageUsers = user.role === ROLES.ADMIN || user.role === ROLES.SUPERADMIN;
+  const userModules = user.modules?.map(moduleId => moduleMap[moduleId]).filter(Boolean) || [];
 
   return (
     <div className="container mx-auto p-4 md:p-8">
@@ -69,52 +77,73 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           <p>Seus módulos de acesso:</p>
-            <div className="flex gap-2 mt-2">
-                {user.modules?.map(module => <Badge key={module} className="capitalize">{module}</Badge>)}
+            <div className="flex gap-2 mt-2 flex-wrap">
+                {userModules.length > 0 ? (
+                    userModules.map(moduleName => <Badge key={moduleName} className="capitalize">{moduleName}</Badge>)
+                ) : (
+                    <p className="text-sm text-muted-foreground">Nenhum módulo atribuído.</p>
+                )}
             </div>
         </CardContent>
       </Card>
       
       {canManageUsers && (
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Gerenciamento de Usuários</CardTitle>
-                <CardDescription>Visualize e gerencie os usuários do sistema.</CardDescription>
-              </div>
-              <Button asChild>
-                <Link href="/registrar">Adicionar Usuário</Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Nome</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Nível de Acesso</TableHead>
-                            <TableHead>Módulos</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {allUsers.map((u) => (
-                            <TableRow key={u.id}>
-                                <TableCell>{u.name}</TableCell>
-                                <TableCell>{u.email}</TableCell>
-                                <TableCell>
-                                    <Badge variant="secondary" className="capitalize">{u.role}</Badge>
-                                </TableCell>
-                                <TableCell className="flex gap-1 flex-wrap">
-                                    {u.modules?.map(m => (
-                                        <Badge key={m} variant="outline" className="capitalize">{m}</Badge>
-                                    ))}
-                                </TableCell>
+        <div className="grid md:grid-cols-2 gap-8">
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle>Gerenciamento de Usuários</CardTitle>
+                    <CardDescription>Visualize e adicione usuários.</CardDescription>
+                  </div>
+                  <Button asChild>
+                    <Link href="/registrar">Adicionar Usuário</Link>
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Nome</TableHead>
+                                <TableHead>Nível</TableHead>
+                                <TableHead>Módulos</TableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </CardContent>
-        </Card>
+                        </TableHeader>
+                        <TableBody>
+                            {allUsers.map((u) => (
+                                <TableRow key={u.id}>
+                                    <TableCell>{u.name}</TableCell>
+                                    <TableCell>
+                                        <Badge variant="secondary" className="capitalize">{u.role}</Badge>
+                                    </TableCell>
+                                    <TableCell className="flex gap-1 flex-wrap">
+                                        {u.modules?.map(mId => (
+                                            <Badge key={mId} variant="outline" className="capitalize">{moduleMap[mId] || mId}</Badge>
+                                        ))}
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+             <Card>
+                <CardHeader>
+                    <CardTitle>Gerenciamento de Módulos</CardTitle>
+                    <CardDescription>Adicione ou edite os módulos do sistema.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-sm text-muted-foreground mb-4">
+                        Os módulos definem as áreas do sistema que os usuários podem acessar.
+                    </p>
+                    <Button asChild>
+                        <Link href="/dashboard/modulos">
+                            <Wrench className="mr-2 h-4 w-4" />
+                            Gerenciar Módulos
+                        </Link>
+                    </Button>
+                </CardContent>
+            </Card>
+        </div>
       )}
        {(user.role === ROLES.SUPERVISOR) && (
         <Card>

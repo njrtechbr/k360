@@ -2,13 +2,15 @@
 "use client";
 
 import type { ReactNode } from "react";
-import React, from "react";
-import type { User, Role } from "@/lib/types";
+import React, { useCallback } from "react";
+import type { User, Module } from "@/lib/types";
+import { INITIAL_MODULES } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 
 const USERS_STORAGE_KEY = "controle_acesso_users";
 const SESSION_STORAGE_KEY = "controle_acesso_session";
+const MODULES_STORAGE_KEY = "controle_acesso_modules";
 
 interface AuthContextType {
   user: User | null;
@@ -20,12 +22,15 @@ interface AuthContextType {
   updateProfile: (userData: Partial<User>) => Promise<void>;
   getUsers: () => User[];
   hasSuperAdmin: () => boolean;
+  modules: Module[];
+  addModule: (moduleData: Omit<Module, "id">) => Promise<void>;
 }
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = React.useState<User | null>(null);
+  const [modules, setModules] = React.useState<Module[]>([]);
   const [loading, setLoading] = React.useState(true);
   const router = useRouter();
   const { toast } = useToast();
@@ -36,8 +41,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return usersJson ? JSON.parse(usersJson) : [];
   };
 
+  const getModulesFromStorage = useCallback((): Module[] => {
+    if (typeof window === "undefined") return [];
+    const modulesJson = localStorage.getItem(MODULES_STORAGE_KEY);
+    if (modulesJson) {
+      return JSON.parse(modulesJson);
+    }
+    // Initialize with default modules if none exist
+    localStorage.setItem(MODULES_STORAGE_KEY, JSON.stringify(INITIAL_MODULES));
+    return INITIAL_MODULES;
+  }, []);
+
   const saveUsersToStorage = (users: User[]) => {
     localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+  };
+
+  const saveModulesToStorage = (modules: Module[]) => {
+    localStorage.setItem(MODULES_STORAGE_KEY, JSON.stringify(modules));
+    setModules(modules);
   };
   
   const hasSuperAdmin = (): boolean => {
@@ -51,9 +72,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (sessionJson) {
         setUser(JSON.parse(sessionJson));
       }
+      setModules(getModulesFromStorage());
       setLoading(false);
     }
-  }, []);
+  }, [getModulesFromStorage]);
 
   const login = async (email: string, password: string): Promise<void> => {
     const users = getUsersFromStorage();
@@ -101,6 +123,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const newUser: User = {
       ...userData,
       id: new Date().toISOString(),
+      modules: userData.role === 'superadmin' ? modules.map(m => m.id) : userData.modules,
     };
 
     const newUsers = [...users, newUser];
@@ -159,6 +182,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return getUsersFromStorage();
   }
 
+  const addModule = async (moduleData: Omit<Module, 'id'>) => {
+    const currentModules = getModulesFromStorage();
+    if (currentModules.find(m => m.name.toLowerCase() === moduleData.name.toLowerCase())) {
+        toast({
+            variant: "destructive",
+            title: "Erro ao adicionar módulo",
+            description: "Um módulo com este nome já existe.",
+        });
+        throw new Error("Módulo já existe");
+    }
+
+    const newModule: Module = {
+        ...moduleData,
+        id: moduleData.name.toLowerCase().replace(/\s+/g, '-'),
+    }
+
+    const newModules = [...currentModules, newModule];
+    saveModulesToStorage(newModules);
+    toast({
+        title: "Módulo Adicionado!",
+        description: `O módulo "${newModule.name}" foi criado com sucesso.`
+    });
+  }
+
   const value = {
     user,
     isAuthenticated: user !== null,
@@ -168,7 +215,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     register,
     updateProfile,
     getUsers,
-    hasSuperAdmin
+    hasSuperAdmin,
+    modules,
+    addModule
   };
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;

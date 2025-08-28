@@ -4,7 +4,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { MODULES, ROLES } from "@/lib/types";
+import { ROLES } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -18,8 +18,6 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { useAuth } from "@/providers/AuthProvider";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ShieldAlert } from "lucide-react";
 
@@ -31,7 +29,6 @@ const formSchema = z.object({
 
 export default function CreateSuperAdminPage() {
   const { register, hasSuperAdmin } = useAuth();
-  const router = useRouter();
   const superAdminExists = hasSuperAdmin();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -45,7 +42,8 @@ export default function CreateSuperAdminPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      await register({ ...values, role: ROLES.SUPERADMIN, modules: Object.values(MODULES) });
+      // Superadmin gets all modules by default
+      await register({ ...values, role: ROLES.SUPERADMIN, modules: [] });
     } catch (error) {
       // Toast handled in auth provider
     }
