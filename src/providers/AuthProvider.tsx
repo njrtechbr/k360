@@ -58,9 +58,10 @@ const INITIAL_USERS: User[] = [
 ];
 
 const parseDate = (dateString: string | null) => {
-    if (!dateString || dateString.toLowerCase() === 'não informado') return new Date(0).toISOString();
+    if (!dateString || dateString.toLowerCase() === 'não informado' || dateString.split('/').length !== 3) {
+      return new Date(0).toISOString();
+    }
     const parts = dateString.split('/');
-    if (parts.length !== 3) return new Date(0).toISOString();
     // new Date(year, monthIndex, day)
     return new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10)).toISOString();
 };
@@ -72,7 +73,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Ana Flávia de Souza",
     email: "anaflaviadesouza@outlook.com",
     funcao: "Escrevente II",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "77998050854",
@@ -88,7 +89,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Ana Nery Conceição dos Santos",
     email: "ananeryconceicao030@gmail.com",
     funcao: "Auxiliar de cartório",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "77999795192",
@@ -104,7 +105,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Bruno Jhoel de Alencar Silva",
     email: "brunojhoel33@gmail.com",
     funcao: "Escrevente",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "77999859270",
@@ -120,7 +121,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Gabriele Batista de Sousa",
     email: "gabrielebatista2020@gmail.com",
     funcao: "Auxiliar de cartório",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "7799295003",
@@ -152,7 +153,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Anderson Lisboa Silveira",
     email: "andersonlisboako@gmail.com",
     funcao: "Escrevente I",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "77999586915",
@@ -184,7 +185,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Abrante Silva Miranda Marques",
     email: "abrantemarques22@gmail.com",
     funcao: "Tabelião Substituto",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "00000000000",
@@ -200,7 +201,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Alex Sandra Soares da Costa Silva",
     email: "leq_33@hotmail.com",
     funcao: "Escrevente",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "77998654398",
@@ -216,7 +217,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Allana Virginia Torres de Almeida",
     email: "allanavirginiatorresalmeida@gmail.com",
     funcao: "Escrevente Agile",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "77999172109",
@@ -232,7 +233,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Amanda Rosa de Miranda Rodrigues",
     email: "amandarosa122@gmail.com",
     funcao: "Escrevente I",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "77999442671",
@@ -248,7 +249,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Bruna Mendes da Silva",
     email: "brunam471@gmail.com",
     funcao: "Escrevente",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "77988174965",
@@ -264,7 +265,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Deyse Karine de Souza Mota Silva",
     email: "deysekmota98@gmail.com",
     funcao: "Auxiliar de cartório",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "77999321437",
@@ -280,7 +281,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Larissa Gabrielly Romeiro Rocha",
     email: "lgabriellyromeiro@gmail.com",
     funcao: "Escrevente II",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "77988546464",
@@ -296,7 +297,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Luana Bastos Tanan",
     email: "luanabastostanan@gmail.com",
     funcao: "Atendente",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "77998676333",
@@ -312,7 +313,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Luana Ferreira da Silva",
     email: "luafsilva2014@gmail.com",
     funcao: "Atendente",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "77991718636",
@@ -328,7 +329,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Lucas Carneiro da Silva",
     email: "lucastecseguro@outlook.com",
     funcao: "Atendente",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "77999545534",
@@ -344,7 +345,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Lucas Lima Santos",
     email: "lucaslimalsantos@gmail.com",
     funcao: "Atendente",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "61991766252",
@@ -360,7 +361,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Lucas de Oliveira Silva",
     email: "lucas.musiclem@gmail.com",
     funcao: "Atendente",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "77998358433",
@@ -376,7 +377,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Lucas Vinícius Muller Petrolli",
     email: "lucasviniciusmuller@gmail.com",
     funcao: "Atendente",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "77999793020",
@@ -392,7 +393,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Rita de Kassia de Sousa",
     email: "kassiasousa133@gmail.com",
     funcao: "Escrevente I",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "(99) 98803-4682",
@@ -408,7 +409,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Marielly Vitória Freire de Souza",
     email: "mariellyvitoria439@gmail.com",
     funcao: "Atendente",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "77999542543",
@@ -424,7 +425,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Nayla da Cruz Oliveira",
     email: "nyla.cruz@hotmail.com",
     funcao: "Atendente",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "77998401521",
@@ -440,7 +441,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Pedro Henrique Orrios Chaves",
     email: "pc875177@gmail.com",
     funcao: "Atendente",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "12991068804",
@@ -456,7 +457,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Rangell Nunes de Miranda",
     email: "rangellnunes1997@gmail.com",
     funcao: "Atendente",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "77998592843",
@@ -472,7 +473,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Rodrigo Santos de Barros",
     email: "rsbarros93@gmail.com",
     funcao: "Atendente",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "77998182951",
@@ -488,7 +489,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Vitória Alda de Arruda Bertoldo",
     email: "vitoriaarruda473@gmail.com",
     funcao: "Atendente",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "6782236860",
@@ -504,7 +505,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Claudiana da Silva Pereira",
     email: "klaudiana17silva@outlook.com",
     funcao: "Escrevente I",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "77999121632",
@@ -520,7 +521,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Paloma Vitoria Almeida Bech",
     email: "palomavitriaalmeida@gmail.com",
     funcao: "Assistente administrativo",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.INACTIVE,
     avatarUrl: "",
     telefone: "21965365167",
@@ -536,7 +537,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Pâmila Ferreira Nepomuceno",
     email: "pamilaferreiranepomuceno@gmail.com",
     funcao: "Assistente administrativo",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "77998733955",
@@ -552,7 +553,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Davi Gomes Prado Peixoto",
     email: "davigomesprado2002@gmail.com",
     funcao: "Escrevente",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "61981189820",
@@ -568,7 +569,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Ary Koerner Nogueira de Oliveira Neto",
     email: "imoveis_arykoerner@yahoo.com.br",
     funcao: "Tabelião Substituto",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "00000000000",
@@ -584,7 +585,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Evelyn Joanne Bezerra de Souza",
     email: "evelynsouzadireito03@gmail.com",
     funcao: "Escrevente II",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "77999177915",
@@ -600,7 +601,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Elen da Silva Nascimento",
     email: "elennilma619@gmail.com",
     funcao: "Escrevente I",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "77999810797",
@@ -616,7 +617,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
     name: "Décio Deivis Coelho de Souza",
     email: "decio.deivis1996@gmail.com",
     funcao: "Escrevente I",
-    setor: "Não informado",
+    setor: "",
     status: ATTENDANT_STATUS.ACTIVE,
     avatarUrl: "",
     telefone: "77998195875",
@@ -670,15 +671,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (typeof window === "undefined") return [];
     try {
       const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
-      if (usersJson && usersJson !== '[]') {
+      if (usersJson) {
           return JSON.parse(usersJson);
       }
-      // If no users, seed with initial data
       localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(INITIAL_USERS));
       return INITIAL_USERS;
     } catch (error) {
       console.error("Failed to parse users from localStorage", error);
-      return INITIAL_USERS; // Fallback to initial users
+      return INITIAL_USERS;
     }
   }, []);
 
@@ -689,7 +689,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (modulesJson) {
         return JSON.parse(modulesJson);
       }
-      // Initialize with default modules if none exist
       localStorage.setItem(MODULES_STORAGE_KEY, JSON.stringify(INITIAL_MODULES));
       return INITIAL_MODULES;
     } catch (error) {
@@ -702,10 +701,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (typeof window === "undefined") return [];
     try {
       const attendantsJson = localStorage.getItem(ATTENDANTS_STORAGE_KEY);
-      if (attendantsJson && attendantsJson !== '[]') {
+      if (attendantsJson) {
         return JSON.parse(attendantsJson);
       }
-      // Initialize with default attendants if none exist
       localStorage.setItem(ATTENDANTS_STORAGE_KEY, JSON.stringify(INITIAL_ATTENDANTS));
       return INITIAL_ATTENDANTS;
     } catch (error) {
