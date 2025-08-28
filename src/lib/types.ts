@@ -12,14 +12,15 @@ export interface Module {
   id: string;
   name: string;
   description: string;
+  active: boolean;
 }
 
 // The static MODULES object is no longer needed as it will be dynamic.
 export const INITIAL_MODULES: Module[] = [
-    { id: 'financeiro', name: 'Financeiro', description: 'Acesso a faturas e pagamentos.' },
-    { id: 'rh', name: 'Recursos Humanos', description: 'Gerenciamento de funcionários e folha de pagamento.' },
-    { id: 'estoque', name: 'Estoque', description: 'Controle de entrada e saída de produtos.' },
-    { id: 'vendas', name: 'Vendas', description: 'Acesso a relatórios e dashboards de vendas.' },
+    { id: 'financeiro', name: 'Financeiro', description: 'Acesso a faturas e pagamentos.', active: true },
+    { id: 'rh', name: 'Recursos Humanos', description: 'Gerenciamento de funcionários e folha de pagamento.', active: true },
+    { id: 'estoque', name: 'Estoque', description: 'Controle de entrada e saída de produtos.', active: true },
+    { id: 'vendas', name: 'Vendas', description: 'Acesso a relatórios e dashboards de vendas.', active: true },
 ];
 
 

@@ -23,7 +23,10 @@ interface AuthContextType {
   getUsers: () => User[];
   hasSuperAdmin: () => boolean;
   modules: Module[];
-  addModule: (moduleData: Omit<Module, "id">) => Promise<void>;
+  addModule: (moduleData: Omit<Module, "id" | "active">) => Promise<void>;
+  updateModule: (moduleId: string, moduleData: Partial<Omit<Module, "id" | "active">>) => Promise<void>;
+  toggleModuleStatus: (moduleId: string) => Promise<void>;
+  deleteModule: (moduleId: string) => Promise<void>;
 }
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
@@ -182,7 +185,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return getUsersFromStorage();
   }
 
-  const addModule = async (moduleData: Omit<Module, 'id'>) => {
+  const addModule = async (moduleData: Omit<Module, 'id' | 'active'>) => {
     const currentModules = getModulesFromStorage();
     if (currentModules.find(m => m.name.toLowerCase() === moduleData.name.toLowerCase())) {
         toast({
@@ -196,6 +199,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const newModule: Module = {
         ...moduleData,
         id: moduleData.name.toLowerCase().replace(/\s+/g, '-'),
+        active: true,
     }
 
     const newModules = [...currentModules, newModule];
@@ -203,6 +207,69 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     toast({
         title: "Módulo Adicionado!",
         description: `O módulo "${newModule.name}" foi criado com sucesso.`
+    });
+  }
+
+  const updateModule = async (moduleId: string, moduleData: Partial<Omit<Module, "id" | "active">>) => {
+    const currentModules = getModulesFromStorage();
+    
+    if (moduleData.name && currentModules.some(m => m.id !== moduleId && m.name.toLowerCase() === moduleData.name?.toLowerCase())) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao atualizar módulo",
+        description: "Um módulo com este nome já existe.",
+      });
+      throw new Error("Nome do módulo já existe");
+    }
+    
+    const newModules = currentModules.map(m => 
+        m.id === moduleId ? { ...m, ...moduleData } : m
+    );
+    saveModulesToStorage(newModules);
+    toast({
+        title: "Módulo Atualizado!",
+        description: `O módulo foi atualizado com sucesso.`
+    });
+  }
+
+  const toggleModuleStatus = async (moduleId: string) => {
+    const currentModules = getModulesFromStorage();
+    const newModules = currentModules.map(m => 
+        m.id === moduleId ? { ...m, active: !m.active } : m
+    );
+    saveModulesToStorage(newModules);
+    toast({
+        title: "Status do Módulo Alterado!",
+        description: "O status do módulo foi atualizado."
+    });
+  };
+
+  const deleteModule = async (moduleId: string) => {
+    const currentModules = getModulesFromStorage();
+    const newModules = currentModules.filter(m => m.id !== moduleId);
+    saveModulesToStorage(newModules);
+
+    // Remove module from all users
+    const users = getUsersFromStorage();
+    const updatedUsers = users.map(u => ({
+        ...u,
+        modules: u.modules.filter(mId => mId !== moduleId),
+    }));
+    saveUsersToStorage(updatedUsers);
+
+    // If the currently logged-in user was affected, update their session
+    if (user && user.modules.includes(moduleId)) {
+      const updatedUser = {
+        ...user,
+        modules: user.modules.filter(mId => mId !== moduleId),
+      };
+      setUser(updatedUser);
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(updatedUser));
+    }
+
+    toast({
+        title: "Módulo Removido!",
+        description: "O módulo foi removido do sistema e dos usuários."
     });
   }
 
@@ -217,7 +284,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     getUsers,
     hasSuperAdmin,
     modules,
-    addModule
+    addModule,
+    updateModule,
+    toggleModuleStatus,
+    deleteModule,
   };
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;

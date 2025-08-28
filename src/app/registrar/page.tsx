@@ -59,6 +59,8 @@ export default function RegisterPage() {
     }
   }
 
+  const activeModules = modules.filter(m => m.active);
+
   return (
     <div className="flex items-center justify-center py-12 px-4">
       <Card className="w-full max-w-md shadow-lg">
@@ -144,7 +146,7 @@ export default function RegisterPage() {
                         Selecione os módulos que este usuário terá acesso.
                       </FormDescription>
                     </div>
-                    {modules.map((item) => (
+                    {activeModules.map((item) => (
                       <FormField
                         key={item.id}
                         control={form.control}
