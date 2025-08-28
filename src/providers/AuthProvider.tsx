@@ -85,16 +85,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
   const { toast } = useToast();
 
-  const getUsersFromStorage = (): User[] => {
+  const getUsersFromStorage = useCallback((): User[] => {
     if (typeof window === "undefined") return [];
     const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
-    if (usersJson) {
+    if (usersJson && usersJson !== '[]') {
         return JSON.parse(usersJson);
     }
     // If no users, seed with initial data
     localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(INITIAL_USERS));
     return INITIAL_USERS;
-  };
+  }, []);
 
   const getModulesFromStorage = useCallback((): Module[] => {
     if (typeof window === "undefined") return [];
@@ -123,6 +123,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   React.useEffect(() => {
     if (typeof window !== "undefined") {
+      getUsersFromStorage(); // Seed users on initial load if necessary
       const sessionJson = localStorage.getItem(SESSION_STORAGE_KEY);
       if (sessionJson) {
         setUser(JSON.parse(sessionJson));
@@ -130,7 +131,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setModules(getModulesFromStorage());
       setLoading(false);
     }
-  }, [getModulesFromStorage]);
+  }, [getUsersFromStorage, getModulesFromStorage]);
 
   const login = async (email: string, password: string): Promise<void> => {
     const users = getUsersFromStorage();

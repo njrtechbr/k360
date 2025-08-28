@@ -55,10 +55,11 @@ export default function UsuariosPage() {
   useEffect(() => {
     if (!loading && (!isAuthenticated || (user?.role !== ROLES.ADMIN && user?.role !== ROLES.SUPERADMIN))) {
       router.push("/dashboard");
-    } else if (!loading && isAuthenticated) {
+    } else if (isAuthenticated) {
         setUsers(getUsers());
     }
-  }, [isAuthenticated, loading, router, user, getUsers]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, loading, router, user]);
 
   useEffect(() => {
     if (selectedUser) {
@@ -252,9 +253,9 @@ export default function UsuariosPage() {
                                             checked={field.value?.includes(item.id)}
                                             onCheckedChange={(checked) => {
                                                 return checked
-                                                ? field.onChange([...field.value, item.id])
+                                                ? field.onChange([...(field.value || []), item.id])
                                                 : field.onChange(
-                                                    field.value?.filter(
+                                                    (field.value || [])?.filter(
                                                         (value) => value !== item.id
                                                     )
                                                     )
@@ -307,3 +308,4 @@ export default function UsuariosPage() {
   );
 }
 
+    
