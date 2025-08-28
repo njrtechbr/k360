@@ -10,6 +10,8 @@ import type { User } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ShieldAlert, ShieldCheck, ShieldHalf, UserIcon } from "lucide-react";
 import { ROLES } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 const RoleIcon = ({ role }: { role: string }) => {
     switch (role) {
@@ -48,6 +50,8 @@ export default function DashboardPage() {
     );
   }
 
+  const canManageUsers = user.role === ROLES.ADMIN || user.role === ROLES.SUPERADMIN;
+
   return (
     <div className="container mx-auto p-4 md:p-8">
       <Card className="mb-8 shadow-lg">
@@ -64,15 +68,20 @@ export default function DashboardPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <p>Este é o seu painel de controle. Use os links de navegação no cabeçalho para gerenciar seu perfil ou sair.</p>
+          <p>Este é o seu painel de controle. Use os links de navegação para gerenciar seu perfil, usuários ou sair.</p>
         </CardContent>
       </Card>
       
-      {(user.role === ROLES.ADMIN || user.role === ROLES.SUPERADMIN) && (
+      {canManageUsers && (
         <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
                 <CardTitle>Gerenciamento de Usuários</CardTitle>
-                <CardDescription>Visualize todos os usuários registrados no sistema.</CardDescription>
+                <CardDescription>Visualize e gerencie os usuários do sistema.</CardDescription>
+              </div>
+              <Button asChild>
+                <Link href="/registrar">Adicionar Usuário</Link>
+              </Button>
             </CardHeader>
             <CardContent>
                 <Table>
