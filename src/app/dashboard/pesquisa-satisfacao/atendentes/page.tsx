@@ -80,18 +80,19 @@ export default function AtendentesPage() {
   }, [isAuthenticated, loading, router]);
 
   useEffect(() => {
-    if (selectedAttendant) {
+    if (selectedAttendant && isFormDialogOpen) {
       form.reset({
         ...selectedAttendant,
         dataAdmissao: new Date(selectedAttendant.dataAdmissao),
         dataNascimento: new Date(selectedAttendant.dataNascimento),
       });
-    } else {
-        form.reset({
-          name: "", email: "", funcao: "", setor: "", status: ATTENDANT_STATUS.ACTIVE,
-          avatarUrl: "", telefone: "", portaria: "", situacao: "", rg: "", cpf: "",
-          dataAdmissao: undefined, dataNascimento: undefined
-        });
+    } else if (!isFormDialogOpen) {
+      setSelectedAttendant(null);
+      form.reset({
+        name: "", email: "", funcao: "", setor: "", status: ATTENDANT_STATUS.ACTIVE,
+        avatarUrl: "", telefone: "", portaria: "", situacao: "", rg: "", cpf: "",
+        dataAdmissao: undefined, dataNascimento: undefined
+      });
     }
   }, [selectedAttendant, form, isFormDialogOpen]);
 
@@ -374,3 +375,6 @@ export default function AtendentesPage() {
     </div>
   );
 }
+
+
+    
