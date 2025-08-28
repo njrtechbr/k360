@@ -3,8 +3,8 @@
 
 import type { ReactNode } from "react";
 import React, { useCallback } from "react";
-import type { User, Module } from "@/lib/types";
-import { INITIAL_MODULES } from "@/lib/types";
+import type { User, Module, Role } from "@/lib/types";
+import { INITIAL_MODULES, ROLES } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 
@@ -21,10 +21,12 @@ interface AuthContextType {
   register: (userData: Omit<User, "id">) => Promise<void>;
   updateProfile: (userData: Partial<User>) => Promise<void>;
   getUsers: () => User[];
+  updateUser: (userId: string, userData: { name: string; role: Role; modules: string[] }) => Promise<void>;
+  deleteUser: (userId: string) => Promise<void>;
   hasSuperAdmin: () => boolean;
   modules: Module[];
   addModule: (moduleData: Omit<Module, "id" | "active">) => Promise<void>;
-  updateModule: (moduleId: string, moduleData: Partial<Omit<Module, "id" | "active" | "path">>) => Promise<void>;
+  updateModule: (moduleId: string, moduleData: Partial<Omit<Module, "id" | "active">>) => Promise<void>;
   toggleModuleStatus: (moduleId: string) => Promise<void>;
   deleteModule: (moduleId: string) => Promise<void>;
 }
@@ -132,15 +134,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const newUsers = [...users, newUser];
     saveUsersToStorage(newUsers);
     
-    // Auto-login after registration
-    setUser(newUser);
-    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(newUser));
+    // Auto-login after registration only if it's the first user (superadmin)
+    // Or if an admin is registering another user, don't switch sessions
+    if (!user) {
+        setUser(newUser);
+        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(newUser));
+        router.push("/dashboard");
+    } else {
+        router.push("/dashboard/usuarios");
+    }
+
 
     toast({
       title: "Registro bem-sucedido!",
-      description: `Bem-vindo, ${newUser.name}!`,
+      description: `O usuário ${newUser.name} foi criado.`,
     });
-    router.push("/dashboard");
   };
 
   const updateProfile = async (userData: Partial<User>): Promise<void> => {
@@ -155,14 +163,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     users = users.map(u => {
         if(u.id === user.id) {
             const updatedUser = { ...u, ...userData };
-            // If password is changed, don't store plain text in session for security.
             // In a real app, this would be handled differently.
-            if(userData.password) {
-              sessionUser = {...updatedUser};
-            } else {
-              sessionUser = {...updatedUser};
-              delete sessionUser.password;
-            }
+            sessionUser = {...updatedUser};
             return updatedUser;
         }
         return u;
@@ -180,6 +182,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description: "Suas informações foram salvas com sucesso."
     });
   };
+
+  const updateUser = async (userId: string, userData: { name: string; role: Role; modules: string[] }) => {
+    let users = getUsersFromStorage();
+    users = users.map(u => u.id === userId ? { ...u, ...userData } : u);
+    saveUsersToStorage(users);
+
+    // If the admin is editing their own account, update the session
+    if (user && user.id === userId) {
+      const updatedSessionUser = { ...user, ...userData };
+      setUser(updatedSessionUser);
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(updatedSessionUser));
+    }
+
+    toast({
+      title: "Usuário Atualizado!",
+      description: "Os dados do usuário foram atualizados com sucesso.",
+    });
+  };
+
+  const deleteUser = async (userId: string) => {
+    if(user?.id === userId) {
+      toast({
+        variant: "destructive",
+        title: "Ação não permitida",
+        description: "Você não pode excluir sua própria conta.",
+      });
+      throw new Error("Auto-exclusão não é permitida");
+    }
+    
+    let users = getUsersFromStorage();
+    users = users.filter(u => u.id !== userId);
+    saveUsersToStorage(users);
+
+    toast({
+      title: "Usuário Excluído!",
+      description: "O usuário foi removido do sistema.",
+    });
+  };
+
 
   const getUsers = (): User[] => {
     return getUsersFromStorage();
@@ -226,6 +267,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         m.id === moduleId ? { ...m, ...moduleData } : m
     );
     saveModulesToStorage(newModules);
+
+    // When a module's path is updated, we need to update it for users too if we store it there.
+    // Currently, we only store IDs, so this is not an issue.
+
     toast({
         title: "Módulo Atualizado!",
         description: `O módulo foi atualizado com sucesso.`
@@ -282,6 +327,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     register,
     updateProfile,
     getUsers,
+    updateUser,
+    deleteUser,
     hasSuperAdmin,
     modules,
     addModule,

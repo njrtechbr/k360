@@ -3,16 +3,13 @@
 
 import { useAuth } from "@/providers/AuthProvider";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type { User } from "@/lib/types";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ShieldAlert, ShieldCheck, ShieldHalf, UserIcon, Wrench, PlusCircle } from "lucide-react";
+import { ShieldAlert, ShieldCheck, ShieldHalf, UserIcon, Wrench, Users, PlusCircle } from "lucide-react";
 import { ROLES } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 const RoleIcon = ({ role }: { role: string }) => {
     switch (role) {
@@ -30,18 +27,14 @@ const RoleIcon = ({ role }: { role: string }) => {
 };
 
 export default function DashboardPage() {
-  const { user, isAuthenticated, loading, getUsers, modules } = useAuth();
+  const { user, isAuthenticated, loading, modules } = useAuth();
   const router = useRouter();
-  const [allUsers, setAllUsers] = useState<User[]>([]);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       router.push("/login");
     }
-    if(user && (user.role === ROLES.ADMIN || user.role === ROLES.SUPERADMIN)){
-        setAllUsers(getUsers());
-    }
-  }, [isAuthenticated, loading, router, user, getUsers]);
+  }, [isAuthenticated, loading, router]);
 
   const moduleMap = useMemo(() => {
     return modules.reduce((acc, module) => {
@@ -95,40 +88,20 @@ export default function DashboardPage() {
            <h2 className="text-2xl font-bold font-heading mb-4">Área Administrativa</h2>
             <div className="grid md:grid-cols-2 gap-8">
                 <Card>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardHeader>
                       <CardTitle>Gerenciamento de Usuários</CardTitle>
-                      <Button asChild size="sm">
-                        <Link href="/registrar"><PlusCircle className="mr-2"/>Adicionar Usuário</Link>
-                      </Button>
+                      <CardDescription>Adicione, edite ou remova usuários do sistema.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <CardDescription className="mb-4">Visualize e gerencie os usuários do sistema.</CardDescription>
-                         <ScrollArea className="h-72">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Nome</TableHead>
-                                        <TableHead>Nível</TableHead>
-                                        <TableHead>Módulos</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {allUsers.map((u) => (
-                                        <TableRow key={u.id}>
-                                            <TableCell className="font-medium">{u.name}</TableCell>
-                                            <TableCell>
-                                                <Badge variant="secondary" className="capitalize">{u.role}</Badge>
-                                            </TableCell>
-                                            <TableCell className="flex gap-1 flex-wrap">
-                                                {u.modules?.map(mId => (
-                                                    <Badge key={mId} variant="outline" className="capitalize">{moduleMap[mId] || 'inválido'}</Badge>
-                                                ))}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </ScrollArea>
+                        <p className="text-sm text-muted-foreground mb-4">
+                            Controle os níveis de acesso e as permissões de cada usuário.
+                        </p>
+                        <Button asChild>
+                            <Link href="/dashboard/usuarios">
+                                <Users className="mr-2 h-4 w-4" />
+                                Gerenciar Usuários
+                            </Link>
+                        </Button>
                     </CardContent>
                 </Card>
                  <Card>

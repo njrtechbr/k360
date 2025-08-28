@@ -5,7 +5,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, useSidebar } from "./ui/sidebar";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, Wrench, CircleUser, Settings, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Wrench, CircleUser, Settings, ShieldCheck, Users } from "lucide-react";
 import { ROLES } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +21,8 @@ export default function AppSidebar() {
     const userModules = user.role === ROLES.SUPERADMIN 
         ? modules 
         : modules.filter(m => user.modules.includes(m.id) && m.active);
+
+    const canManageSystem = user.role === ROLES.ADMIN || user.role === ROLES.SUPERADMIN;
 
     return (
         <Sidebar>
@@ -54,15 +56,25 @@ export default function AppSidebar() {
                         </SidebarMenuItem>
                     ))}
 
-                    {(user.role === ROLES.ADMIN || user.role === ROLES.SUPERADMIN) && (
-                        <SidebarMenuItem>
-                            <SidebarMenuButton asChild isActive={pathname === '/dashboard/modulos'} tooltip={{children: "Gerenciar Módulos"}}>
-                                <Link href="/dashboard/modulos">
-                                    <Wrench />
-                                    <span className={cn(state === 'collapsed' && "hidden")}>Módulos</span>
-                                </Link>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
+                    {canManageSystem && (
+                        <>
+                            <SidebarMenuItem>
+                                <SidebarMenuButton asChild isActive={pathname === '/dashboard/usuarios'} tooltip={{children: "Gerenciar Usuários"}}>
+                                    <Link href="/dashboard/usuarios">
+                                        <Users />
+                                        <span className={cn(state === 'collapsed' && "hidden")}>Usuários</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                                <SidebarMenuButton asChild isActive={pathname === '/dashboard/modulos'} tooltip={{children: "Gerenciar Módulos"}}>
+                                    <Link href="/dashboard/modulos">
+                                        <Wrench />
+                                        <span className={cn(state === 'collapsed' && "hidden")}>Módulos</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        </>
                     )}
                      <SidebarMenuItem>
                         <SidebarMenuButton asChild isActive={pathname === '/perfil'} tooltip={{children: "Perfil"}}>
