@@ -83,3 +83,11 @@ export interface Attendant {
   rg: string;
   cpf: string;
 }
+
+export interface Evaluation {
+  id: string;
+  attendantId: string;
+  nota: number;
+  comentario: string;
+  data: string; // Storing as ISO string for simplicity
+}

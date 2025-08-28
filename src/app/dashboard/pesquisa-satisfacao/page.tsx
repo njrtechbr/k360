@@ -53,9 +53,11 @@ export default function PesquisaSatisfacaoPage() {
                         <p className="text-sm text-muted-foreground mb-4">
                             Configure as perguntas, selecione os atendentes e defina o período da pesquisa.
                         </p>
-                        <Button disabled>
-                            <SmilePlus className="mr-2 h-4 w-4" />
-                            Criar Nova Pesquisa (em breve)
+                         <Button asChild>
+                            <Link href="/dashboard/pesquisa-satisfacao/nova">
+                                <SmilePlus className="mr-2 h-4 w-4" />
+                                Nova Pesquisa
+                            </Link>
                         </Button>
                     </CardContent>
                 </Card>
