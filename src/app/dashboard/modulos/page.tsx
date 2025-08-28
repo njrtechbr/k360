@@ -124,23 +124,46 @@ export default function ModulosPage() {
         <div className="grid md:grid-cols-3 gap-8 items-start">
             <Card className="md:col-span-1 shadow-lg">
                 <CardHeader>
-                <CardTitle>Adicionar Novo Módulo</CardTitle>
-                <CardDescription>Crie um novo módulo para o sistema.</CardDescription>
+                    <CardTitle>Adicionar Novo Módulo</CardTitle>
+                    <CardDescription>Crie um novo módulo para o sistema.</CardDescription>
                 </CardHeader>
-                <Form {...form}>
-                <form onSubmit={form.handleSubmit(onAddSubmit)}>
-                    <CardContent className="space-y-6">
-                    <FormField control={form.control} name="name" render={({ field }) => ( <FormItem> <FormLabel>Nome do Módulo</FormLabel> <FormControl> <Input placeholder="Ex: Contabilidade" {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
-                     <FormField control={form.control} name="description" render={({ field }) => ( <FormItem> <FormLabel>Descrição</FormLabel> <FormControl> <Textarea placeholder="Descreva o que este módulo faz." {...field} /> </FormControl> <FormMessage /> </FormItem> )}/>
-                    </CardContent>
-                    <CardFooter>
-                    <Button type="submit" disabled={form.formState.isSubmitting}>
-                        {form.formState.isSubmitting ? 'Adicionando...' : 'Adicionar Módulo'}
-                    </Button>
-                    </CardFooter>
-                </form>
-                </Form>
+                <CardContent>
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onAddSubmit)} className="space-y-6">
+                            <FormField 
+                                control={form.control} 
+                                name="name" 
+                                render={({ field }) => ( 
+                                    <FormItem> 
+                                        <FormLabel>Nome do Módulo</FormLabel> 
+                                        <FormControl> 
+                                            <Input placeholder="Ex: Contabilidade" {...field} /> 
+                                        </FormControl> 
+                                        <FormMessage /> 
+                                    </FormItem> 
+                                )}
+                            />
+                            <FormField 
+                                control={form.control} 
+                                name="description" 
+                                render={({ field }) => ( 
+                                    <FormItem> 
+                                        <FormLabel>Descrição</FormLabel> 
+                                        <FormControl> 
+                                            <Textarea placeholder="Descreva o que este módulo faz." {...field} /> 
+                                        </FormControl> 
+                                        <FormMessage /> 
+                                    </FormItem> 
+                                )}
+                            />
+                            <Button type="submit" disabled={form.formState.isSubmitting}>
+                                {form.formState.isSubmitting ? 'Adicionando...' : 'Adicionar Módulo'}
+                            </Button>
+                        </form>
+                    </Form>
+                </CardContent>
             </Card>
+
 
             <Card className="md:col-span-2 shadow-lg">
                 <CardHeader>
@@ -200,12 +223,12 @@ export default function ModulosPage() {
         {/* Edit Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
             <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Editar Módulo</DialogTitle>
+                    <DialogDescription>Altere as informações do módulo.</DialogDescription>
+                </DialogHeader>
                 <Form {...editForm}>
                     <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
-                        <DialogHeader>
-                            <DialogTitle>Editar Módulo</DialogTitle>
-                            <DialogDescription>Altere as informações do módulo.</DialogDescription>
-                        </DialogHeader>
                         <FormField
                             control={editForm.control}
                             name="name"
