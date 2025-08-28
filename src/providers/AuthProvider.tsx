@@ -14,48 +14,7 @@ const MODULES_STORAGE_KEY = "controle_acesso_modules";
 const ATTENDANTS_STORAGE_KEY = "controle_acesso_attendants";
 
 // Dummy users for initial seeding
-const INITIAL_USERS: User[] = [
-    {
-      id: 'superadmin-01',
-      name: 'Nereu Super Admin',
-      email: 'super@email.com',
-      password: 'password',
-      role: ROLES.SUPERADMIN,
-      modules: ['financeiro', 'rh', 'estoque', 'vendas', 'pesquisa-satisfacao'],
-    },
-    {
-      id: 'admin-01',
-      name: 'Ana Admin',
-      email: 'admin@email.com',
-      password: 'password',
-      role: ROLES.ADMIN,
-      modules: ['financeiro', 'rh', 'estoque', 'vendas', 'pesquisa-satisfacao'],
-    },
-    {
-      id: 'supervisor-01',
-      name: 'Carlos Supervisor',
-      email: 'supervisor@email.com',
-      password: 'password',
-      role: ROLES.SUPERVISOR,
-      modules: ['vendas', 'estoque'],
-    },
-    {
-      id: 'user-01',
-      name: 'Beatriz Usuário',
-      email: 'usuario@email.com',
-      password: 'password',
-      role: ROLES.USER,
-      modules: ['vendas'],
-    },
-     {
-      id: 'user-02',
-      name: 'Daniel Usuário',
-      email: 'daniel@email.com',
-      password: 'password',
-      role: ROLES.USER,
-      modules: ['financeiro'],
-    }
-];
+const INITIAL_USERS: User[] = [];
 
 const parseDate = (dateString: string | null) => {
     if (!dateString || dateString.toLowerCase() === 'não informado' || dateString.split('/').length !== 3) {
@@ -701,13 +660,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (typeof window === "undefined") return [];
     try {
       const attendantsJson = localStorage.getItem(ATTENDANTS_STORAGE_KEY);
-      if (attendantsJson) {
+      if (attendantsJson && attendantsJson !== '[]') {
         return JSON.parse(attendantsJson);
       }
       localStorage.setItem(ATTENDANTS_STORAGE_KEY, JSON.stringify(INITIAL_ATTENDANTS));
       return INITIAL_ATTENDANTS;
     } catch (error) {
       console.error("Failed to parse attendants from localStorage", error);
+      localStorage.setItem(ATTENDANTS_STORAGE_KEY, JSON.stringify(INITIAL_ATTENDANTS));
       return INITIAL_ATTENDANTS;
     }
   }, []);
@@ -797,7 +757,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const newUser: User = {
       ...userData,
       id: new Date().toISOString(),
-      modules: userData.role === 'superadmin' ? modules.map(m => m.id) : userData.modules,
+      modules: userData.role === 'superadmin' ? getModulesFromStorage().map(m => m.id) : userData.modules,
     };
 
     const newUsers = [...currentUsers, newUser];
