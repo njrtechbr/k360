@@ -129,54 +129,56 @@ export default function ModulosPage() {
                     <CardTitle>Adicionar Novo Módulo</CardTitle>
                     <CardDescription>Crie um novo módulo para o sistema.</CardDescription>
                 </CardHeader>
-                <CardContent>
-                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onAddSubmit)} className="space-y-6">
-                        <FormField 
-                            control={form.control} 
-                            name="name" 
-                            render={({ field }) => ( 
-                                <FormItem> 
-                                    <FormLabel>Nome do Módulo</FormLabel> 
-                                    <FormControl> 
-                                        <Input placeholder="Ex: Contabilidade" {...field} /> 
-                                    </FormControl> 
-                                    <FormMessage /> 
-                                </FormItem> 
-                            )}
-                        />
-                         <FormField 
-                            control={form.control} 
-                            name="path" 
-                            render={({ field }) => ( 
-                                <FormItem> 
-                                    <FormLabel>Caminho do Módulo</FormLabel> 
-                                    <FormControl> 
-                                        <Input placeholder="/dashboard/contabilidade" {...field} /> 
-                                    </FormControl> 
-                                    <FormMessage /> 
-                                </FormItem> 
-                            )}
-                        />
-                        <FormField 
-                            control={form.control} 
-                            name="description" 
-                            render={({ field }) => ( 
-                                <FormItem> 
-                                    <FormLabel>Descrição</FormLabel> 
-                                    <FormControl> 
-                                        <Textarea placeholder="Descreva o que este módulo faz." {...field} /> 
-                                    </FormControl> 
-                                    <FormMessage /> 
-                                </FormItem> 
-                            )}
-                        />
-                         <Button type="submit" disabled={form.formState.isSubmitting} className="w-full">
-                            {form.formState.isSubmitting ? 'Adicionando...' : 'Adicionar Módulo'}
-                        </Button>
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onAddSubmit)}>
+                        <CardContent className="space-y-6">
+                            <FormField 
+                                control={form.control} 
+                                name="name" 
+                                render={({ field }) => ( 
+                                    <FormItem> 
+                                        <FormLabel>Nome do Módulo</FormLabel> 
+                                        <FormControl> 
+                                            <Input placeholder="Ex: Contabilidade" {...field} /> 
+                                        </FormControl> 
+                                        <FormMessage /> 
+                                    </FormItem> 
+                                )}
+                            />
+                            <FormField 
+                                control={form.control} 
+                                name="path" 
+                                render={({ field }) => ( 
+                                    <FormItem> 
+                                        <FormLabel>Caminho do Módulo</FormLabel> 
+                                        <FormControl> 
+                                            <Input placeholder="/dashboard/contabilidade" {...field} /> 
+                                        </FormControl> 
+                                        <FormMessage /> 
+                                    </FormItem> 
+                                )}
+                            />
+                            <FormField 
+                                control={form.control} 
+                                name="description" 
+                                render={({ field }) => ( 
+                                    <FormItem> 
+                                        <FormLabel>Descrição</FormLabel> 
+                                        <FormControl> 
+                                            <Textarea placeholder="Descreva o que este módulo faz." {...field} /> 
+                                        </FormControl> 
+                                        <FormMessage /> 
+                                    </FormItem> 
+                                )}
+                            />
+                        </CardContent>
+                        <CardFooter>
+                            <Button type="submit" disabled={form.formState.isSubmitting} className="w-full">
+                                {form.formState.isSubmitting ? 'Adicionando...' : 'Adicionar Módulo'}
+                            </Button>
+                        </CardFooter>
                     </form>
                 </Form>
-                </CardContent>
             </Card>
 
 
@@ -244,14 +246,14 @@ export default function ModulosPage() {
                 </DialogHeader>
                 <Form {...editForm}>
                     <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
-                        <FormField
+                         <FormField
                             control={editForm.control}
                             name="name"
                             render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Nome do Módulo</FormLabel>
                                 <FormControl>
-                                <Input {...field} />
+                                    <Input {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -264,7 +266,7 @@ export default function ModulosPage() {
                             <FormItem>
                                 <FormLabel>Caminho do Módulo</FormLabel>
                                 <FormControl>
-                                <Input {...field} />
+                                    <Input {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -277,7 +279,7 @@ export default function ModulosPage() {
                             <FormItem>
                                 <FormLabel>Descrição</FormLabel>
                                 <FormControl>
-                                <Textarea {...field} />
+                                    <Textarea {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
