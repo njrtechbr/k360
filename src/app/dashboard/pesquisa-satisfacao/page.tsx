@@ -1,10 +1,11 @@
 
+
 "use client";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/providers/AuthProvider";
-import { Users, LayoutDashboard, ListChecks, Trophy } from "lucide-react";
+import { Users, LayoutDashboard, ListChecks, Trophy, Star } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -80,7 +81,7 @@ export default function PesquisaSatisfacaoPage() {
                 </Card>
                 <Card>
                     <CardHeader>
-                        <CardTitle>Gamificação e Ranking</CardTitle>
+                        <CardTitle>Ranking</CardTitle>
                         <CardDescription>Acompanhe a pontuação e a classificação dos atendentes.</CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -88,9 +89,26 @@ export default function PesquisaSatisfacaoPage() {
                             Incentive a equipe com um sistema de pontos baseado nas avaliações.
                         </p>
                         <Button asChild>
-                            <Link href="/dashboard/pesquisa-satisfacao/gamificacao">
+                            <Link href="/dashboard/pesquisa-satisfacao/ranking">
                                 <Trophy className="mr-2 h-4 w-4" />
                                 Ver Ranking
+                            </Link>
+                        </Button>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Conquistas</CardTitle>
+                        <CardDescription>Veja os objetivos e marcos alcançados pelos atendentes.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground mb-4">
+                           Acompanhe o progresso da equipe em direção às metas estabelecidas.
+                        </p>
+                        <Button asChild>
+                            <Link href="/dashboard/pesquisa-satisfacao/conquistas">
+                                <Star className="mr-2 h-4 w-4" />
+                                Ver Conquistas
                             </Link>
                         </Button>
                     </CardContent>
