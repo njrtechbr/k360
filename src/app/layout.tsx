@@ -5,6 +5,8 @@ import { AuthProvider } from '@/providers/AuthProvider';
 import { Toaster } from '@/components/ui/toaster';
 import SiteHeader from '@/components/SiteHeader';
 import { cn } from '@/lib/utils';
+import { SidebarProvider } from '@/components/ui/sidebar';
+import AppSidebar from '@/components/AppSidebar';
 
 export const metadata: Metadata = {
   title: 'Controle de Acesso',
@@ -17,7 +19,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -26,11 +28,16 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className={cn('font-body antialiased min-h-screen flex flex-col')}>
+      <body className={cn('font-body antialiased')}>
         <AuthProvider>
-          <SiteHeader />
-          <main className="flex-grow">{children}</main>
-          <Toaster />
+          <SidebarProvider>
+            <AppSidebar />
+            <div className="flex flex-col flex-1 md:ml-[var(--sidebar-width-icon)] group-data-[collapsible=offcanvas]:ml-0">
+               <SiteHeader />
+               <main className="flex-grow">{children}</main>
+            </div>
+            <Toaster />
+          </SidebarProvider>
         </AuthProvider>
       </body>
     </html>
