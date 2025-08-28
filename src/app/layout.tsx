@@ -8,18 +8,23 @@ import { cn } from '@/lib/utils';
 import { SidebarProvider, useSidebar } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/AppSidebar';
 
+// Metadata needs to be exported from a server component, so we can't have it in the RootLayout directly if AppLayout is a client component inside it.
+// We can export it separately. The `metadata` object is still valid here, but we will move it outside the main component export logic for clarity
+// and to ensure Next.js picks it up correctly even with "use client" at the top of the file for AppLayout.
+
 export const metadata: Metadata = {
   title: 'Controle de Acesso',
   description: 'Sistema de Controle de Acesso de Usuários',
 };
 
 function AppLayout({ children }: { children: React.ReactNode }) {
+    "use client";
     const { state } = useSidebar();
     
     return (
         <div className="flex min-h-screen w-full flex-col bg-muted/40">
             <AppSidebar />
-            <div className={cn("flex flex-col sm:h-auto sm:border-0 sm:bg-transparent", state === 'expanded' ? 'sm:pl-72' : 'sm:pl-14', 'transition-[margin-left] duration-300 ease-in-out')}>
+            <div className={cn("flex flex-col sm:h-auto sm:border-0 sm:bg-transparent", state === 'expanded' ? 'sm:pl-72' : 'sm:pl-14', 'transition-all duration-300 ease-in-out')}>
                 <SiteHeader />
                 <main className="flex-1 p-4 md:p-8 pt-6">
                     {children}
