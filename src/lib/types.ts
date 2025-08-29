@@ -1,4 +1,5 @@
 
+
 export const ROLES = {
   SUPERADMIN: 'superadmin',
   ADMIN: 'admin',
@@ -91,3 +92,13 @@ export interface Evaluation {
   comentario: string;
   data: string; // Storing as ISO string for simplicity
 }
+
+export type Achievement = {
+  id: string;
+  title: string;
+  description: string;
+  icon: React.ElementType;
+  color: string;
+  isUnlocked: (attendant: Attendant, evaluations: Evaluation[], allEvaluations?: Evaluation[], allAttendants?: Attendant[]) => boolean;
+  getProgress?: (attendant: Attendant, evaluations: Evaluation[], allEvaluations?: Evaluation[], allAttendants?: Attendant[]) => { current: number, target: number, text: string };
+};

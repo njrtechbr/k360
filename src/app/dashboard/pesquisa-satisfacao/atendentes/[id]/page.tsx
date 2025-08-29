@@ -13,8 +13,9 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ArrowLeft, BarChart3, Calendar, FileText, Hash, Mail, Phone, Star, UserCircle, UserCog, Award, BadgeCent, TrendingUp, Crown, Sparkles, Target, Trophy, BarChart, Gem, Medal, Zap, Rocket, StarHalf, Users, Smile, HeartHandshake, StarOff } from "lucide-react";
 import Link from "next/link";
-import type { Attendant, Evaluation } from "@/lib/types";
+import type { Attendant, Evaluation, Achievement } from "@/lib/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Progress } from "@/components/ui/progress";
 
 const getScoreFromRating = (rating: number): number => {
     switch (rating) {
@@ -35,6 +36,7 @@ const achievements: Achievement[] = [
     icon: Sparkles,
     color: "text-orange-500",
     isUnlocked: (attendant, evaluations) => evaluations.length >= 1,
+    getProgress: (attendant, evaluations) => ({ current: evaluations.length, target: 1, text: `${evaluations.length}/1 avaliação` }),
   },
   {
     id: "ganhando-ritmo",
@@ -43,6 +45,7 @@ const achievements: Achievement[] = [
     icon: Target,
     color: "text-cyan-500",
     isUnlocked: (attendant, evaluations) => evaluations.length >= 10,
+    getProgress: (attendant, evaluations) => ({ current: evaluations.length, target: 10, text: `${evaluations.length}/10 avaliações` }),
   },
   {
     id: "veterano",
@@ -51,6 +54,7 @@ const achievements: Achievement[] = [
     icon: BadgeCent,
     color: "text-gray-500",
     isUnlocked: (attendant, evaluations) => evaluations.length >= 50,
+     getProgress: (attendant, evaluations) => ({ current: evaluations.length, target: 50, text: `${evaluations.length}/50 avaliações` }),
   },
   {
     id: "centuriao",
@@ -59,6 +63,7 @@ const achievements: Achievement[] = [
     icon: Trophy,
     color: "text-yellow-500",
     isUnlocked: (attendant, evaluations) => evaluations.length >= 100,
+    getProgress: (attendant, evaluations) => ({ current: evaluations.length, target: 100, text: `${evaluations.length}/100 avaliações` }),
   },
     {
     id: "imparavel",
@@ -67,6 +72,7 @@ const achievements: Achievement[] = [
     icon: Zap,
     color: "text-blue-500",
     isUnlocked: (attendant, evaluations) => evaluations.length >= 250,
+    getProgress: (attendant, evaluations) => ({ current: evaluations.length, target: 250, text: `${evaluations.length}/250 avaliações` }),
   },
   {
     id: "lenda",
@@ -75,6 +81,7 @@ const achievements: Achievement[] = [
     icon: Rocket,
     color: "text-red-500",
     isUnlocked: (attendant, evaluations) => evaluations.length >= 500,
+    getProgress: (attendant, evaluations) => ({ current: evaluations.length, target: 500, text: `${evaluations.length}/500 avaliações` }),
   },
   {
     id: "perfeicao",
@@ -87,6 +94,10 @@ const achievements: Achievement[] = [
       const avg = evaluations.reduce((sum, ev) => sum + ev.nota, 0) / evaluations.length;
       return avg === 5;
     },
+    getProgress: (attendant, evaluations) => {
+        const avg = evaluations.length > 0 ? evaluations.reduce((sum, ev) => sum + ev.nota, 0) / evaluations.length : 0;
+        return { current: evaluations.length, target: 10, text: `Média atual: ${avg.toFixed(2)}` }
+    }
   },
   {
     id: "excelencia",
@@ -99,6 +110,10 @@ const achievements: Achievement[] = [
       const avg = evaluations.reduce((sum, ev) => sum + ev.nota, 0) / evaluations.length;
       return avg > 4.5;
     },
+    getProgress: (attendant, evaluations) => {
+        const avg = evaluations.length > 0 ? evaluations.reduce((sum, ev) => sum + ev.nota, 0) / evaluations.length : 0;
+        return { current: avg, target: 4.5, text: `Média atual: ${avg.toFixed(2)}` }
+    }
   },
   {
     id: "satisfacao-garantida",
@@ -111,6 +126,11 @@ const achievements: Achievement[] = [
       const positiveCount = evaluations.filter(ev => ev.nota >= 4).length;
       return (positiveCount / evaluations.length) * 100 >= 90;
     },
+    getProgress: (attendant, evaluations) => {
+        const positiveCount = evaluations.filter(ev => ev.nota >= 4).length;
+        const percentage = evaluations.length > 0 ? (positiveCount / evaluations.length) * 100 : 0;
+        return { current: percentage, target: 90, text: `Positivas: ${percentage.toFixed(0)}%` }
+    }
   },
     {
     id: 'trinca-perfeita',
@@ -141,6 +161,7 @@ const achievements: Achievement[] = [
     isUnlocked: (attendant, evaluations) => {
       return evaluations.filter(ev => ev.nota === 5).length >= 10;
     },
+    getProgress: (attendant, evaluations) => ({ current: evaluations.filter(e=> e.nota === 5).length, target: 10, text: `${evaluations.filter(e=> e.nota === 5).length}/10 avaliações 5 estrelas` }),
   },
   {
     id: 'mestre-qualidade',
@@ -151,6 +172,7 @@ const achievements: Achievement[] = [
     isUnlocked: (attendant, evaluations) => {
       return evaluations.filter(ev => ev.nota === 5).length >= 50;
     },
+    getProgress: (attendant, evaluations) => ({ current: evaluations.filter(e=> e.nota === 5).length, target: 50, text: `${evaluations.filter(e=> e.nota === 5).length}/50 avaliações 5 estrelas` }),
   },
   {
     id: "favorito-da-galera",
@@ -160,6 +182,7 @@ const achievements: Achievement[] = [
     color: "text-pink-500",
     isUnlocked: (attendant, evaluations, allEvaluations) => {
       if (evaluations.length === 0) return false;
+      if (!allEvaluations) return false;
       const evaluationCounts = allEvaluations.reduce((acc, ev) => {
         acc[ev.attendantId] = (acc[ev.attendantId] || 0) + 1;
         return acc;
@@ -177,7 +200,7 @@ const achievements: Achievement[] = [
     icon: StarHalf,
     color: 'text-teal-500',
     isUnlocked: (attendant, evaluations, allEvaluations, allAttendants) => {
-      if (evaluations.length < 20) return false;
+      if (evaluations.length < 20 || !allEvaluations || !allAttendants) return false;
 
       const attendantStats = allAttendants.map(att => {
         const attEvals = allEvaluations.filter(e => e.attendantId === att.id);
@@ -234,15 +257,6 @@ const achievements: Achievement[] = [
   },
 ];
 
-
-type Achievement = {
-  id: string;
-  title: string;
-  description: string;
-  icon: React.ElementType;
-  color: string;
-  isUnlocked: (attendant: Attendant, evaluations: Evaluation[], allEvaluations?: Evaluation[], allAttendants?: Attendant[]) => boolean;
-};
 
 const RatingStars = ({ rating, className }: { rating: number, className?: string }) => {
     const totalStars = 5;
@@ -436,6 +450,9 @@ export default function AttendantProfilePage() {
                                 <div className="flex flex-wrap gap-4">
                                 {achievements.map(ach => {
                                     const isUnlocked = gamificationStats.unlockedAchievements.some(unlocked => unlocked.id === ach.id);
+                                    const progress = !isUnlocked && ach.getProgress ? ach.getProgress(attendant, attendantEvaluations, evaluations, attendants) : null;
+                                    const progressPercentage = progress ? (progress.current / progress.target) * 100 : 0;
+
                                     return (
                                         <Tooltip key={ach.id}>
                                             <TooltipTrigger>
@@ -443,12 +460,20 @@ export default function AttendantProfilePage() {
                                                      <ach.icon className="h-6 w-6" />
                                                 </div>
                                             </TooltipTrigger>
-                                            <TooltipContent>
+                                            <TooltipContent className="max-w-xs">
                                                 <p className="font-bold">{ach.title}</p>
                                                 <p className="text-sm text-muted-foreground">{ach.description}</p>
                                                 {isUnlocked ? 
                                                     <p className="text-xs text-green-500 font-bold mt-1">Desbloqueado!</p> : 
-                                                    <p className="text-xs text-red-500 font-bold mt-1">Bloqueado</p>
+                                                    <div className="mt-2">
+                                                        <p className="text-xs text-red-500 font-bold">Bloqueado</p>
+                                                        {progress && (
+                                                            <div className="mt-1 space-y-1">
+                                                                <p className="text-xs text-muted-foreground">Progresso: {progress.text}</p>
+                                                                <Progress value={progressPercentage} className="h-1.5" />
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 }
                                             </TooltipContent>
                                         </Tooltip>
@@ -500,4 +525,5 @@ export default function AttendantProfilePage() {
         </div>
     );
 }
+
 
