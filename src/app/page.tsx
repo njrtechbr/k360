@@ -9,10 +9,10 @@ export default function Home() {
     <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] bg-background">
       <div className="container mx-auto px-4 py-16 text-center">
         <h1 className="text-4xl md:text-6xl font-bold font-heading bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60 pb-4">
-          Controle de Acesso Inteligente
+          Koerner 360
         </h1>
         <p className="mt-4 text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
-          Uma plataforma robusta e moderna para gerenciar usuários, permissões e módulos com total segurança e eficiência.
+          Uma plataforma robusta e moderna para gerenciar equipes, permissões, módulos e avaliações com total segurança e eficiência.
         </p>
         <div className="mt-10 flex flex-col sm:flex-row justify-center items-center gap-4">
           <Button asChild size="lg" className="font-bold text-lg w-full sm:w-auto">

@@ -49,7 +49,7 @@ export default function SurveyPage() {
         
         // Reset title on component unmount
         return () => {
-            document.title = 'Controle de Acesso';
+            document.title = 'Koerner 360';
         };
     }, [attendant, attendantId]);
 

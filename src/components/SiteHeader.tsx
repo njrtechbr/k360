@@ -26,7 +26,7 @@ export default function SiteHeader() {
       <div className="flex items-center gap-2 md:ml-auto">
           <Link href="/" className="flex items-center gap-2 font-bold text-lg text-primary">
               <ShieldCheck className="h-6 w-6" />
-              <span className="hidden sm:inline">Controle de Acesso</span>
+              <span className="hidden sm:inline">Koerner 360</span>
           </Link>
       </div>
       <div className="ml-auto flex items-center gap-2">

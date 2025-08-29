@@ -1,3 +1,4 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
 import { AuthProvider } from '@/providers/AuthProvider';
@@ -8,8 +9,8 @@ import AppLayout from '@/components/AppLayout';
 
 
 export const metadata: Metadata = {
-  title: 'Controle de Acesso',
-  description: 'Sistema de Controle de Acesso de Usuários',
+  title: 'Koerner 360',
+  description: 'Sistema de Gestão e Avaliação Koerner 360',
 };
 
 export default function RootLayout({
