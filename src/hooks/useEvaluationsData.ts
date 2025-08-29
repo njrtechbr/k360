@@ -161,7 +161,8 @@ export function useEvaluationsData() {
                         summary: result.summary,
                         analyzedAt: new Date().toISOString(),
                     });
-                    await sleep(2000); 
+                    // Increased sleep time to avoid rate limiting
+                    await sleep(5000); 
                 } catch (error) {
                     console.error(`Falha ao analisar a avaliação ${ev.id}:`, error);
                     // Skip this evaluation and continue with others
