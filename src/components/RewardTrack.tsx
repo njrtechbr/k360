@@ -22,7 +22,7 @@ const RewardTrack: React.FC<RewardTrackProps> = ({ currentXp = 0, showAttendantP
 
     const unlockedAchievements = showAttendantProgress ? achievements.filter(ach => ach.level <= level) : [];
 
-    const levelMilestones = [1, ...achievements.map(ach => ach.level).filter((v, i, a) => a.indexOf(v) === i)].sort((a,b) => a - b);
+    const levelMilestones = [...new Set([1, ...achievements.map(ach => ach.level)])].sort((a, b) => a - b);
 
 
     return (
