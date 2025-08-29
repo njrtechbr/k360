@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useSidebar } from '@/components/ui/sidebar';
@@ -5,9 +6,17 @@ import AppSidebar from '@/components/AppSidebar';
 import SiteHeader from '@/components/SiteHeader';
 import { cn } from '@/lib/utils';
 import type { ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
     const { state } = useSidebar();
+    const pathname = usePathname();
+
+    const isSurveyPage = pathname === '/survey';
+
+    if (isSurveyPage) {
+        return <>{children}</>;
+    }
     
     return (
         <div className="flex min-h-screen w-full flex-col bg-muted/40">
