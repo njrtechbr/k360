@@ -4,7 +4,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/providers/AuthProvider";
-import { Users, LayoutDashboard, ListChecks, Trophy, Star, Sparkles } from "lucide-react";
+import { Users, LayoutDashboard, ListChecks, Trophy, Star, Sparkles, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -80,7 +80,7 @@ export default function PesquisaSatisfacaoPage() {
                 </Card>
                 <Card>
                     <CardHeader>
-                        <CardTitle>Ranking e Conquistas</CardTitle>
+                        <CardTitle>Ranking e Gamificação</CardTitle>
                         <CardDescription>Acompanhe a pontuação, o ranking e as conquistas dos atendentes.</CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -112,7 +112,26 @@ export default function PesquisaSatisfacaoPage() {
                         </Button>
                     </CardContent>
                 </Card>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Manual da Gamificação</CardTitle>
+                        <CardDescription>Entenda todas as regras e como funciona o sistema de progressão.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground mb-4">
+                           Acesse o guia completo sobre a gamificação.
+                        </p>
+                        <Button asChild>
+                            <Link href="/dashboard/pesquisa-satisfacao/manual">
+                                <BookOpen className="mr-2 h-4 w-4" />
+                                Ver Manual
+                            </Link>
+                        </Button>
+                    </CardContent>
+                </Card>
             </div>
         </div>
     )
 }
+
+    

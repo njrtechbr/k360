@@ -7,7 +7,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Crown, Star as StarIcon, TrendingUp, TrendingDown, UserCircle, Shield, ChevronRight } from "lucide-react";
+import { Crown, Star as StarIcon, TrendingUp, TrendingDown, UserCircle, Shield, ChevronRight, BookOpen, BarChartHorizontal } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -15,6 +15,8 @@ import type { Attendant, Achievement } from "@/lib/types";
 import { getScoreFromRating, getLevelFromXp } from '@/lib/xp';
 import { achievements } from "@/lib/achievements";
 import RewardTrack from "@/components/RewardTrack";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 const getMedal = (rank: number) => {
     if (rank === 1) return <span className="text-2xl" title="1º Lugar">🥇</span>;
@@ -96,22 +98,35 @@ export default function GamificacaoPage() {
         <div className="space-y-8">
             <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold">Gamificação e Níveis</h1>
+                    <h1 className="text-3xl font-bold">Gamificação</h1>
                     <p className="text-muted-foreground">Acompanhe o ranking, o progresso e as recompensas da equipe.</p>
                 </div>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Trilha de Níveis</CardTitle>
-                    <CardDescription>Visão geral dos níveis e das próximas recompensas para a equipe.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <TooltipProvider>
-                        <RewardTrack showAttendantProgress={false} />
-                    </TooltipProvider>
-                </CardContent>
-            </Card>
+             <div className="grid md:grid-cols-2 gap-8">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><BarChartHorizontal /> Níveis e Progresso</CardTitle>
+                        <CardDescription>Visualize a trilha de recompensas completa e a classificação geral da equipe.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                       <Button asChild>
+                           <Link href="/dashboard/pesquisa-satisfacao/niveis">Ver Progresso dos Níveis</Link>
+                       </Button>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><BookOpen /> Manual da Gamificação</CardTitle>
+                        <CardDescription>Entenda como funciona o sistema de pontos, níveis e troféus.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                       <Button asChild>
+                           <Link href="/dashboard/pesquisa-satisfacao/manual">Ler o Manual</Link>
+                       </Button>
+                    </CardContent>
+                </Card>
+            </div>
             
             <div className="grid gap-8 lg:grid-cols-3">
                 <div className="lg:col-span-2">
@@ -281,3 +296,5 @@ export default function GamificacaoPage() {
         </div>
     );
 }
+
+    

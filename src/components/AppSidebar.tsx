@@ -5,7 +5,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, useSidebar } from "./ui/sidebar";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, Wrench, CircleUser, Settings, ShieldCheck, Users } from "lucide-react";
+import { LayoutDashboard, Wrench, CircleUser, Settings, ShieldCheck, Users, Trophy } from "lucide-react";
 import { ROLES } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +23,15 @@ export default function AppSidebar() {
         : modules.filter(m => user.modules.includes(m.id) && m.active);
 
     const canManageSystem = user.role === ROLES.ADMIN || user.role === ROLES.SUPERADMIN;
+
+    const getModuleIcon = (moduleId: string) => {
+        switch (moduleId) {
+            case 'pesquisa-satisfacao':
+                return <Trophy />;
+            default:
+                return <Settings />;
+        }
+    }
 
     return (
         <Sidebar>
@@ -49,7 +58,7 @@ export default function AppSidebar() {
                          <SidebarMenuItem key={mod.id}>
                             <SidebarMenuButton asChild isActive={pathname.startsWith(mod.path)} tooltip={{children: mod.name}}>
                                 <Link href={mod.path}>
-                                    <Settings/>
+                                    {getModuleIcon(mod.id)}
                                     <span className={cn("capitalize", state === 'collapsed' && "hidden")}>{mod.name}</span>
                                 </Link>
                             </SidebarMenuButton>
@@ -89,3 +98,5 @@ export default function AppSidebar() {
         </Sidebar>
     )
 }
+
+    
