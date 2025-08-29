@@ -4,11 +4,11 @@
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/providers/AuthProvider';
 import { useMemo, useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { MessageCircle, Star, ThumbsUp, UserCircle } from 'lucide-react';
+import { MessageCircle, ShieldCheck, Star, ThumbsUp, UserCircle } from 'lucide-react';
 import Link from 'next/link';
 
 const RatingSelector = ({ rating, setRating }: { rating: number; setRating: (r: number) => void }) => {
@@ -174,7 +174,14 @@ export default function SurveyPage() {
                         </Button>
                     </form>
                 </CardContent>
+                <CardFooter className="justify-center pt-4 border-t">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                        <ShieldCheck className="h-5 w-5" />
+                        <span className="font-semibold">Koerner 360</span>
+                    </div>
+                </CardFooter>
             </Card>
         </div>
     );
 }
+
