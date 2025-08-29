@@ -218,9 +218,9 @@ export default function AttendantProfilePage() {
                             <CardDescription>Acompanhe o progresso e as recompensas.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <TooltipProvider>
-                                <RewardTrack currentXp={currentScore} />
-                            </TooltipProvider>
+                           <Button asChild>
+                                <Link href={`/dashboard/gamificacao/niveis?attendantId=${attendant.id}`}>Ver Progresso Detalhado</Link>
+                           </Button>
                         </CardContent>
                     </Card>
 

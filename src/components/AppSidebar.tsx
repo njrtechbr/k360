@@ -5,7 +5,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, useSidebar } from "./ui/sidebar";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, Wrench, CircleUser, Settings, ShieldCheck, Users, Trophy } from "lucide-react";
+import { LayoutDashboard, Wrench, CircleUser, Settings, ShieldCheck, Users, Trophy, Star } from "lucide-react";
 import { ROLES } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -25,12 +25,14 @@ export default function AppSidebar() {
     const canManageSystem = user.role === ROLES.ADMIN || user.role === ROLES.SUPERADMIN;
 
     const getModuleIcon = (moduleId: string) => {
-        switch (moduleId) {
-            case 'pesquisa-satisfacao':
-                return <Trophy />;
-            default:
-                return <Settings />;
+        // A simple example, you can expand this
+        if (moduleId === 'pesquisa-satisfacao') {
+            return <Star />;
         }
+        if (moduleId === 'gamificacao') {
+            return <Trophy />;
+        }
+        return <Settings />;
     }
 
     return (
@@ -98,5 +100,3 @@ export default function AppSidebar() {
         </Sidebar>
     )
 }
-
-    

@@ -134,5 +134,3 @@ export default function NiveisPage() {
         </div>
     );
 }
-
-    

@@ -8,13 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Crown, Star as StarIcon, TrendingUp, TrendingDown, UserCircle, Shield, ChevronRight, BookOpen, BarChartHorizontal } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Attendant, Achievement } from "@/lib/types";
 import { getScoreFromRating, getLevelFromXp } from '@/lib/xp';
 import { achievements } from "@/lib/achievements";
-import RewardTrack from "@/components/RewardTrack";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
@@ -111,7 +109,7 @@ export default function GamificacaoPage() {
                     </CardHeader>
                     <CardContent>
                        <Button asChild>
-                           <Link href="/dashboard/pesquisa-satisfacao/niveis">Ver Progresso dos Níveis</Link>
+                           <Link href="/dashboard/gamificacao/niveis">Ver Progresso dos Níveis</Link>
                        </Button>
                     </CardContent>
                 </Card>
@@ -122,7 +120,7 @@ export default function GamificacaoPage() {
                     </CardHeader>
                     <CardContent>
                        <Button asChild>
-                           <Link href="/dashboard/pesquisa-satisfacao/manual">Ler o Manual</Link>
+                           <Link href="/dashboard/gamificacao/manual">Ler o Manual</Link>
                        </Button>
                     </CardContent>
                 </Card>
@@ -299,4 +297,3 @@ export default function GamificacaoPage() {
     );
 }
 
-    
