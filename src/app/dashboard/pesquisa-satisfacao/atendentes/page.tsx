@@ -3,7 +3,7 @@
 
 import { useAuth } from "@/providers/AuthProvider";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -22,8 +22,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { type Attendant, ATTENDANT_STATUS, FUNCOES, SETORES } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Pencil, Trash2, PlusCircle, CalendarIcon, UserCircle, Eye } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, Pencil, Trash2, PlusCircle, CalendarIcon, UserCircle, Eye, QrCode, Link as LinkIcon, Download } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -33,6 +33,10 @@ import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
+import { useToast } from "@/hooks/use-toast";
+import QRCode from "react-qr-code";
+import { toPng } from 'html-to-image';
+
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
@@ -94,9 +98,12 @@ const formatTelefone = (tel: string) => {
 export default function AtendentesPage() {
   const { user, isAuthenticated, loading, attendants, addAttendant, updateAttendant, deleteAttendant } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
+  const qrCodeRef = useRef<HTMLDivElement>(null);
 
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isQrCodeDialogOpen, setIsQrCodeDialogOpen] = useState(false);
   const [selectedAttendant, setSelectedAttendant] = useState<Attendant | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
@@ -180,6 +187,38 @@ export default function AtendentesPage() {
     setSelectedAttendant(attendant);
     setIsDeleteDialogOpen(true);
   };
+  
+  const getSurveyUrl = (attendantId: string) => {
+    return `${window.location.origin}/survey?attendantId=${attendantId}`;
+  }
+
+  const handleCopyLink = (attendant: Attendant) => {
+    const url = getSurveyUrl(attendant.id);
+    navigator.clipboard.writeText(url).then(() => {
+        toast({ title: "Link Copiado!", description: "O link de avaliação foi copiado para a área de transferência."});
+    });
+  }
+  
+  const handleQrCodeClick = (attendant: Attendant) => {
+    setSelectedAttendant(attendant);
+    setIsQrCodeDialogOpen(true);
+  }
+
+  const handleDownloadQrCode = () => {
+    if (!qrCodeRef.current || !selectedAttendant) return;
+
+    toPng(qrCodeRef.current, { cacheBust: true, })
+      .then((dataUrl) => {
+        const link = document.createElement('a');
+        link.download = `qrcode-${selectedAttendant.name.toLowerCase().replace(/ /g, '-')}.png`;
+        link.href = dataUrl;
+        link.click();
+      })
+      .catch((err) => {
+        console.error(err);
+        toast({ variant: "destructive", title: "Erro ao baixar QR Code", description: "Não foi possível gerar a imagem."});
+      })
+  }
 
   if (loading || !user) {
     return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
@@ -241,6 +280,13 @@ export default function AtendentesPage() {
                                                     <Eye className="mr-2 h-4 w-4" /> Ver Perfil
                                                 </Link>
                                             </DropdownMenuItem>
+                                             <DropdownMenuItem onClick={() => handleQrCodeClick(att)}>
+                                                <QrCode className="mr-2 h-4 w-4" /> Gerar QR Code
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => handleCopyLink(att)}>
+                                                <LinkIcon className="mr-2 h-4 w-4" /> Copiar Link
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
                                             <DropdownMenuItem onClick={() => handleEditClick(att)}>
                                                 <Pencil className="mr-2 h-4 w-4" /> Editar
                                             </DropdownMenuItem>
@@ -451,6 +497,29 @@ export default function AtendentesPage() {
             </DialogContent>
         </Dialog>
 
+        {/* QR Code Dialog */}
+        <Dialog open={isQrCodeDialogOpen} onOpenChange={setIsQrCodeDialogOpen}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>QR Code para Avaliação</DialogTitle>
+                    <DialogDescription>
+                        Aponte a câmera para o QR Code para avaliar o atendente <span className="font-bold">{selectedAttendant?.name}</span>.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="flex items-center justify-center p-4 bg-white rounded-md">
+                    <div ref={qrCodeRef} className="p-4 bg-white">
+                        {selectedAttendant && <QRCode value={getSurveyUrl(selectedAttendant.id)} size={256} />}
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button type="button" variant="secondary" onClick={() => setIsQrCodeDialogOpen(false)}>Fechar</Button>
+                    <Button onClick={handleDownloadQrCode}>
+                        <Download className="mr-2 h-4 w-4" /> Baixar QR Code
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
 
         {/* Delete Alert Dialog */}
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
@@ -472,3 +541,5 @@ export default function AtendentesPage() {
     </div>
   );
 }
+
+    
