@@ -189,7 +189,7 @@ export default function SurveyPage() {
                 </p>
                 <Button variant="link" asChild>
                     <Link href="/">
-                        Conheça o Koerner 360
+                        Conheça o Sistema 360
                     </Link>
                 </Button>
             </div>
