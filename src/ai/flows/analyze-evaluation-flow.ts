@@ -4,24 +4,11 @@
  * @fileOverview Flow de Análise de Sentimento de Avaliações
  * 
  * - analyzeEvaluation - Função que analisa o sentimento de um comentário de avaliação.
- * - AnalyzeEvaluationInput - O tipo de entrada para a função analyzeEvaluation.
- * - AnalyzeEvaluationOutput - O tipo de retorno para a função analyzeEvaluation.
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'zod';
+import { AnalyzeEvaluationInputSchema, type AnalyzeEvaluationInput, AnalyzeEvaluationOutputSchema, type AnalyzeEvaluationOutput } from '@/lib/types';
 
-export const AnalyzeEvaluationInputSchema = z.object({
-  rating: z.number().min(1).max(5).describe('A nota em estrelas, de 1 a 5.'),
-  comment: z.string().describe('O comentário deixado pelo cliente.'),
-});
-export type AnalyzeEvaluationInput = z.infer<typeof AnalyzeEvaluationInputSchema>;
-
-export const AnalyzeEvaluationOutputSchema = z.object({
-  sentiment: z.enum(['Positivo', 'Negativo', 'Neutro']).describe('A classificação do sentimento do comentário.'),
-  summary: z.string().describe('Um resumo conciso de uma frase do comentário.'),
-});
-export type AnalyzeEvaluationOutput = z.infer<typeof AnalyzeEvaluationOutputSchema>;
 
 // Função exportada que será chamada pelo aplicativo
 export async function analyzeEvaluation(input: AnalyzeEvaluationInput): Promise<AnalyzeEvaluationOutput> {

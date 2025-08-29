@@ -1,5 +1,7 @@
 
 
+import { z } from "zod";
+
 export const ROLES = {
   SUPERADMIN: 'superadmin',
   ADMIN: 'admin',
@@ -92,6 +94,19 @@ export interface Evaluation {
   comentario: string;
   data: string; // Storing as ISO string for simplicity
 }
+
+export const AnalyzeEvaluationInputSchema = z.object({
+  rating: z.number().min(1).max(5).describe('A nota em estrelas, de 1 a 5.'),
+  comment: z.string().describe('O comentário deixado pelo cliente.'),
+});
+export type AnalyzeEvaluationInput = z.infer<typeof AnalyzeEvaluationInputSchema>;
+
+export const AnalyzeEvaluationOutputSchema = z.object({
+  sentiment: z.enum(['Positivo', 'Negativo', 'Neutro']).describe('A classificação do sentimento do comentário.'),
+  summary: z.string().describe('Um resumo conciso de uma frase do comentário.'),
+});
+export type AnalyzeEvaluationOutput = z.infer<typeof AnalyzeEvaluationOutputSchema>;
+
 
 export type EvaluationAnalysis = {
   evaluationId: string;
