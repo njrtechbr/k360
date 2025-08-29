@@ -283,6 +283,8 @@ export default function AttendantProfilePage() {
     }, [evaluations, id]);
 
     const gamificationStats = useMemo(() => {
+        if (!attendant) return { rank: 0, score: 0, unlockedAchievements: [] };
+        
         const attendantScores: Record<string, { totalScore: number, evaluationCount: number }> = {};
         evaluations.forEach(ev => {
             if (!attendantScores[ev.attendantId]) {
@@ -302,7 +304,7 @@ export default function AttendantProfilePage() {
         const currentAttendantRank = rankedAttendants.findIndex(a => a.id === id) + 1;
         const currentAttendantScore = attendantScores[id as string]?.totalScore ?? 0;
         
-        const unlockedAchievements = achievements.filter(ach => ach.isUnlocked(attendant!, attendantEvaluations, evaluations, attendants));
+        const unlockedAchievements = achievements.filter(ach => ach.isUnlocked(attendant, attendantEvaluations, evaluations, attendants));
 
         return {
             rank: currentAttendantRank,
@@ -444,7 +446,10 @@ export default function AttendantProfilePage() {
                                             <TooltipContent>
                                                 <p className="font-bold">{ach.title}</p>
                                                 <p className="text-sm text-muted-foreground">{ach.description}</p>
-                                                {isUnlocked ? <p className="text-xs text-green-500 font-bold">Desbloqueado!</p> : <p className="text-xs text-red-500 font-bold">Bloqueado</p>}
+                                                {isUnlocked ? 
+                                                    <p className="text-xs text-green-500 font-bold mt-1">Desbloqueado!</p> : 
+                                                    <p className="text-xs text-red-500 font-bold mt-1">Bloqueado</p>
+                                                }
                                             </TooltipContent>
                                         </Tooltip>
                                     )

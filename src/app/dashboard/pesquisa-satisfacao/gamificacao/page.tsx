@@ -3,7 +3,7 @@
 
 import { useAuth } from "@/providers/AuthProvider";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,6 +11,10 @@ import { Award, BarChart, BadgeCent, Star as StarIcon, TrendingUp, Crown, Sparkl
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import type { Attendant, Evaluation } from "@/lib/types";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
 
 const getScoreFromRating = (rating: number): number => {
     switch (rating) {
@@ -247,9 +251,19 @@ const achievements: Achievement[] = [
 ];
 
 
+type AchievementStat = Achievement & {
+  unlockedCount: number;
+  totalAttendants: number;
+  progress: number;
+  unlockedBy: Attendant[];
+};
+
 export default function GamificacaoPage() {
     const { user, isAuthenticated, loading, evaluations, attendants } = useAuth();
     const router = useRouter();
+    const [isAchievementDialogOpen, setIsAchievementDialogOpen] = useState(false);
+    const [selectedAchievement, setSelectedAchievement] = useState<AchievementStat | null>(null);
+
 
     useEffect(() => {
         if (!loading && !isAuthenticated) {
@@ -269,11 +283,16 @@ export default function GamificacaoPage() {
         });
 
         const rankedAttendants = attendants
-            .map(attendant => ({
-                ...attendant,
-                score: attendantScores[attendant.id]?.totalScore ?? 0,
-                evaluationCount: attendantScores[attendant.id]?.evaluationCount ?? 0,
-            }))
+            .map(attendant => {
+                const attendantEvaluations = evaluations.filter(ev => ev.attendantId === attendant.id);
+                const unlockedAchievements = achievements.filter(ach => ach.isUnlocked(attendant, attendantEvaluations, evaluations, attendants));
+                return {
+                    ...attendant,
+                    score: attendantScores[attendant.id]?.totalScore ?? 0,
+                    evaluationCount: attendantScores[attendant.id]?.evaluationCount ?? 0,
+                    unlockedAchievements
+                }
+            })
             .filter(att => att.evaluationCount > 0) // Only rank attendants with at least one evaluation
             .sort((a, b) => b.score - a.score);
 
@@ -281,23 +300,29 @@ export default function GamificacaoPage() {
 
     }, [evaluations, attendants]);
 
-     const achievementStats = useMemo(() => {
+     const achievementStats: AchievementStat[] = useMemo(() => {
         return achievements.map(achievement => {
-            let unlockedCount = 0;
+            const unlockedBy: Attendant[] = [];
             attendants.forEach(attendant => {
                 const attendantEvaluations = evaluations.filter(ev => ev.attendantId === attendant.id);
                 if (achievement.isUnlocked(attendant, attendantEvaluations, evaluations, attendants)) {
-                unlockedCount++;
+                    unlockedBy.push(attendant);
                 }
             });
             return {
                 ...achievement,
-                unlockedCount,
+                unlockedCount: unlockedBy.length,
                 totalAttendants: attendants.length,
-                progress: attendants.length > 0 ? (unlockedCount / attendants.length) * 100 : 0,
+                progress: attendants.length > 0 ? (unlockedBy.length / attendants.length) * 100 : 0,
+                unlockedBy,
             };
         });
     }, [attendants, evaluations]);
+
+    const handleAchievementClick = (achievement: AchievementStat) => {
+        setSelectedAchievement(achievement);
+        setIsAchievementDialogOpen(true);
+    };
 
     if (loading || !user) {
         return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
@@ -325,7 +350,7 @@ export default function GamificacaoPage() {
                                     <TableRow>
                                         <TableHead className="w-16 text-center">Posição</TableHead>
                                         <TableHead>Atendente</TableHead>
-                                        <TableHead>Setor</TableHead>
+                                        <TableHead>Conquistas</TableHead>
                                         <TableHead className="text-right">Avaliações</TableHead>
                                         <TableHead className="text-right">Pontuação</TableHead>
                                     </TableRow>
@@ -340,10 +365,42 @@ export default function GamificacaoPage() {
                                                         <AvatarImage src={att.avatarUrl} alt={att.name}/>
                                                         <AvatarFallback><UserCircle /></AvatarFallback>
                                                     </Avatar>
-                                                    <span>{att.name}</span>
+                                                    <div>
+                                                        <span>{att.name}</span>
+                                                        <div className="text-xs text-muted-foreground capitalize">{att.setor}</div>
+                                                    </div>
                                                 </div>
                                             </TableCell>
-                                            <TableCell><Badge variant="outline" className="capitalize">{att.setor}</Badge></TableCell>
+                                            <TableCell>
+                                                <TooltipProvider>
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {att.unlockedAchievements.slice(0, 5).map(ach => (
+                                                            <Tooltip key={ach.id}>
+                                                                <TooltipTrigger>
+                                                                    <div className={`p-1 rounded-full ${ach.color}`}>
+                                                                        <ach.icon className="h-4 w-4" />
+                                                                    </div>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p className="font-bold">{ach.title}</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        ))}
+                                                        {att.unlockedAchievements.length > 5 && (
+                                                            <Tooltip>
+                                                                <TooltipTrigger>
+                                                                    <div className="p-1 text-muted-foreground">
+                                                                        +{att.unlockedAchievements.length - 5}
+                                                                    </div>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <p>{att.unlockedAchievements.length - 5} outras conquistas</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        )}
+                                                    </div>
+                                                </TooltipProvider>
+                                            </TableCell>
                                             <TableCell className="text-right">{att.evaluationCount}</TableCell>
                                             <TableCell className="text-right font-bold text-lg">{att.score}</TableCell>
                                         </TableRow>
@@ -408,10 +465,10 @@ export default function GamificacaoPage() {
 
              <div>
                 <h2 className="text-2xl font-bold font-heading mb-4">Conquistas Disponíveis</h2>
-                <p className="text-muted-foreground mb-6">Objetivos que os atendentes podem alcançar para ganhar reconhecimento.</p>
+                <p className="text-muted-foreground mb-6">Objetivos que os atendentes podem alcançar para ganhar reconhecimento. Clique em uma conquista para ver quem já a desbloqueou.</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {achievementStats.map(ach => (
-                    <Card key={ach.id} className="flex flex-col">
+                    <Card key={ach.id} className="flex flex-col hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleAchievementClick(ach)}>
                         <CardHeader>
                         <div className="flex items-center gap-4">
                             <div className={`p-2 bg-muted rounded-full ${ach.unlockedCount > 0 ? ach.color : 'text-muted-foreground'}`}>
@@ -435,6 +492,40 @@ export default function GamificacaoPage() {
                     ))}
                 </div>
             </div>
+
+            <Dialog open={isAchievementDialogOpen} onOpenChange={setIsAchievementDialogOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                             <div className={`p-2 bg-muted rounded-full ${selectedAchievement?.color}`}>
+                                {selectedAchievement && <selectedAchievement.icon className="h-5 w-5" />}
+                            </div>
+                            {selectedAchievement?.title}
+                        </DialogTitle>
+                        <DialogDescription>{selectedAchievement?.description}</DialogDescription>
+                    </DialogHeader>
+                    <div>
+                        <h4 className="font-semibold mb-2">Desbloqueada por:</h4>
+                        {selectedAchievement && selectedAchievement.unlockedBy.length > 0 ? (
+                            <ScrollArea className="h-72">
+                                <ul className="space-y-2 pr-4">
+                                {selectedAchievement.unlockedBy.map(att => (
+                                    <li key={att.id} className="flex items-center gap-3 p-2 rounded-md border">
+                                        <Avatar className="h-8 w-8">
+                                            <AvatarImage src={att.avatarUrl} alt={att.name}/>
+                                            <AvatarFallback><UserCircle size={16} /></AvatarFallback>
+                                        </Avatar>
+                                        <span>{att.name}</span>
+                                    </li>
+                                ))}
+                                </ul>
+                            </ScrollArea>
+                        ) : (
+                            <p className="text-sm text-muted-foreground text-center py-4">Nenhum atendente desbloqueou esta conquista ainda.</p>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
 
         </div>
     );
