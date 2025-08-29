@@ -7,10 +7,10 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Award, BarChart, BadgeCent, Star as StarIcon, TrendingUp, Crown, Sparkles, Target, Trophy, Zap, Rocket, StarHalf, Users, Smile, HeartHandshake, Gem, Medal, TrendingDown, UserCircle } from "lucide-react";
+import { Award, BarChart, BadgeCent, Star as StarIcon, TrendingUp, Crown, Sparkles, Target, Trophy, Zap, Rocket, StarHalf, Users, Smile, HeartHandshake, Gem, Medal, TrendingDown, UserCircle, MessageSquareQuote, MessageSquarePlus, MessageSquareHeart, MessageSquareWarning, Bot } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import type { Attendant, Evaluation } from "@/lib/types";
+import type { Attendant, Evaluation, Achievement, EvaluationAnalysis } from "@/lib/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -34,16 +34,18 @@ const getMedal = (rank: number) => {
     return <span className="text-muted-foreground font-semibold">{rank}º</span>
 };
 
-type Achievement = {
-  id: string;
-  title: string;
-  description: string;
-  icon: React.ElementType;
-  color: string;
-  isUnlocked: (attendant: Attendant, evaluations: Evaluation[], allEvaluations: Evaluation[], allAttendants: Attendant[]) => boolean;
+const getAttendantSentimentCounts = (attendantId: string, evaluations: Evaluation[], analysisResults: EvaluationAnalysis[]) => {
+    const attendantEvaluationIds = new Set(evaluations.map(e => e.id));
+    return analysisResults
+        .filter(ar => attendantEvaluationIds.has(ar.evaluationId))
+        .reduce((acc, ar) => {
+            acc[ar.sentiment] = (acc[ar.sentiment] || 0) + 1;
+            return acc;
+        }, {} as Record<EvaluationAnalysis['sentiment'], number>);
 };
 
 const achievements: Achievement[] = [
+  // --- Nota e quantidade based achievements ---
   {
     id: "primeira-impressao",
     title: "Primeira Impressão",
@@ -175,7 +177,7 @@ const achievements: Achievement[] = [
     icon: Users,
     color: "text-pink-500",
     isUnlocked: (attendant, evaluations, allEvaluations) => {
-      if (evaluations.length === 0) return false;
+      if (evaluations.length === 0 || !allEvaluations) return false;
       const evaluationCounts = allEvaluations.reduce((acc, ev) => {
         acc[ev.attendantId] = (acc[ev.attendantId] || 0) + 1;
         return acc;
@@ -193,7 +195,7 @@ const achievements: Achievement[] = [
     icon: StarHalf,
     color: 'text-teal-500',
     isUnlocked: (attendant, evaluations, allEvaluations, allAttendants) => {
-      if (evaluations.length < 20) return false;
+      if (evaluations.length < 20 || !allEvaluations || !allAttendants) return false;
 
       const attendantStats = allAttendants.map(att => {
         const attEvals = allEvaluations.filter(e => e.attendantId === att.id);
@@ -248,6 +250,67 @@ const achievements: Achievement[] = [
       return false;
     },
   },
+  // --- AI Sentiment based achievements ---
+  {
+    id: "ia-primeiro-positivo",
+    title: "Primeiro Feedback Positivo (IA)",
+    description: "Receba o primeiro comentário analisado como Positivo pela IA.",
+    icon: MessageSquareHeart,
+    color: "text-green-500",
+    isUnlocked: (attendant, evaluations, allEval, allAtt, analysis) => {
+        if (!analysis) return false;
+        const counts = getAttendantSentimentCounts(attendant.id, evaluations, analysis);
+        return (counts.Positivo ?? 0) >= 1;
+    },
+  },
+  {
+    id: "ia-querido-critica",
+    title: "Querido pela Crítica (IA)",
+    description: "Receba 10 comentários analisados como Positivos pela IA.",
+    icon: MessageSquarePlus,
+    color: "text-emerald-500",
+    isUnlocked: (attendant, evaluations, allEval, allAtt, analysis) => {
+        if (!analysis) return false;
+        const counts = getAttendantSentimentCounts(attendant.id, evaluations, analysis);
+        return (counts.Positivo ?? 0) >= 10;
+    },
+  },
+    {
+    id: "ia-mestre-resiliencia",
+    title: "Mestre da Resiliência (IA)",
+    description: "Receba 5 comentários Negativos e continue melhorando.",
+    icon: MessageSquareWarning,
+    color: "text-red-500",
+    isUnlocked: (attendant, evaluations, allEval, allAtt, analysis) => {
+        if (!analysis) return false;
+        const counts = getAttendantSentimentCounts(attendant.id, evaluations, analysis);
+        return (counts.Negativo ?? 0) >= 5;
+    },
+  },
+  {
+    id: "ia-ouvinte-atento",
+    title: "Ouvinte Atento (IA)",
+    description: "Receba o primeiro comentário analisado como Negativo, mostrando que você está aberto a críticas.",
+    icon: MessageSquareWarning,
+    color: "text-amber-500",
+    isUnlocked: (attendant, evaluations, allEval, allAtt, analysis) => {
+        if (!analysis) return false;
+        const counts = getAttendantSentimentCounts(attendant.id, evaluations, analysis);
+        return (counts.Negativo ?? 0) >= 1;
+    },
+  },
+  {
+    id: "ia-mestre-zen",
+    title: "Mestre Zen (IA)",
+    description: "Receba 5 comentários analisados como Neutros.",
+    icon: MessageSquareQuote,
+    color: "text-slate-500",
+    isUnlocked: (attendant, evaluations, allEval, allAtt, analysis) => {
+        if (!analysis) return false;
+        const counts = getAttendantSentimentCounts(attendant.id, evaluations, analysis);
+        return (counts.Neutro ?? 0) >= 5;
+    },
+  },
 ];
 
 
@@ -259,7 +322,7 @@ type AchievementStat = Achievement & {
 };
 
 export default function GamificacaoPage() {
-    const { user, isAuthenticated, loading, evaluations, attendants } = useAuth();
+    const { user, isAuthenticated, loading, evaluations, attendants, aiAnalysisResults } = useAuth();
     const router = useRouter();
     const [isAchievementDialogOpen, setIsAchievementDialogOpen] = useState(false);
     const [selectedAchievement, setSelectedAchievement] = useState<AchievementStat | null>(null);
@@ -285,7 +348,7 @@ export default function GamificacaoPage() {
         const rankedAttendants = attendants
             .map(attendant => {
                 const attendantEvaluations = evaluations.filter(ev => ev.attendantId === attendant.id);
-                const unlockedAchievements = achievements.filter(ach => ach.isUnlocked(attendant, attendantEvaluations, evaluations, attendants));
+                const unlockedAchievements = achievements.filter(ach => ach.isUnlocked(attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults));
                 return {
                     ...attendant,
                     score: attendantScores[attendant.id]?.totalScore ?? 0,
@@ -298,14 +361,14 @@ export default function GamificacaoPage() {
 
         return rankedAttendants;
 
-    }, [evaluations, attendants]);
+    }, [evaluations, attendants, aiAnalysisResults]);
 
      const achievementStats: AchievementStat[] = useMemo(() => {
         return achievements.map(achievement => {
             const unlockedBy: Attendant[] = [];
             attendants.forEach(attendant => {
                 const attendantEvaluations = evaluations.filter(ev => ev.attendantId === attendant.id);
-                if (achievement.isUnlocked(attendant, attendantEvaluations, evaluations, attendants)) {
+                if (achievement.isUnlocked(attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults)) {
                     unlockedBy.push(attendant);
                 }
             });
@@ -317,7 +380,7 @@ export default function GamificacaoPage() {
                 unlockedBy,
             };
         });
-    }, [attendants, evaluations]);
+    }, [attendants, evaluations, aiAnalysisResults]);
 
     const handleAchievementClick = (achievement: AchievementStat) => {
         setSelectedAchievement(achievement);

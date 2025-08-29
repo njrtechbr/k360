@@ -11,9 +11,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, BarChart3, Calendar, FileText, Hash, Mail, Phone, Star, UserCircle, UserCog, Award, BadgeCent, TrendingUp, Crown, Sparkles, Target, Trophy, BarChart, Gem, Medal, Zap, Rocket, StarHalf, Users, Smile, HeartHandshake, StarOff } from "lucide-react";
+import { ArrowLeft, BarChart3, Calendar, FileText, Hash, Mail, Phone, Star, UserCircle, UserCog, Award, BadgeCent, TrendingUp, Crown, Sparkles, Target, Trophy, BarChart, Gem, Medal, Zap, Rocket, StarHalf, Users, Smile, HeartHandshake, StarOff, MessageSquareQuote, MessageSquarePlus, MessageSquareHeart, MessageSquareWarning, Bot } from "lucide-react";
 import Link from "next/link";
-import type { Attendant, Evaluation, Achievement } from "@/lib/types";
+import type { Attendant, Evaluation, Achievement, EvaluationAnalysis } from "@/lib/types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
 
@@ -28,7 +28,18 @@ const getScoreFromRating = (rating: number): number => {
     }
 };
 
+const getAttendantSentimentCounts = (attendantId: string, evaluations: Evaluation[], analysisResults: EvaluationAnalysis[]) => {
+    const attendantEvaluationIds = new Set(evaluations.map(e => e.id));
+    return analysisResults
+        .filter(ar => attendantEvaluationIds.has(ar.evaluationId))
+        .reduce((acc, ar) => {
+            acc[ar.sentiment] = (acc[ar.sentiment] || 0) + 1;
+            return acc;
+        }, {} as Record<EvaluationAnalysis['sentiment'], number>);
+};
+
 const achievements: Achievement[] = [
+  // --- Nota e quantidade based achievements ---
   {
     id: "primeira-impressao",
     title: "Primeira Impressão",
@@ -181,8 +192,7 @@ const achievements: Achievement[] = [
     icon: Users,
     color: "text-pink-500",
     isUnlocked: (attendant, evaluations, allEvaluations) => {
-      if (evaluations.length === 0) return false;
-      if (!allEvaluations) return false;
+      if (evaluations.length === 0 || !allEvaluations) return false;
       const evaluationCounts = allEvaluations.reduce((acc, ev) => {
         acc[ev.attendantId] = (acc[ev.attendantId] || 0) + 1;
         return acc;
@@ -255,6 +265,87 @@ const achievements: Achievement[] = [
       return false;
     },
   },
+  // --- AI Sentiment based achievements ---
+  {
+    id: "ia-primeiro-positivo",
+    title: "Primeiro Feedback Positivo (IA)",
+    description: "Receba o primeiro comentário analisado como Positivo pela IA.",
+    icon: MessageSquareHeart,
+    color: "text-green-500",
+    isUnlocked: (attendant, evaluations, allEval, allAtt, analysis) => {
+        if (!analysis) return false;
+        const counts = getAttendantSentimentCounts(attendant.id, evaluations, analysis);
+        return (counts.Positivo ?? 0) >= 1;
+    },
+    getProgress: (attendant, evaluations, allEval, allAtt, analysis) => {
+        const count = analysis ? getAttendantSentimentCounts(attendant.id, evaluations, analysis).Positivo ?? 0 : 0;
+        return { current: count, target: 1, text: `${count}/1 comentário positivo` };
+    },
+  },
+  {
+    id: "ia-querido-critica",
+    title: "Querido pela Crítica (IA)",
+    description: "Receba 10 comentários analisados como Positivos pela IA.",
+    icon: MessageSquarePlus,
+    color: "text-emerald-500",
+    isUnlocked: (attendant, evaluations, allEval, allAtt, analysis) => {
+        if (!analysis) return false;
+        const counts = getAttendantSentimentCounts(attendant.id, evaluations, analysis);
+        return (counts.Positivo ?? 0) >= 10;
+    },
+     getProgress: (attendant, evaluations, allEval, allAtt, analysis) => {
+        const count = analysis ? getAttendantSentimentCounts(attendant.id, evaluations, analysis).Positivo ?? 0 : 0;
+        return { current: count, target: 10, text: `${count}/10 comentários positivos` };
+    },
+  },
+  {
+    id: "ia-ouvinte-atento",
+    title: "Ouvinte Atento (IA)",
+    description: "Receba o primeiro comentário analisado como Negativo, mostrando que você está aberto a críticas.",
+    icon: MessageSquareWarning,
+    color: "text-amber-500",
+    isUnlocked: (attendant, evaluations, allEval, allAtt, analysis) => {
+        if (!analysis) return false;
+        const counts = getAttendantSentimentCounts(attendant.id, evaluations, analysis);
+        return (counts.Negativo ?? 0) >= 1;
+    },
+    getProgress: (attendant, evaluations, allEval, allAtt, analysis) => {
+        const count = analysis ? getAttendantSentimentCounts(attendant.id, evaluations, analysis).Negativo ?? 0 : 0;
+        return { current: count, target: 1, text: `${count}/1 comentário negativo` };
+    },
+  },
+    {
+    id: "ia-mestre-resiliencia",
+    title: "Mestre da Resiliência (IA)",
+    description: "Receba 5 comentários Negativos e continue melhorando.",
+    icon: MessageSquareWarning,
+    color: "text-red-500",
+    isUnlocked: (attendant, evaluations, allEval, allAtt, analysis) => {
+        if (!analysis) return false;
+        const counts = getAttendantSentimentCounts(attendant.id, evaluations, analysis);
+        return (counts.Negativo ?? 0) >= 5;
+    },
+    getProgress: (attendant, evaluations, allEval, allAtt, analysis) => {
+        const count = analysis ? getAttendantSentimentCounts(attendant.id, evaluations, analysis).Negativo ?? 0 : 0;
+        return { current: count, target: 5, text: `${count}/5 comentários negativos` };
+    },
+  },
+  {
+    id: "ia-mestre-zen",
+    title: "Mestre Zen (IA)",
+    description: "Receba 5 comentários analisados como Neutros.",
+    icon: MessageSquareQuote,
+    color: "text-slate-500",
+    isUnlocked: (attendant, evaluations, allEval, allAtt, analysis) => {
+        if (!analysis) return false;
+        const counts = getAttendantSentimentCounts(attendant.id, evaluations, analysis);
+        return (counts.Neutro ?? 0) >= 5;
+    },
+    getProgress: (attendant, evaluations, allEval, allAtt, analysis) => {
+        const count = analysis ? getAttendantSentimentCounts(attendant.id, evaluations, analysis).Neutro ?? 0 : 0;
+        return { current: count, target: 5, text: `${count}/5 comentários neutros` };
+    },
+  },
 ];
 
 
@@ -286,7 +377,7 @@ const DetailItem = ({ icon, label, value }: { icon: React.ReactNode, label: stri
 export default function AttendantProfilePage() {
     const { id } = useParams();
     const router = useRouter();
-    const { attendants, evaluations, loading, user } = useAuth();
+    const { attendants, evaluations, loading, user, aiAnalysisResults } = useAuth();
 
     const attendant = useMemo(() => attendants.find(a => a.id === id), [attendants, id]);
     
@@ -318,7 +409,7 @@ export default function AttendantProfilePage() {
         const currentAttendantRank = rankedAttendants.findIndex(a => a.id === id) + 1;
         const currentAttendantScore = attendantScores[id as string]?.totalScore ?? 0;
         
-        const unlockedAchievements = achievements.filter(ach => ach.isUnlocked(attendant, attendantEvaluations, evaluations, attendants));
+        const unlockedAchievements = achievements.filter(ach => ach.isUnlocked(attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults));
 
         return {
             rank: currentAttendantRank,
@@ -326,7 +417,7 @@ export default function AttendantProfilePage() {
             unlockedAchievements
         }
 
-    }, [attendant, attendants, evaluations, attendantEvaluations, id]);
+    }, [attendant, attendants, evaluations, attendantEvaluations, id, aiAnalysisResults]);
 
     const stats = useMemo(() => {
         if (attendantEvaluations.length === 0) {
@@ -450,7 +541,7 @@ export default function AttendantProfilePage() {
                                 <div className="flex flex-wrap gap-4">
                                 {achievements.map(ach => {
                                     const isUnlocked = gamificationStats.unlockedAchievements.some(unlocked => unlocked.id === ach.id);
-                                    const progress = !isUnlocked && ach.getProgress ? ach.getProgress(attendant, attendantEvaluations, evaluations, attendants) : null;
+                                    const progress = !isUnlocked && ach.getProgress ? ach.getProgress(attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults) : null;
                                     const progressPercentage = progress ? (progress.current / progress.target) * 100 : 0;
 
                                     return (
@@ -525,5 +616,3 @@ export default function AttendantProfilePage() {
         </div>
     );
 }
-
-

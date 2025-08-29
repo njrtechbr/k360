@@ -121,6 +121,18 @@ export type Achievement = {
   description: string;
   icon: React.ElementType;
   color: string;
-  isUnlocked: (attendant: Attendant, evaluations: Evaluation[], allEvaluations?: Evaluation[], allAttendants?: Attendant[]) => boolean;
-  getProgress?: (attendant: Attendant, evaluations: Evaluation[], allEvaluations?: Evaluation[], allAttendants?: Attendant[]) => { current: number, target: number, text: string };
+  isUnlocked: (
+    attendant: Attendant, 
+    attendantEvaluations: Evaluation[], 
+    allEvaluations?: Evaluation[], 
+    allAttendants?: Attendant[],
+    aiAnalysisResults?: EvaluationAnalysis[]
+  ) => boolean;
+  getProgress?: (
+    attendant: Attendant, 
+    attendantEvaluations: Evaluation[], 
+    allEvaluations?: Evaluation[], 
+    allAttendants?: Attendant[],
+    aiAnalysisResults?: EvaluationAnalysis[]
+  ) => { current: number, target: number, text: string };
 };
