@@ -12,12 +12,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, BarChart3, Calendar, FileText, Hash, Mail, Phone, Star, UserCircle, UserCog } from "lucide-react";
+import { ArrowLeft, BarChart3, Calendar, FileText, Hash, History, Mail, Phone, Sparkles, Star, TrendingDown, TrendingUp, Trophy, UserCircle, UserCog } from "lucide-react";
 import Link from "next/link";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { getScoreFromRating } from '@/lib/xp';
 import { achievements } from "@/lib/achievements";
 import RewardTrack from "@/components/RewardTrack";
+import { cn } from "@/lib/utils";
 
 const RatingStars = ({ rating, className }: { rating: number, className?: string }) => {
     const totalStars = 5;
@@ -43,6 +44,13 @@ const DetailItem = ({ icon, label, value }: { icon: React.ReactNode, label: stri
     </div>
 );
 
+type XpEvent = {
+    reason: string;
+    points: number;
+    date: string;
+    type: 'evaluation' | 'achievement';
+    icon: React.ElementType;
+};
 
 export default function AttendantProfilePage() {
     const { id } = useParams();
@@ -54,19 +62,47 @@ export default function AttendantProfilePage() {
     const attendantEvaluations = useMemo(() => {
         return evaluations
             .filter(e => e.attendantId === id)
-            .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+            .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
     }, [evaluations, id]);
+    
+    const unlockedAchievements = useMemo(() => {
+        if (!attendant) return [];
+        return achievements.filter(ach => ach.isUnlocked(attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults));
+    }, [attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults]);
     
     const currentScore = useMemo(() => {
         if (!attendant) return 0;
-        
         const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => acc + getScoreFromRating(ev.nota), 0);
-        
-        const unlockedAchievements = achievements.filter(ach => ach.isUnlocked(attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults));
         const scoreFromAchievements = unlockedAchievements.reduce((acc, ach) => acc + ach.xp, 0);
-        
         return scoreFromRatings + scoreFromAchievements;
-    }, [attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults]);
+    }, [attendant, attendantEvaluations, unlockedAchievements]);
+
+    const xpHistory = useMemo(() => {
+        const evaluationEvents: XpEvent[] = attendantEvaluations.map(ev => ({
+            reason: `Avaliação de ${ev.nota} estrela(s)`,
+            points: getScoreFromRating(ev.nota),
+            date: ev.data,
+            type: 'evaluation',
+            icon: Star,
+        }));
+        
+        // This is an approximation of when an achievement was unlocked.
+        // A more robust system would store the unlock date.
+        // For now, we use the date of the last evaluation as the unlock date.
+        const lastEvaluationDate = attendantEvaluations.length > 0 ? attendantEvaluations[attendantEvaluations.length - 1].data : new Date(0).toISOString();
+
+        const achievementEvents: XpEvent[] = unlockedAchievements.map(ach => ({
+            reason: `Troféu: ${ach.title}`,
+            points: ach.xp,
+            date: lastEvaluationDate, 
+            type: 'achievement',
+            icon: Trophy,
+        }));
+
+        return [...evaluationEvents, ...achievementEvents]
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [attendantEvaluations, unlockedAchievements]);
+
 
     const stats = useMemo(() => {
         if (attendantEvaluations.length === 0) {
@@ -165,6 +201,13 @@ export default function AttendantProfilePage() {
                                 <RatingStars rating={stats.averageRating} />
                                </div>
                            </div>
+                           <div className="flex items-center justify-between">
+                               <div className="flex items-center gap-2 text-muted-foreground">
+                                   <Sparkles size={18}/>
+                                   <span className="text-sm">Pontos de Experiência</span>
+                               </div>
+                               <span className="font-bold text-lg">{currentScore} XP</span>
+                           </div>
                         </CardContent>
                     </Card>
                 </div>
@@ -181,35 +224,43 @@ export default function AttendantProfilePage() {
                         </CardContent>
                     </Card>
 
-                    <Card>
+                     <Card>
                         <CardHeader>
-                            <CardTitle>Histórico de Avaliações</CardTitle>
-                             <CardDescription>Todas as avaliações recebidas por {attendant.name.split(' ')[0]}.</CardDescription>
+                            <CardTitle className="flex items-center gap-2"><History /> Histórico de XP</CardTitle>
+                             <CardDescription>Eventos que concederam ou removeram pontos de experiência.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <Table>
+                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Nota</TableHead>
-                                        <TableHead>Comentário</TableHead>
+                                        <TableHead>Razão</TableHead>
+                                        <TableHead>Pontos</TableHead>
                                         <TableHead className="text-right">Data</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {attendantEvaluations.length > 0 ? (
-                                        attendantEvaluations.map((ev) => (
-                                            <TableRow key={ev.id}>
-                                                <TableCell><RatingStars rating={ev.nota} /></TableCell>
-                                                <TableCell className="text-muted-foreground">{ev.comentario}</TableCell>
+                                    {xpHistory.length > 0 ? (
+                                        xpHistory.map((ev, index) => (
+                                            <TableRow key={index}>
+                                                <TableCell className="font-medium flex items-center gap-2">
+                                                    <ev.icon className={cn("h-4 w-4", ev.type === 'achievement' ? 'text-amber-500' : 'text-muted-foreground')} />
+                                                    {ev.reason}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge variant={ev.points > 0 ? 'secondary' : 'destructive'} className="flex items-center gap-1 w-fit">
+                                                        {ev.points > 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                                                        {ev.points > 0 ? `+${ev.points}` : ev.points} XP
+                                                    </Badge>
+                                                </TableCell>
                                                 <TableCell className="text-right text-sm text-muted-foreground">
-                                                    {format(new Date(ev.data), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                                                    {format(new Date(ev.date), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                                                 </TableCell>
                                             </TableRow>
                                         ))
                                     ) : (
                                         <TableRow>
                                             <TableCell colSpan={3} className="text-center h-24">
-                                                Nenhuma avaliação encontrada para este atendente.
+                                                Nenhum histórico de XP encontrado.
                                             </TableCell>
                                         </TableRow>
                                     )}
@@ -222,3 +273,4 @@ export default function AttendantProfilePage() {
         </div>
     );
 }
+
