@@ -121,6 +121,7 @@ export type Achievement = {
   description: string;
   icon: React.ElementType;
   color: string;
+  level: number; // Nível em que a conquista é desbloqueada
   isUnlocked: (
     attendant: Attendant, 
     attendantEvaluations: Evaluation[], 
@@ -136,3 +137,4 @@ export type Achievement = {
     aiAnalysisResults?: EvaluationAnalysis[]
   ) => { current: number, target: number, text: string };
 };
+
