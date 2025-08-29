@@ -126,7 +126,7 @@ export default function DashboardPage() {
                 <CardContent className="space-y-3">
                     {upcomingBirthdays.length > 0 ? upcomingBirthdays.map(({ attendant, daysUntil, years, date }) => (
                          <div key={attendant.id} className="flex items-center justify-between p-2 rounded-md border">
-                            <Link href={`/dashboard/pesquisa-satisfacao/atendentes/${attendant.id}`} className="flex items-center gap-3 group">
+                            <Link href={`/dashboard/rh/atendentes/${attendant.id}`} className="flex items-center gap-3 group">
                                 <Avatar className="h-10 w-10">
                                     <AvatarImage src={attendant.avatarUrl} alt={attendant.name} />
                                     <AvatarFallback>{getInitials(attendant.name)}</AvatarFallback>
@@ -148,7 +148,7 @@ export default function DashboardPage() {
                 <CardContent className="space-y-3">
                      {upcomingWorkAnniversaries.length > 0 ? upcomingWorkAnniversaries.map(({ attendant, daysUntil, years, date }) => (
                          <div key={attendant.id} className="flex items-center justify-between p-2 rounded-md border">
-                             <Link href={`/dashboard/pesquisa-satisfacao/atendentes/${attendant.id}`} className="flex items-center gap-3 group">
+                             <Link href={`/dashboard/rh/atendentes/${attendant.id}`} className="flex items-center gap-3 group">
                                 <Avatar className="h-10 w-10">
                                     <AvatarImage src={attendant.avatarUrl} alt={attendant.name} />
                                     <AvatarFallback>{getInitials(attendant.name)}</AvatarFallback>
@@ -248,5 +248,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    

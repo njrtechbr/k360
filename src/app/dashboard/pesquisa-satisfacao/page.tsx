@@ -63,23 +63,6 @@ export default function PesquisaSatisfacaoPage() {
                 </Card>
                 <Card>
                     <CardHeader>
-                        <CardTitle>Gerenciar Atendentes</CardTitle>
-                        <CardDescription>Adicione, edite ou remova os atendentes que serão avaliados.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-sm text-muted-foreground mb-4">
-                            Mantenha a lista de atendentes sempre atualizada para pesquisas precisas.
-                        </p>
-                        <Button asChild>
-                            <Link href="/dashboard/pesquisa-satisfacao/atendentes">
-                                <Users className="mr-2 h-4 w-4" />
-                                Gerenciar Atendentes
-                            </Link>
-                        </Button>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader>
                         <CardTitle>Análise de Sentimento (IA)</CardTitle>
                         <CardDescription>Use IA para analisar os comentários e extrair insights.</CardDescription>
                     </CardHeader>

@@ -5,7 +5,7 @@ import { useAuth } from "@/providers/AuthProvider";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, useSidebar } from "./ui/sidebar";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, Wrench, CircleUser, Settings, ShieldCheck, Users, Trophy, Star } from "lucide-react";
+import { LayoutDashboard, Wrench, CircleUser, Settings, ShieldCheck, Users, Trophy, Star, Briefcase } from "lucide-react";
 import { ROLES } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +31,9 @@ export default function AppSidebar() {
         }
         if (moduleId === 'gamificacao') {
             return <Trophy />;
+        }
+        if (moduleId === 'rh') {
+            return <Briefcase />;
         }
         return <Settings />;
     }

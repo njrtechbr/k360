@@ -167,7 +167,7 @@ export default function DashboardAvaliacoesPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold truncate">
-                            <Link href={`/dashboard/pesquisa-satisfacao/atendentes/${dashboardData.bestAttendant.id}`} className="hover:underline">
+                            <Link href={`/dashboard/rh/atendentes/${dashboardData.bestAttendant.id}`} className="hover:underline">
                                 {dashboardData.bestAttendant.name}
                             </Link>
                         </div>
@@ -181,7 +181,7 @@ export default function DashboardAvaliacoesPage() {
                     </CardHeader>
                     <CardContent>
                          <div className="text-2xl font-bold truncate">
-                            <Link href={`/dashboard/pesquisa-satisfacao/atendentes/${dashboardData.mostEvaluatedAttendant.id}`} className="hover:underline">
+                            <Link href={`/dashboard/rh/atendentes/${dashboardData.mostEvaluatedAttendant.id}`} className="hover:underline">
                                 {dashboardData.mostEvaluatedAttendant.name}
                             </Link>
                         </div>
@@ -227,7 +227,7 @@ export default function DashboardAvaliacoesPage() {
                                 {dashboardData.topRatedAttendants.map(att => (
                                     <TableRow key={att.id}>
                                         <TableCell className="font-medium">
-                                            <Link href={`/dashboard/pesquisa-satisfacao/atendentes/${att.id}`} className="hover:underline">
+                                            <Link href={`/dashboard/rh/atendentes/${att.id}`} className="hover:underline">
                                                 {att.name}
                                             </Link>
                                         </TableCell>
@@ -265,7 +265,7 @@ export default function DashboardAvaliacoesPage() {
                             {dashboardData.recentEvaluations.map((evaluation) => (
                                 <TableRow key={evaluation.id}>
                                     <TableCell className="font-medium">
-                                        <Link href={`/dashboard/pesquisa-satisfacao/atendentes/${evaluation.attendantId}`} className="hover:underline">
+                                        <Link href={`/dashboard/rh/atendentes/${evaluation.attendantId}`} className="hover:underline">
                                             <Badge variant="outline">{attendantMap[evaluation.attendantId]?.name || "Desconhecido"}</Badge>
                                         </Link>
                                     </TableCell>

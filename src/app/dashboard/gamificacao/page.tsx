@@ -149,7 +149,7 @@ export default function GamificacaoPage() {
                                          <TableRow key={att.id} className={index < 3 ? 'bg-amber-50 dark:bg-amber-950/50' : ''}>
                                             <TableCell className="text-center">{getMedal(index + 1)}</TableCell>
                                             <TableCell className="font-medium">
-                                                <Link href={`/dashboard/pesquisa-satisfacao/atendentes/${att.id}`} className="flex items-center gap-3 group">
+                                                <Link href={`/dashboard/rh/atendentes/${att.id}`} className="flex items-center gap-3 group">
                                                     <Avatar className="h-9 w-9">
                                                         <AvatarImage src={att.avatarUrl} alt={att.name}/>
                                                         <AvatarFallback><UserCircle /></AvatarFallback>
@@ -275,7 +275,7 @@ export default function GamificacaoPage() {
                                 <ul className="space-y-2 pr-4">
                                 {selectedAchievement.unlockedBy.map(att => (
                                     <li key={att.id}>
-                                      <Link href={`/dashboard/pesquisa-satisfacao/atendentes/${att.id}`} className="flex items-center gap-3 p-2 rounded-md border hover:bg-muted">
+                                      <Link href={`/dashboard/rh/atendentes/${att.id}`} className="flex items-center gap-3 p-2 rounded-md border hover:bg-muted">
                                           <Avatar className="h-8 w-8">
                                               <AvatarImage src={att.avatarUrl} alt={att.name}/>
                                               <AvatarFallback><UserCircle size={16} /></AvatarFallback>
