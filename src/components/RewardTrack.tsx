@@ -1,14 +1,14 @@
 
+
 "use client";
 
 import * as React from 'react';
-import { useAuth } from '@/providers/AuthProvider';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Progress } from '@/components/ui/progress';
-import { achievements } from '@/lib/achievements';
-import { getLevelFromXp, getXpForLevel, MAX_LEVEL } from '@/lib/xp';
+import { levelRewards } from '@/lib/achievements';
+import { getLevelFromXp } from '@/lib/xp';
 import { cn } from '@/lib/utils';
-import { Shield, Star, Trophy } from 'lucide-react';
+import { Shield, Trophy } from 'lucide-react';
 
 type RewardTrackProps = {
     currentXp?: number;
@@ -16,13 +16,10 @@ type RewardTrackProps = {
 }
 
 const RewardTrack: React.FC<RewardTrackProps> = ({ currentXp = 0, showAttendantProgress = true }) => {
-    const { attendants, evaluations, aiAnalysisResults } = useAuth();
 
-    const { level, progress, xpForNextLevel, xpForCurrentLevel } = getLevelFromXp(currentXp);
+    const { level, progress, xpForNextLevel } = getLevelFromXp(currentXp);
 
-    const unlockedAchievements = showAttendantProgress ? achievements.filter(ach => ach.level <= level) : [];
-
-    const levelMilestones = [...new Set([1, ...achievements.map(ach => ach.level)])].sort((a, b) => a - b);
+    const levelMilestones = [...new Set([1, ...levelRewards.map(r => r.level), 50])].sort((a, b) => a - b);
 
 
     return (
@@ -43,7 +40,7 @@ const RewardTrack: React.FC<RewardTrackProps> = ({ currentXp = 0, showAttendantP
                 </div>
             )}
             
-            <div className="relative w-full">
+            <div className="relative w-full pt-4">
                 {/* Progress Bar */}
                 <div className="absolute top-1/2 -translate-y-1/2 left-0 w-full h-2 bg-muted rounded-full">
                     <div 
@@ -53,36 +50,51 @@ const RewardTrack: React.FC<RewardTrackProps> = ({ currentXp = 0, showAttendantP
                 </div>
 
                 {/* Milestones */}
-                <div className="relative flex justify-between items-center">
+                <div className="relative flex justify-between items-start">
                     {levelMilestones.map((milestoneLevel) => {
                         const isUnlocked = level >= milestoneLevel;
-                        const milestoneAchievements = achievements.filter(a => a.level === milestoneLevel);
+                        const milestoneRewards = levelRewards.filter(a => a.level === milestoneLevel);
+                        
+                        if (milestoneRewards.length === 0 && milestoneLevel !== 50) return null;
+
+                        if (milestoneLevel === 50) {
+                             return (
+                                 <div key={milestoneLevel} className="flex flex-col items-center z-10">
+                                     <div className={cn("h-10 w-10 rounded-full flex items-center justify-center border-4", isUnlocked ? `bg-amber-100 border-amber-400` : "bg-muted border-border")}>
+                                        <Trophy className={cn("h-5 w-5", isUnlocked ? 'text-amber-500' : 'text-muted-foreground')} />
+                                     </div>
+                                     <span className={cn("mt-2 text-sm text-center font-semibold w-20", isUnlocked ? "text-primary" : "text-muted-foreground")}>
+                                        Nível Máximo
+                                    </span>
+                                 </div>
+                             )
+                        }
                         
                         return (
                             <div key={milestoneLevel} className="flex flex-col items-center z-10">
                                 <div className="flex -space-x-2">
-                                     {milestoneAchievements.map(ach => (
-                                         <Tooltip key={ach.id}>
+                                     {milestoneRewards.map(reward => (
+                                         <Tooltip key={reward.level}>
                                             <TooltipTrigger>
                                                 <div className={cn(
                                                     "h-10 w-10 rounded-full flex items-center justify-center border-4",
                                                     isUnlocked ? `bg-amber-100 border-amber-400` : "bg-muted border-border",
                                                 )}>
-                                                    <ach.icon className={cn(
+                                                    <reward.icon className={cn(
                                                         "h-5 w-5",
-                                                        isUnlocked ? ach.color : "text-muted-foreground"
+                                                        isUnlocked ? reward.color : "text-muted-foreground"
                                                     )} />
                                                 </div>
                                             </TooltipTrigger>
                                             <TooltipContent>
-                                                <p className="font-bold">{ach.title}</p>
-                                                <p className="text-sm text-muted-foreground">{ach.description}</p>
+                                                <p className="font-bold">{reward.title}</p>
+                                                <p className="text-sm text-muted-foreground">{reward.description}</p>
                                             </TooltipContent>
                                         </Tooltip>
                                      ))}
                                 </div>
                                 <span className={cn(
-                                    "mt-2 text-sm font-semibold",
+                                    "mt-2 text-sm text-center font-semibold w-20",
                                     isUnlocked ? "text-primary" : "text-muted-foreground"
                                 )}>
                                     Nível {milestoneLevel}
@@ -90,14 +102,6 @@ const RewardTrack: React.FC<RewardTrackProps> = ({ currentXp = 0, showAttendantP
                             </div>
                         );
                     })}
-                     <div className="flex flex-col items-center z-10">
-                         <div className="h-10 w-10 rounded-full flex items-center justify-center border-4 bg-muted border-border">
-                            <Trophy className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                        <span className="mt-2 text-sm font-semibold text-muted-foreground">
-                            Fim
-                        </span>
-                     </div>
                 </div>
             </div>
         </div>

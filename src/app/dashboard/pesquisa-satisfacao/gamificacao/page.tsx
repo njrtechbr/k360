@@ -43,31 +43,24 @@ export default function GamificacaoPage() {
     }, [isAuthenticated, loading, router]);
     
     const leaderboard = useMemo(() => {
-        const attendantScores: Record<string, { totalScore: number, evaluationCount: number }> = {};
-
-        evaluations.forEach(ev => {
-            if (!attendantScores[ev.attendantId]) {
-                attendantScores[ev.attendantId] = { totalScore: 0, evaluationCount: 0 };
-            }
-            attendantScores[ev.attendantId].totalScore += getScoreFromRating(ev.nota);
-            attendantScores[ev.attendantId].evaluationCount++;
-        });
-
-        const rankedAttendants = attendants
+        return attendants
             .map(attendant => {
                 const attendantEvaluations = evaluations.filter(ev => ev.attendantId === attendant.id);
+                
+                const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => acc + getScoreFromRating(ev.nota), 0);
+                
                 const unlockedAchievements = achievements.filter(ach => ach.isUnlocked(attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults));
+                const scoreFromAchievements = unlockedAchievements.reduce((acc, ach) => acc + ach.xp, 0);
+
                 return {
                     ...attendant,
-                    score: attendantScores[attendant.id]?.totalScore ?? 0,
-                    evaluationCount: attendantScores[attendant.id]?.evaluationCount ?? 0,
+                    score: scoreFromRatings + scoreFromAchievements,
+                    evaluationCount: attendantEvaluations.length,
                     unlockedAchievements
                 }
             })
             .filter(att => att.evaluationCount > 0)
             .sort((a, b) => b.score - a.score);
-
-        return rankedAttendants;
 
     }, [evaluations, attendants, aiAnalysisResults]);
 
@@ -110,7 +103,7 @@ export default function GamificacaoPage() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Trilha de Recompensas Geral</CardTitle>
+                    <CardTitle>Trilha de Níveis</CardTitle>
                     <CardDescription>Visão geral dos níveis e das próximas recompensas para a equipe.</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -223,18 +216,14 @@ export default function GamificacaoPage() {
             </div>
 
              <div>
-                <h2 className="text-2xl font-bold font-heading mb-4">Galeria de Conquistas</h2>
-                <p className="text-muted-foreground mb-6">Todas as recompensas que podem ser desbloqueadas ao subir de nível. Clique para ver os detalhes.</p>
+                <h2 className="text-2xl font-bold font-heading mb-4">Galeria de Troféus</h2>
+                <p className="text-muted-foreground mb-6">Desbloqueie troféus para ganhar XP bônus e acelerar sua progressão. Clique para ver os detalhes.</p>
                 <div className="space-y-2">
                     {achievementStats.map(ach => (
                     <Card key={ach.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleAchievementClick(ach)}>
                         <div className="p-4 flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                                <div className="flex flex-col items-center justify-center w-16">
-                                    <span className="text-xs text-muted-foreground">Nível</span>
-                                    <span className="text-xl font-bold">{ach.level}</span>
-                                </div>
-                                <div className={`p-2 bg-muted rounded-full ${ach.unlockedCount > 0 ? ach.color : 'text-muted-foreground'}`}>
+                                <div className={`p-3 bg-muted rounded-full ${ach.unlockedCount > 0 ? ach.color : 'text-muted-foreground'}`}>
                                 <ach.icon className="h-6 w-6" />
                                 </div>
                                 <div>
@@ -244,8 +233,8 @@ export default function GamificacaoPage() {
                             </div>
                              <div className="flex items-center gap-4">
                                 <div className="text-right">
-                                    <p className="font-semibold">{ach.unlockedCount} / {ach.totalAttendants}</p>
-                                    <p className="text-xs text-muted-foreground">Desbloqueado</p>
+                                    <p className="font-semibold text-green-600">+{ach.xp} XP</p>
+                                    <p className="text-xs text-muted-foreground">{ach.unlockedCount} / {ach.totalAttendants} Desbloquearam</p>
                                 </div>
                                 <ChevronRight className="text-muted-foreground"/>
                              </div>

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useAuth } from "@/providers/AuthProvider";
@@ -46,7 +47,7 @@ const DetailItem = ({ icon, label, value }: { icon: React.ReactNode, label: stri
 export default function AttendantProfilePage() {
     const { id } = useParams();
     const router = useRouter();
-    const { attendants, evaluations, loading, user } = useAuth();
+    const { attendants, evaluations, loading, user, aiAnalysisResults } = useAuth();
 
     const attendant = useMemo(() => attendants.find(a => a.id === id), [attendants, id]);
     
@@ -57,8 +58,15 @@ export default function AttendantProfilePage() {
     }, [evaluations, id]);
     
     const currentScore = useMemo(() => {
-        return attendantEvaluations.reduce((acc, ev) => acc + getScoreFromRating(ev.nota), 0);
-    }, [attendantEvaluations]);
+        if (!attendant) return 0;
+        
+        const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => acc + getScoreFromRating(ev.nota), 0);
+        
+        const unlockedAchievements = achievements.filter(ach => ach.isUnlocked(attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults));
+        const scoreFromAchievements = unlockedAchievements.reduce((acc, ach) => acc + ach.xp, 0);
+        
+        return scoreFromRatings + scoreFromAchievements;
+    }, [attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults]);
 
     const stats = useMemo(() => {
         if (attendantEvaluations.length === 0) {

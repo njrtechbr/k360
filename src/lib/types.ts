@@ -121,7 +121,7 @@ export type Achievement = {
   description: string;
   icon: React.ElementType;
   color: string;
-  level: number; // Nível em que a conquista é desbloqueada
+  xp: number; // XP concedido ao desbloquear
   isUnlocked: (
     attendant: Attendant, 
     attendantEvaluations: Evaluation[], 
@@ -129,12 +129,14 @@ export type Achievement = {
     allAttendants?: Attendant[],
     aiAnalysisResults?: EvaluationAnalysis[]
   ) => boolean;
-  getProgress?: (
-    attendant: Attendant, 
-    attendantEvaluations: Evaluation[], 
-    allEvaluations?: Evaluation[], 
-    allAttendants?: Attendant[],
-    aiAnalysisResults?: EvaluationAnalysis[]
-  ) => { current: number, target: number, text: string };
+};
+
+
+export type LevelReward = {
+    level: number;
+    title: string;
+    description: string;
+    icon: React.ElementType;
+    color: string;
 };
 
