@@ -3,16 +3,19 @@
 
 import type { ReactNode } from "react";
 import React, { useCallback, useState } from "react";
-import type { User, Module, Role, Attendant, Evaluation } from "@/lib/types";
+import type { User, Module, Role, Attendant, Evaluation, EvaluationAnalysis } from "@/lib/types";
 import { INITIAL_MODULES, ROLES, ATTENDANT_STATUS, FUNCOES, SETORES } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { analyzeEvaluation } from "@/ai/flows/analyze-evaluation-flow";
 
 const USERS_STORAGE_KEY = "controle_acesso_users";
 const SESSION_STORAGE_KEY = "controle_acesso_session";
 const MODULES_STORAGE_KEY = "controle_acesso_modules";
 const ATTENDANTS_STORAGE_KEY = "controle_acesso_attendants";
 const EVALUATIONS_STORAGE_KEY = "controle_acesso_evaluations";
+const AI_ANALYSIS_STORAGE_KEY = "controle_acesso_ai_analysis";
+const LAST_AI_ANALYSIS_DATE_KEY = "controle_acesso_last_ai_analysis_date";
 
 
 // Dummy users for initial seeding
@@ -719,6 +722,10 @@ interface AuthContextType {
   deleteAttendant: (attendantId: string) => Promise<void>;
   evaluations: Evaluation[];
   addEvaluation: (evaluationData: Omit<Evaluation, 'id' | 'data'>) => Promise<void>;
+  aiAnalysisResults: EvaluationAnalysis[];
+  lastAiAnalysis: string | null;
+  runAiAnalysis: () => Promise<void>;
+  isAiAnalysisRunning: boolean;
 }
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
@@ -729,6 +736,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [modules, setModules] = useState<Module[]>([]);
   const [attendants, setAttendants] = useState<Attendant[]>([]);
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
+  const [aiAnalysisResults, setAiAnalysisResults] = useState<EvaluationAnalysis[]>([]);
+  const [lastAiAnalysis, setLastAiAnalysis] = useState<string | null>(null);
+  const [isAiAnalysisRunning, setIsAiAnalysisRunning] = useState(false);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
@@ -797,6 +807,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+   const getAiAnalysisFromStorage = useCallback((): EvaluationAnalysis[] => {
+    if (typeof window === "undefined") return [];
+    try {
+      const analysisJson = localStorage.getItem(AI_ANALYSIS_STORAGE_KEY);
+      return analysisJson ? JSON.parse(analysisJson) : [];
+    } catch (error) {
+      console.error("Failed to parse AI analysis from localStorage", error);
+      return [];
+    }
+  }, []);
+
+  const getLastAiAnalysisDateFromStorage = useCallback((): string | null => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem(LAST_AI_ANALYSIS_DATE_KEY);
+  }, []);
+
   const saveUsersToStorage = (users: User[]) => {
     localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
     setAllUsers(users);
@@ -817,6 +843,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setEvaluations(evaluations);
   }
   
+  const saveAiAnalysisToStorage = (analysis: EvaluationAnalysis[]) => {
+    localStorage.setItem(AI_ANALYSIS_STORAGE_KEY, JSON.stringify(analysis));
+    setAiAnalysisResults(analysis);
+  };
+
+  const saveLastAiAnalysisDate = (date: string) => {
+    localStorage.setItem(LAST_AI_ANALYSIS_DATE_KEY, date);
+    setLastAiAnalysis(date);
+  };
+  
   const hasSuperAdmin = (): boolean => {
     const users = getUsersFromStorage();
     return users.some(u => u.role === 'superadmin');
@@ -828,6 +864,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setModules(getModulesFromStorage());
       setAttendants(getAttendantsFromStorage());
       setEvaluations(getEvaluationsFromStorage());
+      setAiAnalysisResults(getAiAnalysisFromStorage());
+      setLastAiAnalysis(getLastAiAnalysisDateFromStorage());
 
       const sessionJson = localStorage.getItem(SESSION_STORAGE_KEY);
       if (sessionJson) {
@@ -840,7 +878,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       setLoading(false);
     }
-  }, [getUsersFromStorage, getModulesFromStorage, getAttendantsFromStorage, getEvaluationsFromStorage]);
+  }, [getUsersFromStorage, getModulesFromStorage, getAttendantsFromStorage, getEvaluationsFromStorage, getAiAnalysisFromStorage, getLastAiAnalysisDateFromStorage]);
 
   const login = async (email: string, password: string): Promise<void> => {
     const users = getUsersFromStorage();
@@ -1142,6 +1180,56 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       saveEvaluationsToStorage(newEvaluations);
   };
 
+  const runAiAnalysis = async () => {
+    setIsAiAnalysisRunning(true);
+    toast({ title: 'Análise de IA Iniciada', description: 'Processando comentários...' });
+
+    const allEvaluations = getEvaluationsFromStorage();
+    const existingAnalysis = getAiAnalysisFromStorage();
+    const analyzedIds = new Set(existingAnalysis.map(a => a.evaluationId));
+
+    const evaluationsToAnalyze = allEvaluations.filter(e => !analyzedIds.has(e.id));
+    
+    if (evaluationsToAnalyze.length === 0) {
+      toast({ title: 'Nenhuma nova avaliação', description: 'Todos os comentários já foram analisados.' });
+      setIsAiAnalysisRunning(false);
+      return;
+    }
+
+    try {
+      const newAnalysisPromises = evaluationsToAnalyze.map(async (ev) => {
+        const result = await analyzeEvaluation({ rating: ev.nota, comment: ev.comentario });
+        return {
+          evaluationId: ev.id,
+          sentiment: result.sentiment,
+          summary: result.summary,
+          analyzedAt: new Date().toISOString(),
+        };
+      });
+
+      const newResults = await Promise.all(newAnalysisPromises);
+      
+      saveAiAnalysisToStorage([...existingAnalysis, ...newResults]);
+      const now = new Date().toISOString();
+      saveLastAiAnalysisDate(now);
+
+      toast({
+        title: 'Análise Concluída!',
+        description: `${newResults.length} novos comentários foram analisados com sucesso.`,
+      });
+
+    } catch (error) {
+      console.error("AI Analysis failed", error);
+      toast({
+        variant: "destructive",
+        title: 'Erro na Análise de IA',
+        description: 'Não foi possível processar os comentários. Tente novamente.',
+      });
+    } finally {
+      setIsAiAnalysisRunning(false);
+    }
+  };
+
 
   const value = {
     user,
@@ -1166,6 +1254,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     deleteAttendant,
     evaluations,
     addEvaluation,
+    aiAnalysisResults,
+    lastAiAnalysis,
+    runAiAnalysis,
+    isAiAnalysisRunning,
   };
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
@@ -1178,4 +1270,3 @@ export const useAuth = () => {
   }
   return context;
 };
-

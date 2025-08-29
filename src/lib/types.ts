@@ -93,6 +93,13 @@ export interface Evaluation {
   data: string; // Storing as ISO string for simplicity
 }
 
+export type EvaluationAnalysis = {
+  evaluationId: string;
+  sentiment: 'Positivo' | 'Negativo' | 'Neutro';
+  summary: string;
+  analyzedAt: string; // ISO string
+};
+
 export type Achievement = {
   id: string;
   title: string;

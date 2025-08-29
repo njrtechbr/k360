@@ -4,7 +4,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/providers/AuthProvider";
-import { Users, LayoutDashboard, ListChecks, Trophy, Star } from "lucide-react";
+import { Users, LayoutDashboard, ListChecks, Trophy, Star, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -91,6 +91,23 @@ export default function PesquisaSatisfacaoPage() {
                             <Link href="/dashboard/pesquisa-satisfacao/gamificacao">
                                 <Trophy className="mr-2 h-4 w-4" />
                                 Ver Gamificação
+                            </Link>
+                        </Button>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Análise de Sentimento (IA)</CardTitle>
+                        <CardDescription>Use IA para analisar os comentários e extrair insights.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground mb-4">
+                           Execute análises sob demanda e veja os resultados.
+                        </p>
+                        <Button asChild>
+                            <Link href="/dashboard/pesquisa-satisfacao/analise-sentimento">
+                                <Sparkles className="mr-2 h-4 w-4" />
+                                Analisar Comentários
                             </Link>
                         </Button>
                     </CardContent>
