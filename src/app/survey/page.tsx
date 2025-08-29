@@ -125,7 +125,7 @@ export default function SurveyPage() {
     }
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-800 px-4 py-8">
+        <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-800 px-4 py-8">
             <Card className="w-full max-w-md shadow-2xl rounded-2xl animate-in fade-in zoom-in-95">
                 <CardContent className="p-6 md:p-8 text-center">
                     <div className="flex justify-center mb-4">
@@ -182,7 +182,17 @@ export default function SurveyPage() {
                     </div>
                 </CardFooter>
             </Card>
+
+            <div className="text-center mt-8">
+                <p className="text-sm text-muted-foreground">
+                    Quer um sistema de avaliação como este para a sua empresa?
+                </p>
+                <Button variant="link" asChild>
+                    <Link href="/">
+                        Conheça o Koerner 360
+                    </Link>
+                </Button>
+            </div>
         </div>
     );
 }
-
