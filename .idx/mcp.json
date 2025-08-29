@@ -1,0 +1,33 @@
+{
+    "mcpServers": {
+      "context7": {
+        "command": "npx",
+        "args": [
+          "-y",
+          "@upstash/context7-mcp@latest"
+        ],
+        "env": {
+          "DEFAULT_MINIMUM_TOKENS": "10000",
+          "NODE_ENV": "production"
+        },
+        "cwd": "${workspaceFolder}",
+        "timeout": 30000
+      },
+      "Sequential Thinking": {
+        "command": "npx",
+        "args": [
+          "-y",
+          "@modelcontextprotocol/server-sequential-thinking"
+        ],
+        "env": {}
+      },
+      "Playwright": {
+        "command": "npx",
+        "args": [
+          "-y",
+          "@executeautomation/playwright-mcp-server"
+        ],
+        "env": {}
+      }
+    }
+  }
