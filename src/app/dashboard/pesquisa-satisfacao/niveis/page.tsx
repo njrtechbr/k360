@@ -13,6 +13,7 @@ import { getScoreFromRating, getLevelFromXp, MAX_LEVEL } from '@/lib/xp';
 import { achievements } from "@/lib/achievements";
 import RewardTrack from "@/components/RewardTrack";
 import { Progress } from "@/components/ui/progress";
+import Link from "next/link";
 
 const getMedal = (rank: number) => {
     if (rank === 1) return <span className="text-2xl" title="1º Lugar">🥇</span>;
@@ -101,13 +102,13 @@ export default function NiveisPage() {
                                  <TableRow key={att.id}>
                                     <TableCell className="text-center">{getMedal(index + 1)}</TableCell>
                                     <TableCell className="font-medium">
-                                        <div className="flex items-center gap-3">
+                                        <Link href={`/dashboard/pesquisa-satisfacao/atendentes/${att.id}`} className="flex items-center gap-3 group">
                                             <Avatar className="h-9 w-9">
                                                 <AvatarImage src={att.avatarUrl} alt={att.name}/>
                                                 <AvatarFallback><UserCircle /></AvatarFallback>
                                             </Avatar>
-                                            <span>{att.name}</span>
-                                        </div>
+                                            <span className="group-hover:underline">{att.name}</span>
+                                        </Link>
                                     </TableCell>
                                     <TableCell className="text-center">
                                         <div className="flex items-center justify-center gap-1 font-bold">

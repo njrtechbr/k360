@@ -151,16 +151,16 @@ export default function GamificacaoPage() {
                                          <TableRow key={att.id} className={index < 3 ? 'bg-amber-50 dark:bg-amber-950/50' : ''}>
                                             <TableCell className="text-center">{getMedal(index + 1)}</TableCell>
                                             <TableCell className="font-medium">
-                                                <div className="flex items-center gap-3">
+                                                <Link href={`/dashboard/pesquisa-satisfacao/atendentes/${att.id}`} className="flex items-center gap-3 group">
                                                     <Avatar className="h-9 w-9">
                                                         <AvatarImage src={att.avatarUrl} alt={att.name}/>
                                                         <AvatarFallback><UserCircle /></AvatarFallback>
                                                     </Avatar>
                                                     <div>
-                                                        <span>{att.name}</span>
+                                                        <span className="group-hover:underline">{att.name}</span>
                                                         <div className="text-xs text-muted-foreground capitalize">{att.setor}</div>
                                                     </div>
-                                                </div>
+                                                </Link>
                                             </TableCell>
                                             <TableCell className="text-center">
                                                 <div className="flex items-center justify-center gap-1 font-bold">
@@ -276,12 +276,14 @@ export default function GamificacaoPage() {
                             <ScrollArea className="h-72">
                                 <ul className="space-y-2 pr-4">
                                 {selectedAchievement.unlockedBy.map(att => (
-                                    <li key={att.id} className="flex items-center gap-3 p-2 rounded-md border">
-                                        <Avatar className="h-8 w-8">
-                                            <AvatarImage src={att.avatarUrl} alt={att.name}/>
-                                            <AvatarFallback><UserCircle size={16} /></AvatarFallback>
-                                        </Avatar>
-                                        <span>{att.name}</span>
+                                    <li key={att.id}>
+                                      <Link href={`/dashboard/pesquisa-satisfacao/atendentes/${att.id}`} className="flex items-center gap-3 p-2 rounded-md border hover:bg-muted">
+                                          <Avatar className="h-8 w-8">
+                                              <AvatarImage src={att.avatarUrl} alt={att.name}/>
+                                              <AvatarFallback><UserCircle size={16} /></AvatarFallback>
+                                          </Avatar>
+                                          <span>{att.name}</span>
+                                      </Link>
                                     </li>
                                 ))}
                                 </ul>

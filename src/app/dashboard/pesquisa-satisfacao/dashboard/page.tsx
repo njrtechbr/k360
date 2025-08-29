@@ -65,8 +65,8 @@ export default function DashboardAvaliacoesPage() {
                 totalEvaluations: 0,
                 averageRating: 0,
                 ratingsDistribution: [],
-                bestAttendant: { name: 'N/A', avgRating: 0, count: 0 },
-                mostEvaluatedAttendant: { name: 'N/A', count: 0 },
+                bestAttendant: { id: '', name: 'N/A', avgRating: 0, count: 0 },
+                mostEvaluatedAttendant: { id: '', name: 'N/A', count: 0 },
                 recentEvaluations: [],
                 topRatedAttendants: [],
             };
@@ -100,8 +100,8 @@ export default function DashboardAvaliacoesPage() {
             count: stats.count
         }));
         
-        const bestAttendant = [...attendantRanking].sort((a,b) => b.avgRating - a.avgRating)[0] ?? { name: 'N/A', avgRating: 0, count: 0 };
-        const mostEvaluatedAttendant = [...attendantRanking].sort((a,b) => b.count - a.count)[0] ?? { name: 'N/A', count: 0 };
+        const bestAttendant = [...attendantRanking].sort((a,b) => b.avgRating - a.avgRating)[0] ?? { id: '', name: 'N/A', avgRating: 0, count: 0 };
+        const mostEvaluatedAttendant = [...attendantRanking].sort((a,b) => b.count - a.count)[0] ?? { id: '', name: 'N/A', count: 0 };
         const topRatedAttendants = [...attendantRanking].sort((a,b) => b.avgRating - a.avgRating).slice(0, 5);
 
         const recentEvaluations = [...evaluations]
@@ -166,7 +166,11 @@ export default function DashboardAvaliacoesPage() {
                         <UserCheck className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold truncate">{dashboardData.bestAttendant.name}</div>
+                        <div className="text-2xl font-bold truncate">
+                            <Link href={`/dashboard/pesquisa-satisfacao/atendentes/${dashboardData.bestAttendant.id}`} className="hover:underline">
+                                {dashboardData.bestAttendant.name}
+                            </Link>
+                        </div>
                         <p className="text-xs text-muted-foreground">Nota média de {dashboardData.bestAttendant.avgRating.toFixed(2)}</p>
                     </CardContent>
                 </Card>
@@ -176,7 +180,11 @@ export default function DashboardAvaliacoesPage() {
                         <Users className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold truncate">{dashboardData.mostEvaluatedAttendant.name}</div>
+                         <div className="text-2xl font-bold truncate">
+                            <Link href={`/dashboard/pesquisa-satisfacao/atendentes/${dashboardData.mostEvaluatedAttendant.id}`} className="hover:underline">
+                                {dashboardData.mostEvaluatedAttendant.name}
+                            </Link>
+                        </div>
                         <p className="text-xs text-muted-foreground">{dashboardData.mostEvaluatedAttendant.count} avaliações recebidas</p>
                     </CardContent>
                 </Card>
@@ -218,7 +226,11 @@ export default function DashboardAvaliacoesPage() {
                             <TableBody>
                                 {dashboardData.topRatedAttendants.map(att => (
                                     <TableRow key={att.id}>
-                                        <TableCell className="font-medium">{att.name}</TableCell>
+                                        <TableCell className="font-medium">
+                                            <Link href={`/dashboard/pesquisa-satisfacao/atendentes/${att.id}`} className="hover:underline">
+                                                {att.name}
+                                            </Link>
+                                        </TableCell>
                                         <TableCell className="text-right">
                                            <div className="flex justify-end items-center gap-2">
                                                 <span className="font-semibold">{att.avgRating.toFixed(2)}</span>
@@ -253,7 +265,9 @@ export default function DashboardAvaliacoesPage() {
                             {dashboardData.recentEvaluations.map((evaluation) => (
                                 <TableRow key={evaluation.id}>
                                     <TableCell className="font-medium">
-                                        <Badge variant="outline">{attendantMap[evaluation.attendantId]?.name || "Desconhecido"}</Badge>
+                                        <Link href={`/dashboard/pesquisa-satisfacao/atendentes/${evaluation.attendantId}`} className="hover:underline">
+                                            <Badge variant="outline">{attendantMap[evaluation.attendantId]?.name || "Desconhecido"}</Badge>
+                                        </Link>
                                     </TableCell>
                                     <TableCell>
                                         <RatingStars rating={evaluation.nota} />
@@ -274,3 +288,5 @@ export default function DashboardAvaliacoesPage() {
         </div>
     );
 }
+
+    

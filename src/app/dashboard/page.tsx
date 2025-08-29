@@ -126,16 +126,16 @@ export default function DashboardPage() {
                 <CardContent className="space-y-3">
                     {upcomingBirthdays.length > 0 ? upcomingBirthdays.map(({ attendant, daysUntil, years, date }) => (
                          <div key={attendant.id} className="flex items-center justify-between p-2 rounded-md border">
-                            <div className="flex items-center gap-3">
+                            <Link href={`/dashboard/pesquisa-satisfacao/atendentes/${attendant.id}`} className="flex items-center gap-3 group">
                                 <Avatar className="h-10 w-10">
                                     <AvatarImage src={attendant.avatarUrl} alt={attendant.name} />
                                     <AvatarFallback>{getInitials(attendant.name)}</AvatarFallback>
                                 </Avatar>
                                 <div>
-                                    <p className="font-medium">{attendant.name}</p>
+                                    <p className="font-medium group-hover:underline">{attendant.name}</p>
                                     <p className="text-sm text-muted-foreground flex items-center gap-1.5"><Cake size={14}/> {format(date, 'dd/MM')} ({years} anos)</p>
                                 </div>
-                            </div>
+                            </Link>
                             <Badge variant="outline">{daysUntil === 0 ? 'Hoje!' : `em ${daysUntil}d`}</Badge>
                         </div>
                     )) : <p className="text-sm text-muted-foreground">Nenhum aniversário próximo.</p>}
@@ -148,16 +148,16 @@ export default function DashboardPage() {
                 <CardContent className="space-y-3">
                      {upcomingWorkAnniversaries.length > 0 ? upcomingWorkAnniversaries.map(({ attendant, daysUntil, years, date }) => (
                          <div key={attendant.id} className="flex items-center justify-between p-2 rounded-md border">
-                            <div className="flex items-center gap-3">
+                             <Link href={`/dashboard/pesquisa-satisfacao/atendentes/${attendant.id}`} className="flex items-center gap-3 group">
                                 <Avatar className="h-10 w-10">
                                     <AvatarImage src={attendant.avatarUrl} alt={attendant.name} />
                                     <AvatarFallback>{getInitials(attendant.name)}</AvatarFallback>
                                 </Avatar>
                                 <div>
-                                    <p className="font-medium">{attendant.name}</p>
+                                    <p className="font-medium group-hover:underline">{attendant.name}</p>
                                     <p className="text-sm text-muted-foreground flex items-center gap-1.5"><CalendarDays size={14}/> {format(date, 'dd/MM')} ({years} anos)</p>
                                 </div>
-                            </div>
+                            </Link>
                             <Badge variant="outline">{daysUntil === 0 ? 'Hoje!' : `em ${daysUntil}d`}</Badge>
                         </div>
                     )) : <p className="text-sm text-muted-foreground">Nenhum aniversário de admissão próximo.</p>}
@@ -234,7 +234,7 @@ export default function DashboardPage() {
             </CardContent>
         </Card>
       )}
-      {(user.role === ROLES.USER) && (
+       {(user.role === ROLES.USER) && (
         <Card>
             <CardHeader>
                 <CardTitle>Painel do Usuário</CardTitle>
@@ -248,3 +248,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
