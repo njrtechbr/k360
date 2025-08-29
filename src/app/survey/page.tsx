@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { MessageCircle, ShieldCheck, Star, ThumbsUp, UserCircle } from 'lucide-react';
 import Link from 'next/link';
+import { Badge } from '@/components/ui/badge';
 
 const RatingSelector = ({ rating, setRating }: { rating: number; setRating: (r: number) => void }) => {
     return (
@@ -138,7 +139,7 @@ export default function SurveyPage() {
                     </div>
                     
                     <h1 className="text-2xl font-bold">{attendant.name}</h1>
-                    <p className="text-primary font-medium mb-2">{attendant.funcao}</p>
+                    <Badge variant="secondary">{attendant.funcao}</Badge>
                     
                     <h2 className="text-lg font-semibold mt-6">Pesquisa de Satisfação</h2>
                     <p className="text-muted-foreground mb-4 text-sm">Como você avalia o atendimento recebido?</p>
