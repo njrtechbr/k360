@@ -37,6 +37,9 @@ interface AuthContextType {
   lastAiAnalysis: string | null;
   runAiAnalysis: () => Promise<void>;
   isAiAnalysisRunning: boolean;
+  analysisProgress: { current: number; total: number, evaluation: Evaluation | null };
+  isProgressModalOpen: boolean;
+  setIsProgressModalOpen: (isOpen: boolean) => void;
 }
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
@@ -83,6 +86,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     lastAiAnalysis,
     isAiAnalysisRunning,
     runAiAnalysis,
+    analysisProgress,
+    isProgressModalOpen,
+    setIsProgressModalOpen,
   } = useEvaluationsData();
 
   const registerUser = async (userData: Omit<User, "id">) => {
@@ -159,6 +165,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     lastAiAnalysis,
     runAiAnalysis,
     isAiAnalysisRunning,
+    analysisProgress,
+    isProgressModalOpen,
+    setIsProgressModalOpen,
   };
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;

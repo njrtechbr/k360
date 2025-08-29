@@ -10,6 +10,12 @@ const EVALUATIONS_STORAGE_KEY = "controle_acesso_evaluations";
 const AI_ANALYSIS_STORAGE_KEY = "controle_acesso_ai_analysis";
 const LAST_AI_ANALYSIS_DATE_KEY = "controle_acesso_last_ai_analysis_date";
 
+type AnalysisProgress = {
+    current: number;
+    total: number;
+    evaluation: Evaluation | null;
+};
+
 const parseEvaluationDate = (dateString: string) => {
     const [datePart, timePart] = dateString.split(' ');
     const [day, month, year] = datePart.split('/');
@@ -28,6 +34,9 @@ export function useEvaluationsData() {
     const [aiAnalysisResults, setAiAnalysisResults] = useState<EvaluationAnalysis[]>([]);
     const [lastAiAnalysis, setLastAiAnalysis] = useState<string | null>(null);
     const [isAiAnalysisRunning, setIsAiAnalysisRunning] = useState(false);
+    const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
+    const [analysisProgress, setAnalysisProgress] = useState<AnalysisProgress>({ current: 0, total: 0, evaluation: null });
+
     const { toast } = useToast();
 
     const getEvaluationsFromStorage = useCallback((): Evaluation[] => {
@@ -101,15 +110,12 @@ export function useEvaluationsData() {
 
     const runAiAnalysis = async () => {
         setIsAiAnalysisRunning(true);
-        toast({ title: 'Análise de IA Iniciada', description: 'Processando comentários... Isso pode levar alguns minutos.' });
 
         const allEvaluations = getEvaluationsFromStorage();
         const existingAnalysis = getAiAnalysisFromStorage();
         const analyzedIds = new Set(existingAnalysis.map(a => a.evaluationId));
         
         const pendingEvaluations = allEvaluations.filter(e => !analyzedIds.has(e.id));
-        const evaluationsWithComments = pendingEvaluations.filter(e => e.comentario.trim() !== '(Sem comentário)' && e.comentario.trim() !== '');
-        const evaluationsWithoutComments = pendingEvaluations.filter(e => e.comentario.trim() === '(Sem comentário)' || e.comentario.trim() === '');
         
         if (pendingEvaluations.length === 0) {
             toast({ title: 'Nenhuma nova avaliação', description: 'Todos os comentários já foram analisados.' });
@@ -117,8 +123,15 @@ export function useEvaluationsData() {
             return;
         }
 
+        const evaluationsWithComments = pendingEvaluations.filter(e => e.comentario.trim() !== '(Sem comentário)' && e.comentario.trim() !== '');
+        const evaluationsWithoutComments = pendingEvaluations.filter(e => e.comentario.trim() === '(Sem comentário)' || e.comentario.trim() === '');
+        
+        setIsProgressModalOpen(true);
+        setAnalysisProgress({ current: 0, total: pendingEvaluations.length, evaluation: null });
+
         try {
             const newResults: EvaluationAnalysis[] = [];
+            let processedCount = 0;
 
             // Process evaluations without comments locally
             for (const ev of evaluationsWithoutComments) {
@@ -131,10 +144,15 @@ export function useEvaluationsData() {
                     summary: 'Avaliação feita apenas com nota.',
                     analyzedAt: new Date().toISOString(),
                 });
+                processedCount++;
+                setAnalysisProgress({ current: processedCount, total: pendingEvaluations.length, evaluation: ev });
+                await sleep(50); // Small delay for UI update
             }
             
             // Process evaluations with comments using AI, sequentially
             for (const ev of evaluationsWithComments) {
+                processedCount++;
+                setAnalysisProgress({ current: processedCount, total: pendingEvaluations.length, evaluation: ev });
                 try {
                     const result = await analyzeEvaluation({ rating: ev.nota, comment: ev.comentario });
                     newResults.push({
@@ -146,7 +164,7 @@ export function useEvaluationsData() {
                     await sleep(2000); 
                 } catch (error) {
                     console.error(`Falha ao analisar a avaliação ${ev.id}:`, error);
-                    // Optionally skip this evaluation and continue with others
+                    // Skip this evaluation and continue with others
                 }
             }
             
@@ -168,6 +186,7 @@ export function useEvaluationsData() {
             });
         } finally {
             setIsAiAnalysisRunning(false);
+            setIsProgressModalOpen(false);
         }
     };
 
@@ -179,5 +198,8 @@ export function useEvaluationsData() {
         lastAiAnalysis,
         isAiAnalysisRunning,
         runAiAnalysis,
+        analysisProgress,
+        isProgressModalOpen,
+        setIsProgressModalOpen,
     };
 }
