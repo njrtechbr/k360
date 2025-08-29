@@ -106,10 +106,12 @@ export function useEvaluationsData() {
         const allEvaluations = getEvaluationsFromStorage();
         const existingAnalysis = getAiAnalysisFromStorage();
         const analyzedIds = new Set(existingAnalysis.map(a => a.evaluationId));
-
-        const evaluationsToAnalyze = allEvaluations.filter(e => !analyzedIds.has(e.id));
         
-        if (evaluationsToAnalyze.length === 0) {
+        const pendingEvaluations = allEvaluations.filter(e => !analyzedIds.has(e.id));
+        const evaluationsWithComments = pendingEvaluations.filter(e => e.comentario.trim() !== '(Sem comentário)' && e.comentario.trim() !== '');
+        const evaluationsWithoutComments = pendingEvaluations.filter(e => e.comentario.trim() === '(Sem comentário)' || e.comentario.trim() === '');
+        
+        if (pendingEvaluations.length === 0) {
             toast({ title: 'Nenhuma nova avaliação', description: 'Todos os comentários já foram analisados.' });
             setIsAiAnalysisRunning(false);
             return;
@@ -117,7 +119,22 @@ export function useEvaluationsData() {
 
         try {
             const newResults: EvaluationAnalysis[] = [];
-            for (const ev of evaluationsToAnalyze) {
+
+            // Process evaluations without comments locally
+            for (const ev of evaluationsWithoutComments) {
+                let sentiment: 'Positivo' | 'Negativo' | 'Neutro' = 'Neutro';
+                if (ev.nota >= 4) sentiment = 'Positivo';
+                if (ev.nota <= 2) sentiment = 'Negativo';
+                newResults.push({
+                    evaluationId: ev.id,
+                    sentiment,
+                    summary: 'Avaliação feita apenas com nota.',
+                    analyzedAt: new Date().toISOString(),
+                });
+            }
+            
+            // Process evaluations with comments using AI, sequentially
+            for (const ev of evaluationsWithComments) {
                 try {
                     const result = await analyzeEvaluation({ rating: ev.nota, comment: ev.comentario });
                     newResults.push({
@@ -128,7 +145,8 @@ export function useEvaluationsData() {
                     });
                     await sleep(2000); 
                 } catch (error) {
-                    console.error(`Failed to analyze evaluation ${ev.id}`, error);
+                    console.error(`Falha ao analisar a avaliação ${ev.id}:`, error);
+                    // Optionally skip this evaluation and continue with others
                 }
             }
             
@@ -138,11 +156,11 @@ export function useEvaluationsData() {
 
             toast({
                 title: 'Análise Concluída!',
-                description: `${newResults.length} novos comentários foram analisados com sucesso.`,
+                description: `${newResults.length} novas avaliações foram processadas.`,
             });
 
         } catch (error) {
-            console.error("AI Analysis failed", error);
+            console.error("A análise de IA falhou", error);
             toast({
                 variant: "destructive",
                 title: 'Erro na Análise de IA',

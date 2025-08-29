@@ -43,17 +43,6 @@ const analyzeEvaluationFlow = ai.defineFlow(
     outputSchema: AnalyzeEvaluationOutputSchema,
   },
   async (input) => {
-    // Se o comentário for "(Sem comentário)", retorne uma análise padrão.
-    if (input.comment.trim() === '(Sem comentário)') {
-        let sentiment: 'Positivo' | 'Negativo' | 'Neutro' = 'Neutro';
-        if (input.rating >= 4) sentiment = 'Positivo';
-        if (input.rating <= 2) sentiment = 'Negativo';
-        return {
-            sentiment,
-            summary: 'Avaliação feita apenas com nota.',
-        };
-    }
-    
     const { output } = await prompt(input);
     if (!output) {
       throw new Error('A análise da IA não retornou uma resposta válida.');
