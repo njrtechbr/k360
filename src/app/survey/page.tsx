@@ -17,7 +17,7 @@ const RatingSelector = ({ rating, setRating }: { rating: number; setRating: (r: 
             {[1, 2, 3, 4, 5].map((star) => (
                 <button key={star} type="button" onClick={() => setRating(star)} aria-label={`Avaliar com ${star} estrela${star > 1 ? 's' : ''}`}>
                     <Star
-                        className={`h-12 w-12 transition-all duration-200 ease-in-out ${
+                        className={`h-12 w-12 transform transition-all duration-200 ease-in-out hover:scale-125 ${
                             star <= rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300 hover:text-yellow-300'
                         }`}
                     />
@@ -73,7 +73,7 @@ export default function SurveyPage() {
     if (!attendantId || !attendant) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-800 px-4">
-                <Card className="w-full max-w-md text-center p-8 shadow-2xl">
+                <Card className="w-full max-w-md text-center p-8 shadow-2xl animate-in fade-in zoom-in-95">
                     <CardHeader>
                         <CardTitle className="text-2xl text-destructive">Atendente não encontrado</CardTitle>
                     </CardHeader>
@@ -91,13 +91,13 @@ export default function SurveyPage() {
     if (isSubmitted) {
         return (
              <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-800 px-4">
-                <Card className="w-full max-w-md text-center p-8 shadow-2xl">
+                <Card className="w-full max-w-md text-center p-8 shadow-2xl animate-in fade-in zoom-in-95">
                     <CardHeader>
-                        <div className="mx-auto bg-green-100 dark:bg-green-900 rounded-full h-24 w-24 flex items-center justify-center ring-8 ring-green-50 dark:ring-green-950">
+                        <div className="mx-auto bg-green-100 dark:bg-green-900 rounded-full h-24 w-24 flex items-center justify-center ring-8 ring-green-50 dark:ring-green-950 animate-in fade-in-0 zoom-in-50 delay-200 duration-500">
                            <ThumbsUp className="h-12 w-12 text-green-600 dark:text-green-400" />
                         </div>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 animate-in fade-in-0 slide-in-from-bottom-5 delay-300 duration-500">
                         <h2 className="text-2xl font-bold">Obrigado por sua avaliação!</h2>
                         <p className="text-muted-foreground">Seu feedback é muito importante para nós e nos ajuda a melhorar nossos serviços.</p>
                          <Button asChild className="mt-6 w-full">
@@ -111,7 +111,7 @@ export default function SurveyPage() {
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-800 px-4 py-12">
-            <Card className="w-full max-w-lg shadow-2xl rounded-2xl">
+            <Card className="w-full max-w-lg shadow-2xl rounded-2xl animate-in fade-in zoom-in-95">
                 <CardContent className="p-8 md:p-12 text-center">
                     <div className="flex justify-center mb-6">
                         <div className="relative p-1.5 bg-white rounded-full shadow-lg">
