@@ -3,7 +3,7 @@
 
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/providers/AuthProvider';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,20 @@ export default function SurveyPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (attendant) {
+            document.title = `Avaliar: ${attendant.name} - ${attendant.funcao}`;
+        } else {
+             document.title = attendantId ? 'Atendente não encontrado' : 'Pesquisa de Satisfação';
+        }
+        
+        // Reset title on component unmount
+        return () => {
+            document.title = 'Controle de Acesso';
+        };
+    }, [attendant, attendantId]);
+
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
