@@ -1179,10 +1179,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const newEvaluations = [...currentEvaluations, newEvaluation];
       saveEvaluationsToStorage(newEvaluations);
   };
+  
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   const runAiAnalysis = async () => {
     setIsAiAnalysisRunning(true);
-    toast({ title: 'Análise de IA Iniciada', description: 'Processando comentários...' });
+    toast({ title: 'Análise de IA Iniciada', description: 'Processando comentários... Isso pode levar alguns minutos.' });
 
     const allEvaluations = getEvaluationsFromStorage();
     const existingAnalysis = getAiAnalysisFromStorage();
@@ -1197,17 +1199,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      const newAnalysisPromises = evaluationsToAnalyze.map(async (ev) => {
-        const result = await analyzeEvaluation({ rating: ev.nota, comment: ev.comentario });
-        return {
-          evaluationId: ev.id,
-          sentiment: result.sentiment,
-          summary: result.summary,
-          analyzedAt: new Date().toISOString(),
-        };
-      });
-
-      const newResults = await Promise.all(newAnalysisPromises);
+      const newResults: EvaluationAnalysis[] = [];
+      for (const ev of evaluationsToAnalyze) {
+        try {
+          const result = await analyzeEvaluation({ rating: ev.nota, comment: ev.comentario });
+          newResults.push({
+            evaluationId: ev.id,
+            sentiment: result.sentiment,
+            summary: result.summary,
+            analyzedAt: new Date().toISOString(),
+          });
+          // Wait for a moment to avoid hitting rate limits
+          await sleep(2000); 
+        } catch (error) {
+           console.error(`Failed to analyze evaluation ${ev.id}`, error);
+           // Continue to the next one even if one fails
+        }
+      }
       
       saveAiAnalysisToStorage([...existingAnalysis, ...newResults]);
       const now = new Date().toISOString();
@@ -1223,7 +1231,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({
         variant: "destructive",
         title: 'Erro na Análise de IA',
-        description: 'Não foi possível processar os comentários. Tente novamente.',
+        description: 'Ocorreu um erro ao processar os comentários. Tente novamente mais tarde.',
       });
     } finally {
       setIsAiAnalysisRunning(false);
