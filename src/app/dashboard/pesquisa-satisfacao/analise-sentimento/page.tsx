@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Star, Sparkles, AlertTriangle, CheckCircle, MinusCircle, Bot, MessageSquareText } from "lucide-react";
+import { Star, Sparkles, AlertTriangle, CheckCircle, MinusCircle, Bot, MessageSquareText, Hourglass, Check } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -83,6 +83,8 @@ export default function AnaliseSentimentoPage() {
     const sortedAnalysis = [...analysisWithDetails].sort((a, b) => new Date(b.evaluation.data).getTime() - new Date(a.evaluation.data).getTime());
 
     const progressPercentage = analysisProgress.total > 0 ? (analysisProgress.current / analysisProgress.total) * 100 : 0;
+    const lastResult = analysisProgress.lastResult;
+    const lastEvaluationAnalyzed = lastResult ? evaluationMap[lastResult.evaluationId] : null;
 
     return (
         <>
@@ -181,25 +183,51 @@ export default function AnaliseSentimentoPage() {
                         </div>
                         <Progress value={progressPercentage} className="w-full" />
                         
-                        {analysisProgress.evaluation && (
-                            <Card className="bg-muted/50">
+                        {analysisProgress.status === 'processing' && analysisProgress.evaluation && (
+                            <Card className="bg-muted/50 animate-in fade-in">
                                 <CardHeader>
-                                    <CardTitle className="text-base">Analisando agora:</CardTitle>
+                                    <CardTitle className="text-base flex items-center gap-2">
+                                        <Hourglass className="animate-spin text-amber-500" /> Analisando agora...
+                                    </CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-3">
                                     <div className="flex items-center gap-2">
                                         <span className="font-semibold">Atendente:</span>
                                         <Badge variant="outline">{attendantMap[analysisProgress.evaluation.attendantId] || 'Desconhecido'}</Badge>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-semibold">Nota:</span>
-                                        <RatingStars rating={analysisProgress.evaluation.nota} className="h-5 w-5"/>
-                                    </div>
                                     <div className="flex items-start gap-2">
                                         <MessageSquareText className="h-5 w-5 mt-1 text-muted-foreground flex-shrink-0" />
                                         <p className="text-sm text-muted-foreground italic border-l-2 pl-3">
                                            "{analysisProgress.evaluation.comentario}"
                                         </p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
+                         {analysisProgress.status === 'waiting' && lastResult && lastEvaluationAnalyzed && (
+                            <Card className="bg-muted/50 animate-in fade-in">
+                                <CardHeader>
+                                    <CardTitle className="text-base flex items-center gap-2 text-green-600">
+                                       <Check /> Análise Concluída
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-3">
+                                     <div className="flex items-center gap-2">
+                                        <span className="font-semibold">Atendente:</span>
+                                        <Badge variant="outline">{attendantMap[lastEvaluationAnalyzed.attendantId] || 'Desconhecido'}</Badge>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-semibold">Sentimento:</span>
+                                        <SentimentBadge sentiment={lastResult.sentiment} />
+                                    </div>
+                                    <div className="flex items-start gap-2">
+                                        <Bot className="h-5 w-5 mt-1 text-muted-foreground flex-shrink-0" />
+                                        <p className="text-sm text-muted-foreground italic border-l-2 pl-3">
+                                           "{lastResult.summary}"
+                                        </p>
+                                    </div>
+                                     <div className="pt-2 text-center text-sm text-muted-foreground">
+                                        Próxima análise em {analysisProgress.countdown} segundos...
                                     </div>
                                 </CardContent>
                             </Card>

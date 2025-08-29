@@ -37,7 +37,7 @@ interface AuthContextType {
   lastAiAnalysis: string | null;
   runAiAnalysis: () => Promise<void>;
   isAiAnalysisRunning: boolean;
-  analysisProgress: { current: number; total: number, evaluation: Evaluation | null };
+  analysisProgress: { current: number; total: number; evaluation: Evaluation | null; status: 'idle' | 'processing' | 'waiting' | 'done'; countdown: number; lastResult: EvaluationAnalysis | null; };
   isProgressModalOpen: boolean;
   setIsProgressModalOpen: (isOpen: boolean) => void;
 }

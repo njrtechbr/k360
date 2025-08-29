@@ -14,6 +14,9 @@ type AnalysisProgress = {
     current: number;
     total: number;
     evaluation: Evaluation | null;
+    status: 'idle' | 'processing' | 'waiting' | 'done';
+    countdown: number;
+    lastResult: EvaluationAnalysis | null;
 };
 
 const parseEvaluationDate = (dateString: string) => {
@@ -35,7 +38,7 @@ export function useEvaluationsData() {
     const [lastAiAnalysis, setLastAiAnalysis] = useState<string | null>(null);
     const [isAiAnalysisRunning, setIsAiAnalysisRunning] = useState(false);
     const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
-    const [analysisProgress, setAnalysisProgress] = useState<AnalysisProgress>({ current: 0, total: 0, evaluation: null });
+    const [analysisProgress, setAnalysisProgress] = useState<AnalysisProgress>({ current: 0, total: 0, evaluation: null, status: 'idle', countdown: 0, lastResult: null });
 
     const { toast } = useToast();
 
@@ -106,76 +109,75 @@ export function useEvaluationsData() {
         saveEvaluationsToStorage(newEvaluations);
     };
 
-    const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
     const runAiAnalysis = async () => {
         setIsAiAnalysisRunning(true);
+        setIsProgressModalOpen(true);
 
         const allEvaluations = getEvaluationsFromStorage();
         const existingAnalysis = getAiAnalysisFromStorage();
         const analyzedIds = new Set(existingAnalysis.map(a => a.evaluationId));
         
-        const pendingEvaluations = allEvaluations.filter(e => !analyzedIds.has(e.id));
+        const pendingEvaluations = allEvaluations.filter(e => !analyzedIds.has(e.id) && e.comentario && e.comentario.trim() !== '(Sem comentário)' && e.comentario.trim() !== '');
         
         if (pendingEvaluations.length === 0) {
             toast({ title: 'Nenhuma nova avaliação', description: 'Todos os comentários já foram analisados.' });
             setIsAiAnalysisRunning(false);
+            setIsProgressModalOpen(false);
             return;
         }
-
-        const evaluationsWithComments = pendingEvaluations.filter(e => e.comentario.trim() !== '(Sem comentário)' && e.comentario.trim() !== '');
-        const evaluationsWithoutComments = pendingEvaluations.filter(e => e.comentario.trim() === '(Sem comentário)' || e.comentario.trim() === '');
         
-        setIsProgressModalOpen(true);
-        setAnalysisProgress({ current: 0, total: pendingEvaluations.length, evaluation: null });
+        setAnalysisProgress({ current: 0, total: pendingEvaluations.length, evaluation: null, status: 'idle', countdown: 0, lastResult: null });
+        let processedCount = 0;
 
         try {
-            const newResults: EvaluationAnalysis[] = [];
-            let processedCount = 0;
-
-            // Process evaluations without comments locally
-            for (const ev of evaluationsWithoutComments) {
-                let sentiment: 'Positivo' | 'Negativo' | 'Neutro' = 'Neutro';
-                if (ev.nota >= 4) sentiment = 'Positivo';
-                if (ev.nota <= 2) sentiment = 'Negativo';
-                newResults.push({
-                    evaluationId: ev.id,
-                    sentiment,
-                    summary: 'Avaliação feita apenas com nota.',
-                    analyzedAt: new Date().toISOString(),
-                });
+            for (const ev of pendingEvaluations) {
                 processedCount++;
-                setAnalysisProgress({ current: processedCount, total: pendingEvaluations.length, evaluation: ev });
-                await sleep(50); // Small delay for UI update
-            }
-            
-            // Process evaluations with comments using AI, sequentially
-            for (const ev of evaluationsWithComments) {
-                processedCount++;
-                setAnalysisProgress({ current: processedCount, total: pendingEvaluations.length, evaluation: ev });
+                setAnalysisProgress(prev => ({ ...prev, current: processedCount, evaluation: ev, status: 'processing' }));
+                
                 try {
                     const result = await analyzeEvaluation({ rating: ev.nota, comment: ev.comentario });
-                    newResults.push({
+                    const newResult: EvaluationAnalysis = {
                         evaluationId: ev.id,
                         sentiment: result.sentiment,
                         summary: result.summary,
                         analyzedAt: new Date().toISOString(),
-                    });
-                    // Increased sleep time to avoid rate limiting
-                    await sleep(5000); 
+                    };
+
+                    // Save result immediately
+                    const currentResults = getAiAnalysisFromStorage();
+                    saveAiAnalysisToStorage([...currentResults, newResult]);
+                    
+                    setAnalysisProgress(prev => ({ ...prev, status: 'waiting', lastResult: newResult }));
+
+                    // Countdown before next request
+                    const countdownDuration = 5;
+                    for (let i = countdownDuration; i > 0; i--) {
+                       setAnalysisProgress(prev => ({ ...prev, countdown: i }));
+                       await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+
                 } catch (error) {
                     console.error(`Falha ao analisar a avaliação ${ev.id}:`, error);
-                    // Skip this evaluation and continue with others
+                    toast({
+                        variant: "destructive",
+                        title: 'Erro na Análise de IA',
+                        description: `Ocorreu um erro ao processar o comentário do ID ${ev.id}. Pulando para o próximo.`,
+                    });
+                    // Skip this evaluation and continue with others after a pause
+                    const countdownDuration = 5;
+                    for (let i = countdownDuration; i > 0; i--) {
+                       setAnalysisProgress(prev => ({ ...prev, countdown: i, status: 'waiting' }));
+                       await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
                 }
             }
             
-            saveAiAnalysisToStorage([...existingAnalysis, ...newResults]);
             const now = new Date().toISOString();
             saveLastAiAnalysisDate(now);
 
             toast({
                 title: 'Análise Concluída!',
-                description: `${newResults.length} novas avaliações foram processadas.`,
+                description: `${processedCount} novas avaliações foram processadas.`,
             });
 
         } catch (error) {
@@ -183,11 +185,12 @@ export function useEvaluationsData() {
             toast({
                 variant: "destructive",
                 title: 'Erro na Análise de IA',
-                description: 'Ocorreu um erro ao processar os comentários. Tente novamente mais tarde.',
+                description: 'Ocorreu um erro geral ao processar os comentários. Tente novamente mais tarde.',
             });
         } finally {
             setIsAiAnalysisRunning(false);
             setIsProgressModalOpen(false);
+            setAnalysisProgress({ current: 0, total: 0, evaluation: null, status: 'done', countdown: 0, lastResult: null });
         }
     };
 
