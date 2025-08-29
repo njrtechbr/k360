@@ -718,6 +718,7 @@ interface AuthContextType {
   updateAttendant: (attendantId: string, attendantData: Partial<Omit<Attendant, 'id'>>) => Promise<void>;
   deleteAttendant: (attendantId: string) => Promise<void>;
   evaluations: Evaluation[];
+  addEvaluation: (evaluationData: Omit<Evaluation, 'id' | 'data'>) => Promise<void>;
 }
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
@@ -1118,11 +1119,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const currentAttendants = getAttendantsFromStorage();
       const newAttendants = currentAttendants.filter(a => a.id !== attendantId);
       saveAttendantsToStorage(newAttendants);
+      
+      const currentEvaluations = getEvaluationsFromStorage();
+      const newEvaluations = currentEvaluations.filter(e => e.attendantId !== attendantId);
+      saveEvaluationsToStorage(newEvaluations);
+
       toast({
           title: "Atendente Removido!",
-          description: "O atendente foi removido do sistema."
+          description: "O atendente e todas as suas avaliações foram removidos do sistema."
       });
   };
+
+  const addEvaluation = async (evaluationData: Omit<Evaluation, 'id' | 'data'>) => {
+      const currentEvaluations = getEvaluationsFromStorage();
+      const newEvaluation: Evaluation = {
+          ...evaluationData,
+          id: crypto.randomUUID(),
+          data: new Date().toISOString(),
+      };
+
+      const newEvaluations = [...currentEvaluations, newEvaluation];
+      saveEvaluationsToStorage(newEvaluations);
+  };
+
 
   const value = {
     user,
@@ -1146,6 +1165,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     updateAttendant,
     deleteAttendant,
     evaluations,
+    addEvaluation,
   };
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
@@ -1159,4 +1179,3 @@ export const useAuth = () => {
   return context;
 };
 
-    
