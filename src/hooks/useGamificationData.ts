@@ -26,8 +26,8 @@ const mergeAchievementsWithDefaults = (savedAchievements: Partial<Achievement>[]
     return savedAchievements.map(savedAch => {
         const defaultAch = defaultAchievementsMap.get(savedAch.id!);
         if (defaultAch) {
-            // Re-apply the isUnlocked function from defaults, but keep saved properties
-            return { ...defaultAch, ...savedAch, isUnlocked: defaultAch.isUnlocked };
+            // Re-apply the function and icon from defaults, but keep saved properties
+            return { ...defaultAch, ...savedAch, isUnlocked: defaultAch.isUnlocked, icon: defaultAch.icon };
         }
         return null;
     }).filter((ach): ach is Achievement => !!ach);
@@ -38,7 +38,7 @@ const mergeLevelRewardsWithDefaults = (savedRewards: Partial<LevelReward>[]): Le
     return savedRewards.map(savedReward => {
         const defaultReward = defaultRewardsMap.get(savedReward.level!);
         if (defaultReward) {
-             // Re-apply the icon function from defaults, but keep saved properties
+             // Re-apply the icon component from defaults, but keep saved properties
             return { ...defaultReward, ...savedReward, icon: defaultReward.icon };
         }
         return null;
@@ -109,7 +109,7 @@ export function useGamificationData() {
     const saveGamificationConfigToStorage = (config: GamificationConfig) => {
         const configToSave = {
             ...config,
-            achievements: config.achievements.map(({ isUnlocked, ...ach }) => ach), // Remove function before saving
+            achievements: config.achievements.map(({ isUnlocked, icon, ...ach }) => ach), // Remove function and icon before saving
             levelRewards: config.levelRewards.map(({ icon, ...reward }) => reward) // Remove icon component before saving
         };
 
