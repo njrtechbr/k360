@@ -19,9 +19,9 @@ export interface Module {
 }
 
 export const INITIAL_MODULES: Module[] = [
+    { id: 'rh', name: 'Recursos Humanos', description: 'Gerenciamento de atendentes e funcionários.', path: '/dashboard/rh', active: true },
     { id: 'pesquisa-satisfacao', name: 'Pesquisa de Satisfação', description: 'Gerenciamento de pesquisas de satisfação e avaliações.', path: '/dashboard/pesquisa-satisfacao', active: true },
     { id: 'gamificacao', name: 'Gamificação', description: 'Acompanhe o ranking, o progresso e as recompensas da equipe.', path: '/dashboard/gamificacao', active: true },
-    { id: 'rh', name: 'Recursos Humanos', description: 'Gerenciamento de atendentes e funcionários.', path: '/dashboard/rh', active: true },
 ];
 
 
@@ -139,6 +139,14 @@ export type LevelReward = {
     active: boolean;
 };
 
+export interface GamificationSeason {
+    id: string;
+    name: string;
+    startDate: string; // ISO string
+    endDate: string; // ISO string
+    active: boolean;
+}
+
 export interface GamificationConfig {
   ratingScores: {
     '1': number;
@@ -149,4 +157,5 @@ export interface GamificationConfig {
   };
   achievements: Achievement[];
   levelRewards: LevelReward[];
+  seasons: GamificationSeason[];
 }

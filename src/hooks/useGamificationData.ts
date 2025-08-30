@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import type { GamificationConfig, Achievement, LevelReward } from '@/lib/types';
+import type { GamificationConfig, Achievement, LevelReward, GamificationSeason } from '@/lib/types';
 import { INITIAL_ACHIEVEMENTS, INITIAL_LEVEL_REWARDS } from '@/lib/achievements';
 
 const GAMIFICATION_CONFIG_KEY = "controle_acesso_gamification_config";
@@ -18,12 +18,14 @@ const INITIAL_GAMIFICATION_CONFIG: GamificationConfig = {
     },
     achievements: INITIAL_ACHIEVEMENTS,
     levelRewards: INITIAL_LEVEL_REWARDS,
+    seasons: [],
 };
 
 export function useGamificationData() {
     const [gamificationConfig, setGamificationConfig] = useState<GamificationConfig>(INITIAL_GAMIFICATION_CONFIG);
     const [achievements, setAchievements] = useState<Achievement[]>(INITIAL_ACHIEVEMENTS);
     const [levelRewards, setLevelRewards] = useState<LevelReward[]>(INITIAL_LEVEL_REWARDS);
+    const [seasons, setSeasons] = useState<GamificationSeason[]>([]);
     const { toast } = useToast();
 
     const getGamificationConfigFromStorage = useCallback((): GamificationConfig => {
@@ -39,6 +41,7 @@ export function useGamificationData() {
                     ratingScores: { ...INITIAL_GAMIFICATION_CONFIG.ratingScores, ...parsed.ratingScores },
                     achievements: parsed.achievements || INITIAL_GAMIFICATION_CONFIG.achievements,
                     levelRewards: parsed.levelRewards || INITIAL_GAMIFICATION_CONFIG.levelRewards,
+                    seasons: parsed.seasons || INITIAL_GAMIFICATION_CONFIG.seasons,
                 };
             }
             localStorage.setItem(GAMIFICATION_CONFIG_KEY, JSON.stringify(INITIAL_GAMIFICATION_CONFIG));
@@ -54,6 +57,7 @@ export function useGamificationData() {
         setGamificationConfig(config);
         setAchievements(config.achievements);
         setLevelRewards(config.levelRewards);
+        setSeasons(config.seasons);
     }, [getGamificationConfigFromStorage]);
 
     const saveGamificationConfigToStorage = (config: GamificationConfig) => {
@@ -61,6 +65,7 @@ export function useGamificationData() {
         setGamificationConfig(config);
         setAchievements(config.achievements);
         setLevelRewards(config.levelRewards);
+        setSeasons(config.seasons);
     };
 
     const updateGamificationConfig = async (newConfig: Partial<Pick<GamificationConfig, 'ratingScores'>>) => {
@@ -91,12 +96,38 @@ export function useGamificationData() {
         toast({ title: "Recompensa Atualizada!", description: "A recompensa do nível foi salva." });
     };
 
+    const addSeason = async (seasonData: Omit<GamificationSeason, 'id' | 'active'>) => {
+        const currentConfig = getGamificationConfigFromStorage();
+        const newSeason: GamificationSeason = { ...seasonData, id: crypto.randomUUID(), active: true };
+        const updatedSeasons = [...currentConfig.seasons, newSeason];
+        saveGamificationConfigToStorage({ ...currentConfig, seasons: updatedSeasons });
+        toast({ title: "Sessão Adicionada!", description: "A nova sessão de gamificação foi criada." });
+    };
+
+    const updateSeason = async (id: string, seasonData: Partial<Omit<GamificationSeason, 'id'>>) => {
+        const currentConfig = getGamificationConfigFromStorage();
+        const updatedSeasons = currentConfig.seasons.map(s => s.id === id ? { ...s, ...seasonData } : s);
+        saveGamificationConfigToStorage({ ...currentConfig, seasons: updatedSeasons });
+        toast({ title: "Sessão Atualizada!", description: "As informações da sessão foram salvas." });
+    };
+
+    const deleteSeason = async (id: string) => {
+        const currentConfig = getGamificationConfigFromStorage();
+        const updatedSeasons = currentConfig.seasons.filter(s => s.id !== id);
+        saveGamificationConfigToStorage({ ...currentConfig, seasons: updatedSeasons });
+        toast({ title: "Sessão Removida!", description: "A sessão de gamificação foi removida." });
+    };
+
     return { 
         gamificationConfig, 
         updateGamificationConfig,
         achievements,
         updateAchievement,
         levelRewards,
-        updateLevelReward
+        updateLevelReward,
+        seasons,
+        addSeason,
+        updateSeason,
+        deleteSeason,
     };
 }

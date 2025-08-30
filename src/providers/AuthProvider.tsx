@@ -3,7 +3,7 @@
 
 import type { ReactNode } from "react";
 import React, from "react";
-import type { User, Module, Role, Attendant, Evaluation, EvaluationAnalysis, GamificationConfig, Achievement, LevelReward } from "@/lib/types";
+import type { User, Module, Role, Attendant, Evaluation, EvaluationAnalysis, GamificationConfig, Achievement, LevelReward, GamificationSeason } from "@/lib/types";
 import { useAuthData } from "@/hooks/useAuthData";
 import { useUsersData } from "@/hooks/useUsersData";
 import { useModulesData } from "@/hooks/useModulesData";
@@ -47,6 +47,10 @@ interface AuthContextType {
   updateAchievement: (id: string, data: Partial<Omit<Achievement, 'id' | 'icon' | 'color' | 'isUnlocked'>>) => Promise<void>;
   levelRewards: LevelReward[];
   updateLevelReward: (level: number, data: Partial<Omit<LevelReward, 'level' | 'icon' | 'color'>>) => Promise<void>;
+  seasons: GamificationSeason[];
+  addSeason: (seasonData: Omit<GamificationSeason, 'id' | 'active'>) => Promise<void>;
+  updateSeason: (id: string, seasonData: Partial<Omit<GamificationSeason, 'id'>>) => Promise<void>;
+  deleteSeason: (id: string) => Promise<void>;
 }
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
@@ -104,7 +108,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     achievements,
     updateAchievement,
     levelRewards,
-    updateLevelReward
+    updateLevelReward,
+    seasons,
+    addSeason,
+    updateSeason,
+    deleteSeason,
   } = useGamificationData();
 
   const registerUser = async (userData: Omit<User, "id">) => {
@@ -189,7 +197,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     achievements,
     updateAchievement,
     levelRewards,
-    updateLevelReward
+    updateLevelReward,
+    seasons,
+    addSeason,
+    updateSeason,
+    deleteSeason,
   };
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
