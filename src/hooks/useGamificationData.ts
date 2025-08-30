@@ -86,7 +86,7 @@ export function useGamificationData() {
         
         const currentActiveSeason = allSeasons
             .filter(s => s.active && new Date(s.startDate) <= now && new Date(s.endDate) >= now)
-            .sort((a, b) => new Date(b.endDate).getTime() - new Date(a.endDate).getTime())[0] || null;
+            .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0] || null;
         setActiveSeason(currentActiveSeason);
 
         const upcomingSeasons = allSeasons
