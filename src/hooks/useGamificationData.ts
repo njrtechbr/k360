@@ -21,6 +21,18 @@ const INITIAL_GAMIFICATION_CONFIG: GamificationConfig = {
     seasons: [],
 };
 
+const mergeAchievementsWithDefaults = (savedAchievements: Partial<Achievement>[]): Achievement[] => {
+    const defaultAchievementsMap = new Map(INITIAL_ACHIEVEMENTS.map(ach => [ach.id, ach]));
+    return savedAchievements.map(savedAch => {
+        const defaultAch = defaultAchievementsMap.get(savedAch.id!);
+        if (defaultAch) {
+            return { ...defaultAch, ...savedAch };
+        }
+        return null;
+    }).filter((ach): ach is Achievement => !!ach);
+};
+
+
 export function useGamificationData() {
     const [gamificationConfig, setGamificationConfig] = useState<GamificationConfig>(INITIAL_GAMIFICATION_CONFIG);
     const [achievements, setAchievements] = useState<Achievement[]>(INITIAL_ACHIEVEMENTS);
@@ -35,12 +47,13 @@ export function useGamificationData() {
             const configJson = localStorage.getItem(GAMIFICATION_CONFIG_KEY);
             if (configJson) {
                 const parsed = JSON.parse(configJson);
-                // Ensure all keys exist, merging with defaults if not
+                const mergedAchievements = parsed.achievements ? mergeAchievementsWithDefaults(parsed.achievements) : INITIAL_ACHIEVEMENTS;
+
                 return {
                     ...INITIAL_GAMIFICATION_CONFIG,
                     ...parsed,
                     ratingScores: { ...INITIAL_GAMIFICATION_CONFIG.ratingScores, ...parsed.ratingScores },
-                    achievements: parsed.achievements || INITIAL_GAMIFICATION_CONFIG.achievements,
+                    achievements: mergedAchievements,
                     levelRewards: parsed.levelRewards || INITIAL_GAMIFICATION_CONFIG.levelRewards,
                     seasons: parsed.seasons || INITIAL_GAMIFICATION_CONFIG.seasons,
                 };
@@ -71,7 +84,12 @@ export function useGamificationData() {
     }, [getGamificationConfigFromStorage]);
 
     const saveGamificationConfigToStorage = (config: GamificationConfig) => {
-        localStorage.setItem(GAMIFICATION_CONFIG_KEY, JSON.stringify(config));
+        const configToSave = {
+            ...config,
+            achievements: config.achievements.map(({ isUnlocked, ...ach }) => ach) // Remove function before saving
+        };
+
+        localStorage.setItem(GAMIFICATION_CONFIG_KEY, JSON.stringify(configToSave));
         setGamificationConfig(config);
         setAchievements(config.achievements);
         setLevelRewards(config.levelRewards);
@@ -107,9 +125,9 @@ export function useGamificationData() {
         toast({ title: "Recompensa Atualizada!", description: "A recompensa do nível foi salva." });
     };
 
-    const addSeason = async (seasonData: Omit<GamificationSeason, 'id' | 'active'>) => {
+    const addSeason = async (seasonData: Omit<GamificationSeason, 'id'>) => {
         const currentConfig = getGamificationConfigFromStorage();
-        const newSeason: GamificationSeason = { ...seasonData, id: crypto.randomUUID(), active: true };
+        const newSeason: GamificationSeason = { ...seasonData, id: crypto.randomUUID() };
         const updatedSeasons = [...currentConfig.seasons, newSeason];
         saveGamificationConfigToStorage({ ...currentConfig, seasons: updatedSeasons });
         toast({ title: "Sessão Adicionada!", description: "A nova sessão de gamificação foi criada." });

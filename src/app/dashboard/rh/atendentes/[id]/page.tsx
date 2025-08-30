@@ -63,7 +63,7 @@ export default function AttendantProfilePage() {
     }, [evaluations, id]);
     
     const unlockedAchievements = useMemo(() => {
-        if (!attendant) return [];
+        if (!attendant || !achievements) return [];
         return achievements.filter(ach => ach.active && ach.isUnlocked(attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults));
     }, [attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults, achievements]);
     
