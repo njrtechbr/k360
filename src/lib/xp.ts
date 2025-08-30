@@ -1,7 +1,5 @@
 
 
-import type { GamificationConfig } from "./types";
-
 const BASE_XP = 100;
 const GROWTH_FACTOR = 1.5;
 
@@ -49,10 +47,4 @@ export const getLevelFromXp = (xp: number) => {
         xpForCurrentLevel,
         xpForNextLevel
     };
-};
-
-
-export const getScoreFromRating = (rating: number, scores: GamificationConfig['ratingScores']): number => {
-    const key = String(rating) as keyof typeof scores;
-    return scores[key] ?? 0;
 };

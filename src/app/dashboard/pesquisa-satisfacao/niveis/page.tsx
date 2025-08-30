@@ -9,11 +9,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserCircle, Shield } from "lucide-react";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { getScoreFromRating, getLevelFromXp, MAX_LEVEL } from '@/lib/xp';
+import { getLevelFromXp, MAX_LEVEL } from '@/lib/xp';
 import { achievements } from "@/lib/achievements";
 import RewardTrack from "@/components/RewardTrack";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
+import { getScoreFromRating } from "@/hooks/useGamificationData";
 
 const getMedal = (rank: number) => {
     if (rank === 1) return <span className="text-2xl" title="1º Lugar">🥇</span>;
@@ -23,7 +24,7 @@ const getMedal = (rank: number) => {
 };
 
 export default function NiveisPage() {
-    const { user, isAuthenticated, loading, evaluations, attendants, aiAnalysisResults } = useAuth();
+    const { user, isAuthenticated, loading, evaluations, attendants, aiAnalysisResults, gamificationConfig } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
@@ -37,7 +38,7 @@ export default function NiveisPage() {
             .map(attendant => {
                 const attendantEvaluations = evaluations.filter(ev => ev.attendantId === attendant.id);
                 
-                const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => acc + getScoreFromRating(ev.nota), 0);
+                const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => acc + getScoreFromRating(ev.nota, gamificationConfig.ratingScores), 0);
                 
                 const unlockedAchievements = achievements.filter(ach => ach.isUnlocked(attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults));
                 const scoreFromAchievements = unlockedAchievements.reduce((acc, ach) => acc + ach.xp, 0);
@@ -55,7 +56,7 @@ export default function NiveisPage() {
             })
             .sort((a, b) => b.score - a.score);
 
-    }, [evaluations, attendants, aiAnalysisResults]);
+    }, [evaluations, attendants, aiAnalysisResults, gamificationConfig]);
 
 
     if (loading || !user) {

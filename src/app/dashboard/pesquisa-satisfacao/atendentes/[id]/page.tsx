@@ -15,10 +15,11 @@ import { ptBR } from "date-fns/locale";
 import { ArrowLeft, BarChart3, Calendar, FileText, Hash, History, Mail, Phone, Sparkles, Star, TrendingDown, TrendingUp, Trophy, UserCircle, UserCog } from "lucide-react";
 import Link from "next/link";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { getScoreFromRating } from '@/lib/xp';
+import { getLevelFromXp } from '@/lib/xp';
 import { achievements } from "@/lib/achievements";
 import RewardTrack from "@/components/RewardTrack";
 import { cn } from "@/lib/utils";
+import { getScoreFromRating } from "@/hooks/useGamificationData";
 
 const RatingStars = ({ rating, className }: { rating: number, className?: string }) => {
     const totalStars = 5;
@@ -55,7 +56,7 @@ type XpEvent = {
 export default function AttendantProfilePage() {
     const { id } = useParams();
     const router = useRouter();
-    const { attendants, evaluations, loading, user, aiAnalysisResults } = useAuth();
+    const { attendants, evaluations, loading, user, aiAnalysisResults, gamificationConfig } = useAuth();
 
     const attendant = useMemo(() => attendants.find(a => a.id === id), [attendants, id]);
     
@@ -72,15 +73,15 @@ export default function AttendantProfilePage() {
     
     const currentScore = useMemo(() => {
         if (!attendant) return 0;
-        const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => acc + getScoreFromRating(ev.nota), 0);
+        const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => acc + getScoreFromRating(ev.nota, gamificationConfig.ratingScores), 0);
         const scoreFromAchievements = unlockedAchievements.reduce((acc, ach) => acc + ach.xp, 0);
         return scoreFromRatings + scoreFromAchievements;
-    }, [attendant, attendantEvaluations, unlockedAchievements]);
+    }, [attendant, attendantEvaluations, unlockedAchievements, gamificationConfig]);
 
     const xpHistory = useMemo(() => {
         const evaluationEvents: XpEvent[] = attendantEvaluations.map(ev => ({
             reason: `Avaliação de ${ev.nota} estrela(s)`,
-            points: getScoreFromRating(ev.nota),
+            points: getScoreFromRating(ev.nota, gamificationConfig.ratingScores),
             date: ev.data,
             type: 'evaluation',
             icon: Star,
@@ -101,7 +102,7 @@ export default function AttendantProfilePage() {
 
         return [...evaluationEvents, ...achievementEvents]
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [attendantEvaluations, unlockedAchievements]);
+    }, [attendantEvaluations, unlockedAchievements, gamificationConfig]);
 
 
     const stats = useMemo(() => {
@@ -273,4 +274,3 @@ export default function AttendantProfilePage() {
         </div>
     );
 }
-

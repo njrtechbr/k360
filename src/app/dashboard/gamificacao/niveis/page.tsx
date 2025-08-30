@@ -9,11 +9,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserCircle, Shield } from "lucide-react";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { getScoreFromRating, getLevelFromXp, MAX_LEVEL } from '@/lib/xp';
+import { getLevelFromXp, MAX_LEVEL } from '@/lib/xp';
 import RewardTrack from "@/components/RewardTrack";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import GamificationSeasonStatus from "@/components/GamificationSeasonStatus";
+import { getScoreFromRating } from "@/hooks/useGamificationData";
 
 const getMedal = (rank: number) => {
     if (rank === 1) return <span className="text-2xl" title="1º Lugar">🥇</span>;

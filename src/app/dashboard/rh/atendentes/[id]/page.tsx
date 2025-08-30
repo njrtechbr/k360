@@ -13,8 +13,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ArrowLeft, BarChart3, Calendar, FileText, Hash, History, Mail, Phone, Sparkles, Star, TrendingDown, TrendingUp, Trophy, UserCircle, UserCog } from "lucide-react";
 import Link from "next/link";
-import { getScoreFromRating } from '@/lib/xp';
 import { cn } from "@/lib/utils";
+import { getScoreFromRating } from "@/hooks/useGamificationData";
 
 const RatingStars = ({ rating, className }: { rating: number, className?: string }) => {
     const totalStars = 5;

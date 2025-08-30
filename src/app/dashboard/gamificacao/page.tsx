@@ -11,11 +11,12 @@ import { Crown, Star as StarIcon, TrendingUp, TrendingDown, UserCircle, Shield, 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Attendant, Achievement } from "@/lib/types";
-import { getScoreFromRating, getLevelFromXp } from '@/lib/xp';
+import { getLevelFromXp } from '@/lib/xp';
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ROLES } from "@/lib/types";
 import GamificationSeasonStatus from "@/components/GamificationSeasonStatus";
+import { getScoreFromRating } from "@/hooks/useGamificationData";
 
 const getMedal = (rank: number) => {
     if (rank === 1) return <span className="text-2xl" title="1º Lugar">🥇</span>;

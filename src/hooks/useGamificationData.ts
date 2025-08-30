@@ -45,6 +45,11 @@ const mergeLevelRewardsWithDefaults = (savedRewards: Partial<LevelReward>[]): Le
     }).filter((r): r is LevelReward => !!r);
 }
 
+export const getScoreFromRating = (rating: number, scores: GamificationConfig['ratingScores']): number => {
+    const key = String(rating) as keyof typeof scores;
+    return scores[key] ?? 0;
+};
+
 
 export function useGamificationData() {
     const [gamificationConfig, setGamificationConfig] = useState<GamificationConfig>(INITIAL_GAMIFICATION_CONFIG);
@@ -84,21 +89,18 @@ export function useGamificationData() {
     const calculateActiveAndNextSeason = useCallback((allSeasons: GamificationSeason[]) => {
         const now = new Date();
         
-        const activeSeasons = allSeasons
-            .filter(s => s.active && new Date(s.startDate) <= now && new Date(s.endDate) >= now);
+        const currentActiveSeasons = allSeasons
+            .filter(s => s.active && new Date(s.startDate) <= now && new Date(s.endDate) >= now)
+            .sort((a,b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
         
-        const currentActiveSeason = activeSeasons.length > 0
-            ? activeSeasons.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())[0]
-            : null;
-        
+        const currentActiveSeason = currentActiveSeasons.length > 0 ? currentActiveSeasons[0] : null;
         setActiveSeason(currentActiveSeason);
-
-        const upcomingSeasons = allSeasons
-            .filter(s => s.active && new Date(s.startDate) > now);
         
-        const nextUpcomingSeason = upcomingSeasons.length > 0
-            ? upcomingSeasons.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())[0]
-            : null;
+        const upcomingSeasons = allSeasons
+            .filter(s => s.active && new Date(s.startDate) > now)
+            .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+        
+        const nextUpcomingSeason = upcomingSeasons.length > 0 ? upcomingSeasons[0] : null;
 
         setNextSeason(nextUpcomingSeason);
     }, []);
