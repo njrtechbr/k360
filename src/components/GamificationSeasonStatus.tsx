@@ -3,15 +3,33 @@
 
 import { useAuth } from "@/providers/AuthProvider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Hourglass, Trophy } from "lucide-react";
+import { Hourglass, Trophy, CalendarClock } from "lucide-react";
 import { differenceInDays, format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Badge } from "./ui/badge";
 
 export default function GamificationSeasonStatus() {
-    const { activeSeason } = useAuth();
+    const { activeSeason, nextSeason } = useAuth();
 
     if (!activeSeason) {
+         if (nextSeason) {
+            const startDate = parseISO(nextSeason.startDate);
+            const formattedStartDate = format(startDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+             return (
+                 <Card className="bg-muted/50 border-dashed">
+                     <CardHeader className="flex-row items-center justify-between">
+                         <div className="flex items-center gap-4">
+                            <CalendarClock className="h-8 w-8 text-muted-foreground" />
+                            <div>
+                                <CardTitle>Próxima Temporada: {nextSeason.name}</CardTitle>
+                                <CardDescription>Prepare-se! A próxima temporada começa em {formattedStartDate}.</CardDescription>
+                            </div>
+                         </div>
+                     </CardHeader>
+                 </Card>
+             );
+        }
+
         return (
             <Card className="bg-muted/50 border-dashed">
                 <CardHeader className="flex-row items-center gap-4">

@@ -48,10 +48,11 @@ interface AuthContextType {
   levelRewards: LevelReward[];
   updateLevelReward: (level: number, data: Partial<Omit<LevelReward, 'level' | 'icon' | 'color'>>) => Promise<void>;
   seasons: GamificationSeason[];
-  addSeason: (seasonData: Omit<GamificationSeason, 'id' | 'active'>) => Promise<void>;
+  addSeason: (seasonData: Omit<GamificationSeason, 'id'>) => Promise<void>;
   updateSeason: (id: string, seasonData: Partial<Omit<GamificationSeason, 'id'>>) => Promise<void>;
   deleteSeason: (id: string) => Promise<void>;
   activeSeason: GamificationSeason | null;
+  nextSeason: GamificationSeason | null;
 }
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
@@ -115,6 +116,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     updateSeason,
     deleteSeason,
     activeSeason,
+    nextSeason,
   } = useGamificationData();
 
   const registerUser = async (userData: Omit<User, "id">) => {
@@ -205,6 +207,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     updateSeason,
     deleteSeason,
     activeSeason,
+    nextSeason,
   };
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;

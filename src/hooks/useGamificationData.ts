@@ -52,6 +52,7 @@ export function useGamificationData() {
     const [levelRewards, setLevelRewards] = useState<LevelReward[]>(INITIAL_LEVEL_REWARDS);
     const [seasons, setSeasons] = useState<GamificationSeason[]>([]);
     const [activeSeason, setActiveSeason] = useState<GamificationSeason | null>(null);
+    const [nextSeason, setNextSeason] = useState<GamificationSeason | null>(null);
     const { toast } = useToast();
 
     const getGamificationConfigFromStorage = useCallback((): GamificationConfig => {
@@ -80,13 +81,21 @@ export function useGamificationData() {
         }
     }, []);
 
-    const calculateActiveSeason = (allSeasons: GamificationSeason[]) => {
+    const calculateActiveAndNextSeason = useCallback((allSeasons: GamificationSeason[]) => {
         const now = new Date();
+        
         const currentActiveSeason = allSeasons
             .filter(s => s.active && new Date(s.startDate) <= now && new Date(s.endDate) >= now)
             .sort((a, b) => new Date(b.endDate).getTime() - new Date(a.endDate).getTime())[0] || null;
         setActiveSeason(currentActiveSeason);
-    }
+
+        const upcomingSeasons = allSeasons
+            .filter(s => s.active && new Date(s.startDate) > now)
+            .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+        
+        const nextUpcomingSeason = upcomingSeasons[0] || null;
+        setNextSeason(nextUpcomingSeason);
+    }, []);
 
     useEffect(() => {
         const config = getGamificationConfigFromStorage();
@@ -94,8 +103,8 @@ export function useGamificationData() {
         setAchievements(config.achievements);
         setLevelRewards(config.levelRewards);
         setSeasons(config.seasons);
-        calculateActiveSeason(config.seasons);
-    }, [getGamificationConfigFromStorage]);
+        calculateActiveAndNextSeason(config.seasons);
+    }, [getGamificationConfigFromStorage, calculateActiveAndNextSeason]);
 
     const saveGamificationConfigToStorage = (config: GamificationConfig) => {
         const configToSave = {
@@ -106,13 +115,12 @@ export function useGamificationData() {
 
         localStorage.setItem(GAMIFICATION_CONFIG_KEY, JSON.stringify(configToSave));
         
-        // After saving, we need to set the state with the full objects (including functions/components)
         const fullConfig = getGamificationConfigFromStorage();
         setGamificationConfig(fullConfig);
         setAchievements(fullConfig.achievements);
         setLevelRewards(fullConfig.levelRewards);
         setSeasons(fullConfig.seasons);
-        calculateActiveSeason(fullConfig.seasons);
+        calculateActiveAndNextSeason(fullConfig.seasons);
     };
 
     const updateGamificationConfig = async (newConfig: Partial<Pick<GamificationConfig, 'ratingScores'>>) => {
@@ -177,5 +185,6 @@ export function useGamificationData() {
         updateSeason,
         deleteSeason,
         activeSeason,
+        nextSeason,
     };
 }
