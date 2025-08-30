@@ -22,7 +22,7 @@ import { ROLES, type GamificationSeason } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { MoreHorizontal, Pencil, PlusCircle, Trash2, CalendarIcon } from "lucide-react";
+import { MoreHorizontal, Pencil, PlusCircle, Trash2, CalendarIcon, Percent } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -40,6 +40,7 @@ const formSchema = z.object({
     to: z.date({ required_error: "A data de término é obrigatória." }),
   }),
   active: z.boolean(),
+  xpMultiplier: z.coerce.number().min(0, "O multiplicador não pode ser negativo.").default(1),
 });
 
 export default function ConfigurarSessoesPage() {
@@ -65,6 +66,7 @@ export default function ConfigurarSessoesPage() {
             form.reset({
                 name: selectedSeason.name,
                 active: selectedSeason.active,
+                xpMultiplier: selectedSeason.xpMultiplier || 1,
                 dateRange: {
                     from: new Date(selectedSeason.startDate),
                     to: new Date(selectedSeason.endDate),
@@ -74,6 +76,7 @@ export default function ConfigurarSessoesPage() {
             form.reset({
                 name: "",
                 active: true,
+                xpMultiplier: 1,
                 dateRange: { from: new Date(), to: addDays(new Date(), 30) },
             });
         }
@@ -84,6 +87,7 @@ export default function ConfigurarSessoesPage() {
         const seasonData = {
             name: values.name,
             active: values.active,
+            xpMultiplier: values.xpMultiplier,
             startDate: values.dateRange.from.toISOString(),
             endDate: values.dateRange.to.toISOString(),
         }
@@ -151,6 +155,7 @@ export default function ConfigurarSessoesPage() {
                             <TableRow>
                                 <TableHead>Nome</TableHead>
                                 <TableHead>Período de Validade</TableHead>
+                                <TableHead>Multiplicador XP</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead className="text-right">Ações</TableHead>
                             </TableRow>
@@ -160,6 +165,13 @@ export default function ConfigurarSessoesPage() {
                                 <TableRow key={season.id}>
                                     <TableCell className="font-medium">{season.name}</TableCell>
                                     <TableCell>{format(new Date(season.startDate), 'dd/MM/yy')} - {format(new Date(season.endDate), 'dd/MM/yy')}</TableCell>
+                                    <TableCell>
+                                        {season.xpMultiplier && season.xpMultiplier !== 1 ? (
+                                            <Badge variant="outline">{season.xpMultiplier}x</Badge>
+                                        ) : (
+                                            <span className="text-muted-foreground">-</span>
+                                        )}
+                                    </TableCell>
                                     <TableCell>
                                          <Badge variant={season.active ? "secondary" : "destructive"}>
                                             {season.active ? "Ativo" : "Inativo"}
@@ -241,6 +253,16 @@ export default function ConfigurarSessoesPage() {
                                     </PopoverContent>
                                 </Popover>
                                 <FormMessage />
+                                </FormItem>
+                            )} />
+                             <FormField control={form.control} name="xpMultiplier" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Multiplicador de XP</FormLabel>
+                                    <div className="flex items-center">
+                                       <FormControl><Input type="number" step="0.1" className="w-28" {...field} /></FormControl>
+                                       <Percent className="ml-2 h-4 w-4 text-muted-foreground" />
+                                    </div>
+                                    <FormMessage />
                                 </FormItem>
                             )} />
                             <FormField control={form.control} name="active" render={({ field }) => (

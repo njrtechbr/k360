@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useAuth } from "@/providers/AuthProvider";
@@ -52,32 +51,36 @@ type XpEvent = {
 export default function AttendantProfilePage() {
     const { id } = useParams();
     const router = useRouter();
-    const { attendants, evaluations, loading, user, aiAnalysisResults, gamificationConfig, achievements } = useAuth();
+    const { attendants, evaluations, loading, user, aiAnalysisResults, gamificationConfig, achievements, activeSeason } = useAuth();
 
     const attendant = useMemo(() => attendants.find(a => a.id === id), [attendants, id]);
     
-    const attendantEvaluations = useMemo(() => {
-        return evaluations
-            .filter(e => e.attendantId === id)
-            .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
-    }, [evaluations, id]);
+    const seasonEvaluations = useMemo(() => {
+        const evs = evaluations.filter(e => e.attendantId === id);
+        if (!activeSeason) return evs;
+        return evs.filter(e => new Date(e.data) >= new Date(activeSeason.startDate) && new Date(e.data) <= new Date(activeSeason.endDate));
+    }, [evaluations, id, activeSeason]);
+
     
     const unlockedAchievements = useMemo(() => {
         if (!attendant || !achievements) return [];
-        return achievements.filter(ach => ach.active && ach.isUnlocked(attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults));
-    }, [attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults, achievements]);
+        return achievements.filter(ach => ach.active && ach.isUnlocked(attendant, seasonEvaluations, evaluations, attendants, aiAnalysisResults));
+    }, [attendant, seasonEvaluations, evaluations, attendants, aiAnalysisResults, achievements]);
     
     const currentScore = useMemo(() => {
         if (!attendant) return 0;
-        const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => acc + getScoreFromRating(ev.nota, gamificationConfig.ratingScores), 0);
+        const multiplier = activeSeason?.xpMultiplier ?? 1;
+        const scoreFromRatings = seasonEvaluations.reduce((acc, ev) => acc + (getScoreFromRating(ev.nota, gamificationConfig.ratingScores) * multiplier), 0);
         const scoreFromAchievements = unlockedAchievements.reduce((acc, ach) => acc + ach.xp, 0);
         return scoreFromRatings + scoreFromAchievements;
-    }, [attendant, attendantEvaluations, unlockedAchievements, gamificationConfig]);
+    }, [attendant, seasonEvaluations, unlockedAchievements, gamificationConfig, activeSeason]);
 
     const xpHistory = useMemo(() => {
-        const evaluationEvents: XpEvent[] = attendantEvaluations.map(ev => ({
+        const multiplier = activeSeason?.xpMultiplier ?? 1;
+
+        const evaluationEvents: XpEvent[] = seasonEvaluations.map(ev => ({
             reason: `Avaliação de ${ev.nota} estrela(s)`,
-            points: getScoreFromRating(ev.nota, gamificationConfig.ratingScores),
+            points: getScoreFromRating(ev.nota, gamificationConfig.ratingScores) * multiplier,
             date: ev.data,
             type: 'evaluation',
             icon: Star,
@@ -86,7 +89,7 @@ export default function AttendantProfilePage() {
         // This is an approximation of when an achievement was unlocked.
         // A more robust system would store the unlock date.
         // For now, we use the date of the last evaluation as the unlock date.
-        const lastEvaluationDate = attendantEvaluations.length > 0 ? attendantEvaluations[attendantEvaluations.length - 1].data : new Date(0).toISOString();
+        const lastEvaluationDate = seasonEvaluations.length > 0 ? seasonEvaluations[seasonEvaluations.length - 1].data : new Date(0).toISOString();
 
         const achievementEvents: XpEvent[] = unlockedAchievements.map(ach => ({
             reason: `Troféu: ${ach.title}`,
@@ -98,19 +101,19 @@ export default function AttendantProfilePage() {
 
         return [...evaluationEvents, ...achievementEvents]
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [attendantEvaluations, unlockedAchievements, gamificationConfig]);
+    }, [seasonEvaluations, unlockedAchievements, gamificationConfig, activeSeason]);
 
 
     const stats = useMemo(() => {
-        if (attendantEvaluations.length === 0) {
+        if (seasonEvaluations.length === 0) {
             return { averageRating: 0, totalEvaluations: 0 };
         }
-        const totalRating = attendantEvaluations.reduce((sum, ev) => sum + ev.nota, 0);
+        const totalRating = seasonEvaluations.reduce((sum, ev) => sum + ev.nota, 0);
         return {
-            averageRating: totalRating / attendantEvaluations.length,
-            totalEvaluations: attendantEvaluations.length
+            averageRating: totalRating / seasonEvaluations.length,
+            totalEvaluations: seasonEvaluations.length
         };
-    }, [attendantEvaluations]);
+    }, [seasonEvaluations]);
     
     useEffect(() => {
         if (!loading && !user) {
@@ -177,8 +180,8 @@ export default function AttendantProfilePage() {
                     </Card>
                      <Card>
                         <CardHeader>
-                            <CardTitle>Estatísticas</CardTitle>
-                            <CardDescription>Resumo do desempenho.</CardDescription>
+                            <CardTitle>Estatísticas {activeSeason && `(${activeSeason.name})`}</CardTitle>
+                            <CardDescription>Resumo do desempenho na temporada atual.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                            <div className="flex items-center justify-between">

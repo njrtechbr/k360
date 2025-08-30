@@ -145,6 +145,7 @@ export interface GamificationSeason {
     startDate: string; // ISO string
     endDate: string; // ISO string
     active: boolean;
+    xpMultiplier: number;
 }
 
 export interface GamificationConfig {

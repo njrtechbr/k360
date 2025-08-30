@@ -84,22 +84,18 @@ export function useGamificationData() {
     const calculateActiveAndNextSeason = useCallback((allSeasons: GamificationSeason[]) => {
         const now = new Date();
         
-        // Find active season: where today is between start and end date
-        const currentActiveSeasons = allSeasons
+        const activeSeasons = allSeasons
             .filter(s => s.active && new Date(s.startDate) <= now && new Date(s.endDate) >= now);
         
-        // If there are multiple active seasons, pick the one that started EARLIEST
-        const currentActiveSeason = currentActiveSeasons.length > 0
-            ? currentActiveSeasons.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())[0]
+        const currentActiveSeason = activeSeasons.length > 0
+            ? activeSeasons.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())[0]
             : null;
         
         setActiveSeason(currentActiveSeason);
 
-        // Find next season: where start date is in the future
         const upcomingSeasons = allSeasons
             .filter(s => s.active && new Date(s.startDate) > now);
         
-        // Pick the one that will start soonest
         const nextUpcomingSeason = upcomingSeasons.length > 0
             ? upcomingSeasons.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())[0]
             : null;

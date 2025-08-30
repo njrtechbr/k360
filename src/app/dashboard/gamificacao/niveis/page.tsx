@@ -43,7 +43,9 @@ export default function NiveisPage() {
             .map(attendant => {
                 const attendantEvaluations = seasonEvaluations.filter(ev => ev.attendantId === attendant.id);
                 
-                const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => acc + getScoreFromRating(ev.nota, gamificationConfig.ratingScores), 0);
+                const multiplier = activeSeason?.xpMultiplier ?? 1;
+
+                const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => acc + (getScoreFromRating(ev.nota, gamificationConfig.ratingScores) * multiplier), 0);
                 
                 const unlockedAchievements = achievements.filter(ach => ach.active && ach.isUnlocked(attendant, attendantEvaluations, seasonEvaluations, attendants, aiAnalysisResults));
                 const scoreFromAchievements = unlockedAchievements.reduce((acc, ach) => acc + ach.xp, 0);
