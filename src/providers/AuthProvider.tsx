@@ -51,6 +51,7 @@ interface AuthContextType {
   addSeason: (seasonData: Omit<GamificationSeason, 'id' | 'active'>) => Promise<void>;
   updateSeason: (id: string, seasonData: Partial<Omit<GamificationSeason, 'id'>>) => Promise<void>;
   deleteSeason: (id: string) => Promise<void>;
+  activeSeason: GamificationSeason | null;
 }
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
@@ -113,6 +114,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     addSeason,
     updateSeason,
     deleteSeason,
+    activeSeason,
   } = useGamificationData();
 
   const registerUser = async (userData: Omit<User, "id">) => {
@@ -202,6 +204,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     addSeason,
     updateSeason,
     deleteSeason,
+    activeSeason,
   };
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;

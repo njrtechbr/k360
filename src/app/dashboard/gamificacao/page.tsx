@@ -15,6 +15,7 @@ import { getScoreFromRating, getLevelFromXp } from '@/lib/xp';
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ROLES } from "@/lib/types";
+import GamificationSeasonStatus from "@/components/GamificationSeasonStatus";
 
 const getMedal = (rank: number) => {
     if (rank === 1) return <span className="text-2xl" title="1º Lugar">🥇</span>;
@@ -31,7 +32,7 @@ type AchievementStat = Achievement & {
 };
 
 export default function GamificacaoPage() {
-    const { user, isAuthenticated, loading, evaluations, attendants, aiAnalysisResults, gamificationConfig, achievements } = useAuth();
+    const { user, isAuthenticated, loading, evaluations, attendants, aiAnalysisResults, gamificationConfig, achievements, activeSeason } = useAuth();
     const router = useRouter();
     const [isAchievementDialogOpen, setIsAchievementDialogOpen] = useState(false);
     const [selectedAchievement, setSelectedAchievement] = useState<AchievementStat | null>(null);
@@ -43,13 +44,19 @@ export default function GamificacaoPage() {
     }, [isAuthenticated, loading, router]);
     
     const leaderboard = useMemo(() => {
+        const seasonEvaluations = activeSeason 
+            ? evaluations.filter(ev => 
+                new Date(ev.data) >= new Date(activeSeason.startDate) && new Date(ev.data) <= new Date(activeSeason.endDate)
+            ) 
+            : evaluations;
+
         return attendants
             .map(attendant => {
-                const attendantEvaluations = evaluations.filter(ev => ev.attendantId === attendant.id);
+                const attendantEvaluations = seasonEvaluations.filter(ev => ev.attendantId === attendant.id);
                 
                 const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => acc + getScoreFromRating(ev.nota, gamificationConfig.ratingScores), 0);
                 
-                const unlockedAchievements = achievements.filter(ach => ach.active && ach.isUnlocked(attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults));
+                const unlockedAchievements = achievements.filter(ach => ach.active && ach.isUnlocked(attendant, attendantEvaluations, seasonEvaluations, attendants, aiAnalysisResults));
                 const scoreFromAchievements = unlockedAchievements.reduce((acc, ach) => acc + ach.xp, 0);
 
                 return {
@@ -62,7 +69,7 @@ export default function GamificacaoPage() {
             .filter(att => att.evaluationCount > 0)
             .sort((a, b) => b.score - a.score);
 
-    }, [evaluations, attendants, aiAnalysisResults, gamificationConfig, achievements]);
+    }, [evaluations, attendants, aiAnalysisResults, gamificationConfig, achievements, activeSeason]);
 
      const achievementStats: AchievementStat[] = useMemo(() => {
         return achievements
@@ -104,6 +111,8 @@ export default function GamificacaoPage() {
                     <p className="text-muted-foreground">Acompanhe o ranking, o progresso e as recompensas da equipe.</p>
                 </div>
             </div>
+
+            <GamificationSeasonStatus />
 
              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                 <Card>
@@ -148,7 +157,7 @@ export default function GamificacaoPage() {
                     <Card className="shadow-lg">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2"><Crown /> Leaderboard</CardTitle>
-                            <CardDescription>Classificação dos atendentes com base na pontuação total (XP).</CardDescription>
+                            <CardDescription>Classificação dos atendentes com base na pontuação total (XP) da temporada atual.</CardDescription>
                         </CardHeader>
                         <CardContent>
                            <Table>

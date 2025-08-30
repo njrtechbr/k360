@@ -13,6 +13,7 @@ import { getScoreFromRating, getLevelFromXp, MAX_LEVEL } from '@/lib/xp';
 import RewardTrack from "@/components/RewardTrack";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
+import GamificationSeasonStatus from "@/components/GamificationSeasonStatus";
 
 const getMedal = (rank: number) => {
     if (rank === 1) return <span className="text-2xl" title="1º Lugar">🥇</span>;
@@ -22,7 +23,7 @@ const getMedal = (rank: number) => {
 };
 
 export default function NiveisPage() {
-    const { user, isAuthenticated, loading, evaluations, attendants, aiAnalysisResults, gamificationConfig, achievements } = useAuth();
+    const { user, isAuthenticated, loading, evaluations, attendants, aiAnalysisResults, gamificationConfig, achievements, activeSeason } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
@@ -32,13 +33,19 @@ export default function NiveisPage() {
     }, [isAuthenticated, loading, router]);
     
     const leaderboard = useMemo(() => {
+        const seasonEvaluations = activeSeason 
+            ? evaluations.filter(ev => 
+                new Date(ev.data) >= new Date(activeSeason.startDate) && new Date(ev.data) <= new Date(activeSeason.endDate)
+            ) 
+            : evaluations;
+
         return attendants
             .map(attendant => {
-                const attendantEvaluations = evaluations.filter(ev => ev.attendantId === attendant.id);
+                const attendantEvaluations = seasonEvaluations.filter(ev => ev.attendantId === attendant.id);
                 
                 const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => acc + getScoreFromRating(ev.nota, gamificationConfig.ratingScores), 0);
                 
-                const unlockedAchievements = achievements.filter(ach => ach.active && ach.isUnlocked(attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults));
+                const unlockedAchievements = achievements.filter(ach => ach.active && ach.isUnlocked(attendant, attendantEvaluations, seasonEvaluations, attendants, aiAnalysisResults));
                 const scoreFromAchievements = unlockedAchievements.reduce((acc, ach) => acc + ach.xp, 0);
 
                 const totalScore = scoreFromRatings + scoreFromAchievements;
@@ -54,7 +61,7 @@ export default function NiveisPage() {
             })
             .sort((a, b) => b.score - a.score);
 
-    }, [evaluations, attendants, aiAnalysisResults, gamificationConfig, achievements]);
+    }, [evaluations, attendants, aiAnalysisResults, gamificationConfig, achievements, activeSeason]);
 
 
     if (loading || !user) {
@@ -67,6 +74,8 @@ export default function NiveisPage() {
                 <h1 className="text-3xl font-bold">Níveis e Progresso</h1>
                 <p className="text-muted-foreground">Acompanhe a trilha de recompensas e o progresso de cada atendente.</p>
             </div>
+            
+            <GamificationSeasonStatus />
 
             <Card>
                 <CardHeader>
