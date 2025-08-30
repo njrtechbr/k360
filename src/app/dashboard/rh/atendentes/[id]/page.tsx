@@ -15,7 +15,6 @@ import { ptBR } from "date-fns/locale";
 import { ArrowLeft, BarChart3, Calendar, FileText, Hash, History, Mail, Phone, Sparkles, Star, TrendingDown, TrendingUp, Trophy, UserCircle, UserCog } from "lucide-react";
 import Link from "next/link";
 import { getScoreFromRating } from '@/lib/xp';
-import { achievements } from "@/lib/achievements";
 import { cn } from "@/lib/utils";
 
 const RatingStars = ({ rating, className }: { rating: number, className?: string }) => {
@@ -53,7 +52,7 @@ type XpEvent = {
 export default function AttendantProfilePage() {
     const { id } = useParams();
     const router = useRouter();
-    const { attendants, evaluations, loading, user, aiAnalysisResults, gamificationConfig } = useAuth();
+    const { attendants, evaluations, loading, user, aiAnalysisResults, gamificationConfig, achievements } = useAuth();
 
     const attendant = useMemo(() => attendants.find(a => a.id === id), [attendants, id]);
     
@@ -65,8 +64,8 @@ export default function AttendantProfilePage() {
     
     const unlockedAchievements = useMemo(() => {
         if (!attendant) return [];
-        return achievements.filter(ach => ach.isUnlocked(attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults));
-    }, [attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults]);
+        return achievements.filter(ach => ach.active && ach.isUnlocked(attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults));
+    }, [attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults, achievements]);
     
     const currentScore = useMemo(() => {
         if (!attendant) return 0;

@@ -12,7 +12,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Attendant, Achievement } from "@/lib/types";
 import { getScoreFromRating, getLevelFromXp } from '@/lib/xp';
-import { achievements } from "@/lib/achievements";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ROLES } from "@/lib/types";
@@ -32,7 +31,7 @@ type AchievementStat = Achievement & {
 };
 
 export default function GamificacaoPage() {
-    const { user, isAuthenticated, loading, evaluations, attendants, aiAnalysisResults, gamificationConfig } = useAuth();
+    const { user, isAuthenticated, loading, evaluations, attendants, aiAnalysisResults, gamificationConfig, achievements } = useAuth();
     const router = useRouter();
     const [isAchievementDialogOpen, setIsAchievementDialogOpen] = useState(false);
     const [selectedAchievement, setSelectedAchievement] = useState<AchievementStat | null>(null);
@@ -50,7 +49,7 @@ export default function GamificacaoPage() {
                 
                 const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => acc + getScoreFromRating(ev.nota, gamificationConfig.ratingScores), 0);
                 
-                const unlockedAchievements = achievements.filter(ach => ach.isUnlocked(attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults));
+                const unlockedAchievements = achievements.filter(ach => ach.active && ach.isUnlocked(attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults));
                 const scoreFromAchievements = unlockedAchievements.reduce((acc, ach) => acc + ach.xp, 0);
 
                 return {
@@ -63,26 +62,28 @@ export default function GamificacaoPage() {
             .filter(att => att.evaluationCount > 0)
             .sort((a, b) => b.score - a.score);
 
-    }, [evaluations, attendants, aiAnalysisResults, gamificationConfig]);
+    }, [evaluations, attendants, aiAnalysisResults, gamificationConfig, achievements]);
 
      const achievementStats: AchievementStat[] = useMemo(() => {
-        return achievements.map(achievement => {
-            const unlockedBy: Attendant[] = [];
-            attendants.forEach(attendant => {
-                const attendantEvaluations = evaluations.filter(ev => ev.attendantId === attendant.id);
-                if (achievement.isUnlocked(attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults)) {
-                    unlockedBy.push(attendant);
-                }
+        return achievements
+            .filter(ach => ach.active)
+            .map(achievement => {
+                const unlockedBy: Attendant[] = [];
+                attendants.forEach(attendant => {
+                    const attendantEvaluations = evaluations.filter(ev => ev.attendantId === attendant.id);
+                    if (achievement.isUnlocked(attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults)) {
+                        unlockedBy.push(attendant);
+                    }
+                });
+                return {
+                    ...achievement,
+                    unlockedCount: unlockedBy.length,
+                    totalAttendants: attendants.length,
+                    progress: attendants.length > 0 ? (unlockedBy.length / attendants.length) * 100 : 0,
+                    unlockedBy,
+                };
             });
-            return {
-                ...achievement,
-                unlockedCount: unlockedBy.length,
-                totalAttendants: attendants.length,
-                progress: attendants.length > 0 ? (unlockedBy.length / attendants.length) * 100 : 0,
-                unlockedBy,
-            };
-        });
-    }, [attendants, evaluations, aiAnalysisResults]);
+    }, [attendants, evaluations, aiAnalysisResults, achievements]);
 
     const handleAchievementClick = (achievement: AchievementStat) => {
         setSelectedAchievement(achievement);

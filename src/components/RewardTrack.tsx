@@ -3,12 +3,12 @@
 "use client";
 
 import * as React from 'react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Progress } from '@/components/ui/progress';
-import { levelRewards } from '@/lib/achievements';
 import { getLevelFromXp } from '@/lib/xp';
 import { cn } from '@/lib/utils';
 import { Shield, Trophy } from 'lucide-react';
+import { useAuth } from '@/providers/AuthProvider';
 
 type RewardTrackProps = {
     currentXp?: number;
@@ -16,10 +16,12 @@ type RewardTrackProps = {
 }
 
 const RewardTrack: React.FC<RewardTrackProps> = ({ currentXp = 0, showAttendantProgress = true }) => {
-
+    const { levelRewards } = useAuth();
     const { level, progress, xpForNextLevel } = getLevelFromXp(currentXp);
 
-    const levelMilestones = [...new Set([1, ...levelRewards.map(r => r.level), 50])].sort((a, b) => a - b);
+    const activeLevelRewards = levelRewards.filter(r => r.active);
+
+    const levelMilestones = [...new Set([1, ...activeLevelRewards.map(r => r.level), 50])].sort((a, b) => a - b);
 
 
     return (
@@ -53,9 +55,9 @@ const RewardTrack: React.FC<RewardTrackProps> = ({ currentXp = 0, showAttendantP
                 <div className="relative flex justify-between items-start">
                     {levelMilestones.map((milestoneLevel) => {
                         const isUnlocked = level >= milestoneLevel;
-                        const milestoneRewards = levelRewards.filter(a => a.level === milestoneLevel);
+                        const milestoneRewards = activeLevelRewards.filter(a => a.level === milestoneLevel);
                         
-                        if (milestoneRewards.length === 0 && milestoneLevel !== 50) return null;
+                        if (milestoneRewards.length === 0 && milestoneLevel !== 1 && milestoneLevel !== 50) return null;
 
                         if (milestoneLevel === 50) {
                              return (
@@ -65,6 +67,19 @@ const RewardTrack: React.FC<RewardTrackProps> = ({ currentXp = 0, showAttendantP
                                      </div>
                                      <span className={cn("mt-2 text-sm text-center font-semibold w-20", isUnlocked ? "text-primary" : "text-muted-foreground")}>
                                         Nível Máximo
+                                    </span>
+                                 </div>
+                             )
+                        }
+
+                        if (milestoneLevel === 1) {
+                             return (
+                                 <div key={milestoneLevel} className="flex flex-col items-center z-10">
+                                     <div className={cn("h-10 w-10 rounded-full flex items-center justify-center border-4", isUnlocked ? `bg-green-100 border-green-400` : "bg-muted border-border")}>
+                                        <Shield className={cn("h-5 w-5", isUnlocked ? 'text-green-500' : 'text-muted-foreground')} />
+                                     </div>
+                                     <span className={cn("mt-2 text-sm text-center font-semibold w-20", isUnlocked ? "text-primary" : "text-muted-foreground")}>
+                                        Nível 1
                                     </span>
                                  </div>
                              )

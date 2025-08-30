@@ -16,7 +16,7 @@ const getAttendantSentimentCounts = (attendantId: string, evaluations: Evaluatio
         }, {} as Record<EvaluationAnalysis['sentiment'], number>);
 };
 
-export const achievements: Achievement[] = [
+export const INITIAL_ACHIEVEMENTS: Achievement[] = [
   {
     id: "primeira-impressao",
     title: "Primeira Impressão",
@@ -24,6 +24,7 @@ export const achievements: Achievement[] = [
     icon: Sparkles,
     color: "text-orange-500",
     xp: 10,
+    active: true,
     isUnlocked: (attendant, evaluations) => evaluations.length >= 1,
   },
   {
@@ -33,6 +34,7 @@ export const achievements: Achievement[] = [
     icon: MessageSquareHeart,
     color: "text-green-500",
     xp: 25,
+    active: true,
     isUnlocked: (attendant, evaluations, allEval, allAtt, analysis) => {
         if (!analysis) return false;
         const counts = getAttendantSentimentCounts(attendant.id, evaluations, analysis);
@@ -46,6 +48,7 @@ export const achievements: Achievement[] = [
     icon: Target,
     color: "text-cyan-500",
     xp: 50,
+    active: true,
     isUnlocked: (attendant, evaluations) => evaluations.length >= 10,
   },
   {
@@ -55,6 +58,7 @@ export const achievements: Achievement[] = [
     icon: Smile,
     color: 'text-pink-400',
     xp: 100,
+    active: true,
     isUnlocked: (attendant, evaluations) => {
       const sortedEvals = [...evaluations].sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
       let consecutiveFives = 0;
@@ -76,6 +80,7 @@ export const achievements: Achievement[] = [
     icon: MessageSquareWarning,
     color: "text-amber-500",
     xp: 75,
+    active: true,
     isUnlocked: (attendant, evaluations, allEval, allAtt, analysis) => {
         if (!analysis) return false;
         const counts = getAttendantSentimentCounts(attendant.id, evaluations, analysis);
@@ -89,6 +94,7 @@ export const achievements: Achievement[] = [
     icon: BadgeCent,
     color: "text-gray-500",
     xp: 150,
+    active: true,
     isUnlocked: (attendant, evaluations) => evaluations.length >= 50,
   },
   {
@@ -98,6 +104,7 @@ export const achievements: Achievement[] = [
     icon: MessageSquarePlus,
     color: "text-emerald-500",
     xp: 200,
+    active: true,
     isUnlocked: (attendant, evaluations, allEval, allAtt, analysis) => {
         if (!analysis) return false;
         const counts = getAttendantSentimentCounts(attendant.id, evaluations, analysis);
@@ -111,6 +118,7 @@ export const achievements: Achievement[] = [
     icon: Trophy,
     color: "text-yellow-500",
     xp: 300,
+    active: true,
     isUnlocked: (attendant, evaluations) => evaluations.length >= 100,
   },
   {
@@ -120,6 +128,7 @@ export const achievements: Achievement[] = [
     icon: TrendingUp,
     color: "text-green-500",
     xp: 500,
+    active: true,
     isUnlocked: (attendant, evaluations) => {
       if (evaluations.length < 20) return false; // Mínimo de 20 avaliações
       const positiveCount = evaluations.filter(ev => ev.nota >= 4).length;
@@ -133,6 +142,7 @@ export const achievements: Achievement[] = [
     icon: Award,
     color: "text-yellow-600",
     xp: 750,
+    active: true,
     isUnlocked: (attendant, evaluations) => {
       if (evaluations.length < 50) return false;
       const avg = evaluations.reduce((sum, ev) => sum + ev.nota, 0) / evaluations.length;
@@ -146,6 +156,7 @@ export const achievements: Achievement[] = [
     icon: Zap,
     color: "text-blue-500",
     xp: 1000,
+    active: true,
     isUnlocked: (attendant, evaluations) => evaluations.length >= 250,
   },
   {
@@ -155,6 +166,7 @@ export const achievements: Achievement[] = [
     icon: Crown,
     color: "text-purple-500",
     xp: 1500,
+    active: true,
     isUnlocked: (attendant, evaluations) => {
       if (evaluations.length < 25) return false;
       const avg = evaluations.reduce((sum, ev) => sum + ev.nota, 0) / evaluations.length;
@@ -168,6 +180,7 @@ export const achievements: Achievement[] = [
     icon: Gem,
     color: 'text-sky-400',
     xp: 1200,
+    active: true,
     isUnlocked: (attendant, evaluations) => {
       return evaluations.filter(ev => ev.nota === 5).length >= 50;
     },
@@ -179,6 +192,7 @@ export const achievements: Achievement[] = [
     icon: MessageSquareWarning,
     color: "text-red-500",
     xp: 500,
+    active: true,
     isUnlocked: (attendant, evaluations, allEval, allAtt, analysis) => {
         if (!analysis) return false;
         const counts = getAttendantSentimentCounts(attendant.id, evaluations, analysis);
@@ -192,18 +206,20 @@ export const achievements: Achievement[] = [
     icon: Rocket,
     color: "text-red-500",
     xp: 2500,
+    active: true,
     isUnlocked: (attendant, evaluations) => evaluations.length >= 500,
   },
 ];
 
 
-export const levelRewards: LevelReward[] = [
+export const INITIAL_LEVEL_REWARDS: LevelReward[] = [
     {
         level: 1,
         title: "Iniciante",
         description: "Você começou sua jornada!",
         icon: ShieldCheck,
         color: "text-gray-400",
+        active: true,
     },
     {
         level: 5,
@@ -211,6 +227,7 @@ export const levelRewards: LevelReward[] = [
         description: "Reconhecimento pelo seu esforço inicial.",
         icon: Medal,
         color: "text-orange-400",
+        active: true,
     },
     {
         level: 10,
@@ -218,6 +235,7 @@ export const levelRewards: LevelReward[] = [
         description: "Acesso a novos materiais de treinamento.",
         icon: BookOpen,
         color: "text-blue-400",
+        active: true,
     },
     {
         level: 15,
@@ -225,6 +243,7 @@ export const levelRewards: LevelReward[] = [
         description: "Um marco de consistência e qualidade.",
         icon: Medal,
         color: "text-gray-400",
+        active: true,
     },
     {
         level: 20,
@@ -232,6 +251,7 @@ export const levelRewards: LevelReward[] = [
         description: "Convidado para ajudar no treinamento de novos colegas.",
         icon: Users,
         color: "text-green-500",
+        active: true,
     },
     {
         level: 25,
@@ -239,6 +259,7 @@ export const levelRewards: LevelReward[] = [
         description: "Prova de sua dedicação e excelência.",
         icon: Medal,
         color: "text-yellow-400",
+        active: true,
     },
     {
         level: 30,
@@ -246,6 +267,7 @@ export const levelRewards: LevelReward[] = [
         description: "Represente a equipe em eventos internos.",
         icon: UserCheck,
         color: "text-indigo-500",
+        active: true,
     },
     {
         level: 40,
@@ -253,6 +275,7 @@ export const levelRewards: LevelReward[] = [
         description: "Um dos pilares da excelência no atendimento.",
         icon: Medal,
         color: "text-cyan-400",
+        active: true,
     },
     {
         level: 50,
@@ -260,5 +283,6 @@ export const levelRewards: LevelReward[] = [
         description: "Você alcançou o auge da maestria!",
         icon: Crown,
         color: "text-purple-500",
+        active: true,
     }
 ];

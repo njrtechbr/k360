@@ -3,7 +3,7 @@
 
 import type { ReactNode } from "react";
 import React, from "react";
-import type { User, Module, Role, Attendant, Evaluation, EvaluationAnalysis, GamificationConfig } from "@/lib/types";
+import type { User, Module, Role, Attendant, Evaluation, EvaluationAnalysis, GamificationConfig, Achievement, LevelReward } from "@/lib/types";
 import { useAuthData } from "@/hooks/useAuthData";
 import { useUsersData } from "@/hooks/useUsersData";
 import { useModulesData } from "@/hooks/useModulesData";
@@ -42,7 +42,11 @@ interface AuthContextType {
   isProgressModalOpen: boolean;
   setIsProgressModalOpen: (isOpen: boolean) => void;
   gamificationConfig: GamificationConfig;
-  updateGamificationConfig: (newConfig: Partial<GamificationConfig>) => Promise<void>;
+  updateGamificationConfig: (newConfig: Partial<Pick<GamificationConfig, 'ratingScores'>>) => Promise<void>;
+  achievements: Achievement[];
+  updateAchievement: (id: string, data: Partial<Omit<Achievement, 'id' | 'icon' | 'color' | 'isUnlocked'>>) => Promise<void>;
+  levelRewards: LevelReward[];
+  updateLevelReward: (level: number, data: Partial<Omit<LevelReward, 'level' | 'icon' | 'color'>>) => Promise<void>;
 }
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
@@ -97,6 +101,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const {
     gamificationConfig,
     updateGamificationConfig,
+    achievements,
+    updateAchievement,
+    levelRewards,
+    updateLevelReward
   } = useGamificationData();
 
   const registerUser = async (userData: Omit<User, "id">) => {
@@ -178,6 +186,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsProgressModalOpen,
     gamificationConfig,
     updateGamificationConfig,
+    achievements,
+    updateAchievement,
+    levelRewards,
+    updateLevelReward
   };
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;

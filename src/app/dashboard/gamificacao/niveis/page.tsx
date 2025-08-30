@@ -10,7 +10,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserCircle, Shield } from "lucide-react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { getScoreFromRating, getLevelFromXp, MAX_LEVEL } from '@/lib/xp';
-import { achievements } from "@/lib/achievements";
 import RewardTrack from "@/components/RewardTrack";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
@@ -23,7 +22,7 @@ const getMedal = (rank: number) => {
 };
 
 export default function NiveisPage() {
-    const { user, isAuthenticated, loading, evaluations, attendants, aiAnalysisResults, gamificationConfig } = useAuth();
+    const { user, isAuthenticated, loading, evaluations, attendants, aiAnalysisResults, gamificationConfig, achievements } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
@@ -39,7 +38,7 @@ export default function NiveisPage() {
                 
                 const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => acc + getScoreFromRating(ev.nota, gamificationConfig.ratingScores), 0);
                 
-                const unlockedAchievements = achievements.filter(ach => ach.isUnlocked(attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults));
+                const unlockedAchievements = achievements.filter(ach => ach.active && ach.isUnlocked(attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults));
                 const scoreFromAchievements = unlockedAchievements.reduce((acc, ach) => acc + ach.xp, 0);
 
                 const totalScore = scoreFromRatings + scoreFromAchievements;
@@ -55,7 +54,7 @@ export default function NiveisPage() {
             })
             .sort((a, b) => b.score - a.score);
 
-    }, [evaluations, attendants, aiAnalysisResults, gamificationConfig]);
+    }, [evaluations, attendants, aiAnalysisResults, gamificationConfig, achievements]);
 
 
     if (loading || !user) {

@@ -119,6 +119,7 @@ export type Achievement = {
   icon: React.ElementType;
   color: string;
   xp: number; // XP concedido ao desbloquear
+  active: boolean; // Controla se a conquista está ativa no sistema
   isUnlocked: (
     attendant: Attendant, 
     attendantEvaluations: Evaluation[], 
@@ -135,6 +136,7 @@ export type LevelReward = {
     description: string;
     icon: React.ElementType;
     color: string;
+    active: boolean;
 };
 
 export interface GamificationConfig {
@@ -144,5 +146,7 @@ export interface GamificationConfig {
     '3': number;
     '4': number;
     '5': number;
-  }
+  };
+  achievements: Achievement[];
+  levelRewards: LevelReward[];
 }
