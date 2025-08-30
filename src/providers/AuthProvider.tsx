@@ -3,12 +3,13 @@
 
 import type { ReactNode } from "react";
 import React, from "react";
-import type { User, Module, Role, Attendant, Evaluation, EvaluationAnalysis } from "@/lib/types";
+import type { User, Module, Role, Attendant, Evaluation, EvaluationAnalysis, GamificationConfig } from "@/lib/types";
 import { useAuthData } from "@/hooks/useAuthData";
 import { useUsersData } from "@/hooks/useUsersData";
 import { useModulesData } from "@/hooks/useModulesData";
 import { useAttendantsData } from "@/hooks/useAttendantsData";
 import { useEvaluationsData } from "@/hooks/useEvaluationsData";
+import { useGamificationData } from "@/hooks/useGamificationData";
 
 interface AuthContextType {
   user: User | null;
@@ -40,6 +41,8 @@ interface AuthContextType {
   analysisProgress: { current: number; total: number; evaluation: Evaluation | null; status: 'idle' | 'processing' | 'waiting' | 'done'; countdown: number; lastResult: EvaluationAnalysis | null; };
   isProgressModalOpen: boolean;
   setIsProgressModalOpen: (isOpen: boolean) => void;
+  gamificationConfig: GamificationConfig;
+  updateGamificationConfig: (newConfig: Partial<GamificationConfig>) => Promise<void>;
 }
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
@@ -90,6 +93,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     isProgressModalOpen,
     setIsProgressModalOpen,
   } = useEvaluationsData();
+
+  const {
+    gamificationConfig,
+    updateGamificationConfig,
+  } = useGamificationData();
 
   const registerUser = async (userData: Omit<User, "id">) => {
     const currentUsers = getUsersFromStorage();
@@ -168,6 +176,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     analysisProgress,
     isProgressModalOpen,
     setIsProgressModalOpen,
+    gamificationConfig,
+    updateGamificationConfig,
   };
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;

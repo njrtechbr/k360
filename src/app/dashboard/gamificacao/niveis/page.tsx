@@ -23,7 +23,7 @@ const getMedal = (rank: number) => {
 };
 
 export default function NiveisPage() {
-    const { user, isAuthenticated, loading, evaluations, attendants, aiAnalysisResults } = useAuth();
+    const { user, isAuthenticated, loading, evaluations, attendants, aiAnalysisResults, gamificationConfig } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
@@ -37,7 +37,7 @@ export default function NiveisPage() {
             .map(attendant => {
                 const attendantEvaluations = evaluations.filter(ev => ev.attendantId === attendant.id);
                 
-                const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => acc + getScoreFromRating(ev.nota), 0);
+                const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => acc + getScoreFromRating(ev.nota, gamificationConfig.ratingScores), 0);
                 
                 const unlockedAchievements = achievements.filter(ach => ach.isUnlocked(attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults));
                 const scoreFromAchievements = unlockedAchievements.reduce((acc, ach) => acc + ach.xp, 0);
@@ -55,7 +55,7 @@ export default function NiveisPage() {
             })
             .sort((a, b) => b.score - a.score);
 
-    }, [evaluations, attendants, aiAnalysisResults]);
+    }, [evaluations, attendants, aiAnalysisResults, gamificationConfig]);
 
 
     if (loading || !user) {

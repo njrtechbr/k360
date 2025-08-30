@@ -7,7 +7,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Crown, Star as StarIcon, TrendingUp, TrendingDown, UserCircle, Shield, ChevronRight, BookOpen, BarChartHorizontal } from "lucide-react";
+import { Crown, Star as StarIcon, TrendingUp, TrendingDown, UserCircle, Shield, ChevronRight, BookOpen, BarChartHorizontal, Settings } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Attendant, Achievement } from "@/lib/types";
@@ -15,6 +15,7 @@ import { getScoreFromRating, getLevelFromXp } from '@/lib/xp';
 import { achievements } from "@/lib/achievements";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { ROLES } from "@/lib/types";
 
 const getMedal = (rank: number) => {
     if (rank === 1) return <span className="text-2xl" title="1º Lugar">🥇</span>;
@@ -31,7 +32,7 @@ type AchievementStat = Achievement & {
 };
 
 export default function GamificacaoPage() {
-    const { user, isAuthenticated, loading, evaluations, attendants, aiAnalysisResults } = useAuth();
+    const { user, isAuthenticated, loading, evaluations, attendants, aiAnalysisResults, gamificationConfig } = useAuth();
     const router = useRouter();
     const [isAchievementDialogOpen, setIsAchievementDialogOpen] = useState(false);
     const [selectedAchievement, setSelectedAchievement] = useState<AchievementStat | null>(null);
@@ -47,7 +48,7 @@ export default function GamificacaoPage() {
             .map(attendant => {
                 const attendantEvaluations = evaluations.filter(ev => ev.attendantId === attendant.id);
                 
-                const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => acc + getScoreFromRating(ev.nota), 0);
+                const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => acc + getScoreFromRating(ev.nota, gamificationConfig.ratingScores), 0);
                 
                 const unlockedAchievements = achievements.filter(ach => ach.isUnlocked(attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults));
                 const scoreFromAchievements = unlockedAchievements.reduce((acc, ach) => acc + ach.xp, 0);
@@ -62,7 +63,7 @@ export default function GamificacaoPage() {
             .filter(att => att.evaluationCount > 0)
             .sort((a, b) => b.score - a.score);
 
-    }, [evaluations, attendants, aiAnalysisResults]);
+    }, [evaluations, attendants, aiAnalysisResults, gamificationConfig]);
 
      const achievementStats: AchievementStat[] = useMemo(() => {
         return achievements.map(achievement => {
@@ -91,6 +92,8 @@ export default function GamificacaoPage() {
     if (loading || !user) {
         return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
     }
+    
+    const canManageSystem = user.role === ROLES.ADMIN || user.role === ROLES.SUPERADMIN;
 
     return (
         <div className="space-y-8">
@@ -101,7 +104,7 @@ export default function GamificacaoPage() {
                 </div>
             </div>
 
-             <div className="grid md:grid-cols-2 gap-8">
+             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2"><BarChartHorizontal /> Níveis e Progresso</CardTitle>
@@ -124,6 +127,19 @@ export default function GamificacaoPage() {
                        </Button>
                     </CardContent>
                 </Card>
+                 {canManageSystem && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2"><Settings /> Configurações</CardTitle>
+                            <CardDescription>Ajuste as regras e a pontuação do sistema de gamificação.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                        <Button asChild>
+                            <Link href="/dashboard/gamificacao/configuracoes">Ajustar Configurações</Link>
+                        </Button>
+                        </CardContent>
+                    </Card>
+                 )}
             </div>
             
             <div className="grid gap-8 lg:grid-cols-3">
@@ -187,7 +203,7 @@ export default function GamificacaoPage() {
                                     <StarIcon className="h-4 w-4 text-yellow-400 fill-yellow-400"/> 5 Estrelas
                                 </div>
                                 <div className="flex items-center gap-1 font-bold text-green-600 dark:text-green-400">
-                                    <TrendingUp size={16}/> +5 XP
+                                    <TrendingUp size={16}/> +{gamificationConfig.ratingScores[5]} XP
                                 </div>
                             </div>
                              <div className="flex justify-between items-center p-2 rounded-md bg-lime-50 dark:bg-lime-950">
@@ -195,7 +211,7 @@ export default function GamificacaoPage() {
                                     <StarIcon className="h-4 w-4 text-yellow-400 fill-yellow-400"/> 4 Estrelas
                                 </div>
                                 <div className="flex items-center gap-1 font-bold text-lime-600 dark:text-lime-400">
-                                     <TrendingUp size={16}/> +3 XP
+                                     <TrendingUp size={16}/> +{gamificationConfig.ratingScores[4]} XP
                                 </div>
                             </div>
                              <div className="flex justify-between items-center p-2 rounded-md bg-blue-50 dark:bg-blue-950">
@@ -203,7 +219,7 @@ export default function GamificacaoPage() {
                                     <StarIcon className="h-4 w-4 text-yellow-400 fill-yellow-400"/> 3 Estrelas
                                 </div>
                                 <div className="flex items-center gap-1 font-bold text-blue-600 dark:text-blue-400">
-                                    <TrendingUp size={16}/> +1 XP
+                                    <TrendingUp size={16}/> +{gamificationConfig.ratingScores[3]} XP
                                 </div>
                             </div>
                              <div className="flex justify-between items-center p-2 rounded-md bg-orange-50 dark:bg-orange-950">
@@ -211,7 +227,7 @@ export default function GamificacaoPage() {
                                     <StarIcon className="h-4 w-4 text-yellow-400 fill-yellow-400"/> 2 Estrelas
                                 </div>
                                 <div className="flex items-center gap-1 font-bold text-orange-600 dark:text-orange-400">
-                                    <TrendingDown size={16}/> -2 XP
+                                    <TrendingDown size={16}/> {gamificationConfig.ratingScores[2]} XP
                                 </div>
                             </div>
                              <div className="flex justify-between items-center p-2 rounded-md bg-red-50 dark:bg-red-950">
@@ -219,7 +235,7 @@ export default function GamificacaoPage() {
                                     <StarIcon className="h-4 w-4 text-yellow-400 fill-yellow-400"/> 1 Estrela
                                 </div>
                                 <div className="flex items-center gap-1 font-bold text-red-600 dark:text-red-400">
-                                    <TrendingDown size={16}/> -5 XP
+                                    <TrendingDown size={16}/> {gamificationConfig.ratingScores[1]} XP
                                 </div>
                             </div>
                         </CardContent>
