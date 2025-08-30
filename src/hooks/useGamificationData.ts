@@ -88,9 +88,9 @@ export function useGamificationData() {
         const currentActiveSeasons = allSeasons
             .filter(s => s.active && new Date(s.startDate) <= now && new Date(s.endDate) >= now);
         
-        // If there are multiple active seasons, pick the one that started most recently
+        // If there are multiple active seasons, pick the one that started EARLIEST
         const currentActiveSeason = currentActiveSeasons.length > 0
-            ? currentActiveSeasons.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0]
+            ? currentActiveSeasons.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())[0]
             : null;
         
         setActiveSeason(currentActiveSeason);
