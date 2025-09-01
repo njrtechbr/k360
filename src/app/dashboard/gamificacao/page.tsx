@@ -44,6 +44,10 @@ export default function GamificacaoPage() {
         }
     }, [isAuthenticated, loading, router]);
     
+    const globalMultiplier = gamificationConfig.globalXpMultiplier || 1;
+    const seasonMultiplier = activeSeason?.xpMultiplier ?? 1;
+    const totalMultiplier = globalMultiplier * seasonMultiplier;
+
     const leaderboard = useMemo(() => {
         const seasonEvaluations = activeSeason 
             ? evaluations.filter(ev => 
@@ -51,10 +55,6 @@ export default function GamificacaoPage() {
             ) 
             : evaluations;
         
-        const globalMultiplier = gamificationConfig.globalXpMultiplier || 1;
-        const seasonMultiplier = activeSeason?.xpMultiplier ?? 1;
-        const totalMultiplier = globalMultiplier * seasonMultiplier;
-
         return attendants
             .map(attendant => {
                 const attendantEvaluations = seasonEvaluations.filter(ev => ev.attendantId === attendant.id);
@@ -79,7 +79,7 @@ export default function GamificacaoPage() {
             .filter(att => att.evaluationCount > 0)
             .sort((a, b) => b.score - a.score);
 
-    }, [evaluations, attendants, aiAnalysisResults, gamificationConfig, achievements, activeSeason]);
+    }, [evaluations, attendants, aiAnalysisResults, gamificationConfig, achievements, activeSeason, totalMultiplier]);
 
      const achievementStats: AchievementStat[] = useMemo(() => {
         return achievements
@@ -112,6 +112,8 @@ export default function GamificacaoPage() {
     }
     
     const canManageSystem = user.role === ROLES.ADMIN || user.role === ROLES.SUPERADMIN;
+
+    const ratingScores = gamificationConfig.ratingScores;
 
     return (
         <div className="space-y-8">
@@ -223,7 +225,7 @@ export default function GamificacaoPage() {
                                     <StarIcon className="h-4 w-4 text-yellow-400 fill-yellow-400"/> 5 Estrelas
                                 </div>
                                 <div className="flex items-center gap-1 font-bold text-green-600 dark:text-green-400">
-                                    <TrendingUp size={16}/> +{gamificationConfig.ratingScores[5]} XP
+                                    <TrendingUp size={16}/> +{Math.round(ratingScores[5] * totalMultiplier)} XP
                                 </div>
                             </div>
                              <div className="flex justify-between items-center p-2 rounded-md bg-lime-50 dark:bg-lime-950">
@@ -231,7 +233,7 @@ export default function GamificacaoPage() {
                                     <StarIcon className="h-4 w-4 text-yellow-400 fill-yellow-400"/> 4 Estrelas
                                 </div>
                                 <div className="flex items-center gap-1 font-bold text-lime-600 dark:text-lime-400">
-                                     <TrendingUp size={16}/> +{gamificationConfig.ratingScores[4]} XP
+                                     <TrendingUp size={16}/> +{Math.round(ratingScores[4] * totalMultiplier)} XP
                                 </div>
                             </div>
                              <div className="flex justify-between items-center p-2 rounded-md bg-blue-50 dark:bg-blue-950">
@@ -239,7 +241,7 @@ export default function GamificacaoPage() {
                                     <StarIcon className="h-4 w-4 text-yellow-400 fill-yellow-400"/> 3 Estrelas
                                 </div>
                                 <div className="flex items-center gap-1 font-bold text-blue-600 dark:text-blue-400">
-                                    <TrendingUp size={16}/> +{gamificationConfig.ratingScores[3]} XP
+                                    <TrendingUp size={16}/> +{Math.round(ratingScores[3] * totalMultiplier)} XP
                                 </div>
                             </div>
                              <div className="flex justify-between items-center p-2 rounded-md bg-orange-50 dark:bg-orange-950">
@@ -247,7 +249,7 @@ export default function GamificacaoPage() {
                                     <StarIcon className="h-4 w-4 text-yellow-400 fill-yellow-400"/> 2 Estrelas
                                 </div>
                                 <div className="flex items-center gap-1 font-bold text-orange-600 dark:text-orange-400">
-                                    <TrendingDown size={16}/> {gamificationConfig.ratingScores[2]} XP
+                                    <TrendingDown size={16}/> {Math.round(ratingScores[2] * totalMultiplier)} XP
                                 </div>
                             </div>
                              <div className="flex justify-between items-center p-2 rounded-md bg-red-50 dark:bg-red-950">
@@ -255,7 +257,7 @@ export default function GamificacaoPage() {
                                     <StarIcon className="h-4 w-4 text-yellow-400 fill-yellow-400"/> 1 Estrela
                                 </div>
                                 <div className="flex items-center gap-1 font-bold text-red-600 dark:text-red-400">
-                                    <TrendingDown size={16}/> {gamificationConfig.ratingScores[1]} XP
+                                    <TrendingDown size={16}/> {Math.round(ratingScores[1] * totalMultiplier)} XP
                                 </div>
                             </div>
                         </CardContent>
@@ -282,7 +284,7 @@ export default function GamificacaoPage() {
                             </div>
                              <div className="flex items-center gap-4">
                                 <div className="text-right">
-                                    <p className="font-semibold text-green-600">+{ach.xp} XP</p>
+                                    <p className="font-semibold text-green-600">+{Math.round(ach.xp * totalMultiplier)} XP</p>
                                     <p className="text-xs text-muted-foreground">{ach.unlockedCount} / {ach.totalAttendants} Desbloquearam</p>
                                 </div>
                                 <ChevronRight className="text-muted-foreground"/>
