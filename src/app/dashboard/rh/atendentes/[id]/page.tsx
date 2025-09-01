@@ -89,7 +89,7 @@ export default function AttendantProfilePage() {
 
         const evaluationEvents: XpEvent[] = seasonEvaluations.map(ev => ({
             reason: `Avaliação de ${ev.nota} estrela(s)`,
-            points: getScoreFromRating(ev.nota, gamificationConfig.ratingScores) * totalMultiplier,
+            points: getScoreFromRating(ev.nota, gamificationConfig.ratingScores),
             date: ev.data,
             type: 'evaluation',
             icon: Star,
@@ -99,14 +99,16 @@ export default function AttendantProfilePage() {
 
         const achievementEvents: XpEvent[] = unlockedAchievements.map(ach => ({
             reason: `Troféu: ${ach.title}`,
-            points: ach.xp * totalMultiplier,
+            points: ach.xp,
             date: lastEvaluationDate, 
             type: 'achievement',
             icon: Trophy,
         }));
 
         return [...evaluationEvents, ...achievementEvents]
+            .map(event => ({ ...event, points: event.points * totalMultiplier }))
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            
     }, [seasonEvaluations, unlockedAchievements, gamificationConfig, activeSeason]);
 
 
