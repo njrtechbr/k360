@@ -3,7 +3,7 @@
 
 import { useAuth } from "@/providers/AuthProvider";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -18,13 +18,14 @@ import {
   FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Percent, Edit } from "lucide-react";
-import { ROLES, type GamificationSeason } from "@/lib/types";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { X, Edit } from "lucide-react";
+import { type GamificationSeason } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import Link from "next/link";
+import { ROLES } from "@/lib/types";
 
 const formSchema = z.object({
   globalXpMultiplier: z.coerce.number().min(0, "O multiplicador não pode ser negativo.").default(1),
@@ -115,7 +116,7 @@ export default function GamificacaoMultiplicadoresPage() {
                       <FormLabel>Fator Multiplicador</FormLabel>
                       <div className="flex items-center gap-2">
                          <FormControl><Input type="number" step="0.1" className="w-28" {...field} /></FormControl>
-                         <Percent className="h-4 w-4 text-muted-foreground" />
+                         <X className="h-4 w-4 text-muted-foreground" />
                       </div>
                        <FormDescription>
                           Use 1 para nenhum bônus, 2 para XP em dobro, etc.
@@ -152,6 +153,7 @@ export default function GamificacaoMultiplicadoresPage() {
                         {sortedSeasons.map((field, index) => {
                              const seasonInfo = findSeasonInfo(field.id);
                              if (!seasonInfo) return null;
+                             const originalIndex = fields.findIndex(f => f.id === field.id);
                              return (
                                 <TableRow key={field.id}>
                                     <TableCell className="font-medium">{seasonInfo.name}</TableCell>
@@ -166,14 +168,14 @@ export default function GamificacaoMultiplicadoresPage() {
                                     <TableCell>
                                          <FormField
                                             control={form.control}
-                                            name={`seasons.${index}.xpMultiplier`}
+                                            name={`seasons.${originalIndex}.xpMultiplier`}
                                             render={({ field: seasonField }) => (
                                                 <FormItem>
                                                     <div className="flex items-center gap-2">
                                                         <FormControl>
                                                             <Input type="number" step="0.1" className="w-24" {...seasonField} />
                                                         </FormControl>
-                                                        <Percent className="h-4 w-4 text-muted-foreground" />
+                                                        <X className="h-4 w-4 text-muted-foreground" />
                                                     </div>
                                                      <FormMessage />
                                                 </FormItem>
