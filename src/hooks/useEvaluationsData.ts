@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import type { Evaluation, EvaluationAnalysis, GamificationConfig } from '@/lib/types';
+import type { Evaluation, EvaluationAnalysis, GamificationConfig, GamificationSeason, Attendant } from '@/lib/types';
 import { analyzeEvaluation } from '@/ai/flows/analyze-evaluation-flow';
 import { getScoreFromRating } from './useGamificationData';
 
@@ -38,8 +38,14 @@ const INITIAL_EVALUATIONS: Evaluation[] = INITIAL_EVALUATIONS_RAW.map(ev => ({
     xpGained: getScoreFromRating(ev.nota, { '1': -5, '2': -2, '3': 1, '4': 3, '5': 5 }), // Initial calculation
 }));
 
+type UseEvaluationsDataProps = {
+    gamificationConfig: GamificationConfig;
+    activeSeason: GamificationSeason | null;
+    attendants: Attendant[];
+    onNewEvaluation: (attendant: Attendant) => void;
+};
 
-export function useEvaluationsData(getGamificationConfig: () => GamificationConfig) {
+export function useEvaluationsData({ gamificationConfig, activeSeason, onNewEvaluation, attendants }: UseEvaluationsDataProps) {
     const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
     const [aiAnalysisResults, setAiAnalysisResults] = useState<EvaluationAnalysis[]>([]);
     const [lastAiAnalysis, setLastAiAnalysis] = useState<string | null>(null);
@@ -59,7 +65,7 @@ export function useEvaluationsData(getGamificationConfig: () => GamificationConf
                      // Backwards compatibility: add xpGained if missing
                     return parsed.map((ev: any) => ({
                         ...ev,
-                        xpGained: ev.xpGained ?? getScoreFromRating(ev.nota, getGamificationConfig().ratingScores)
+                        xpGained: ev.xpGained ?? getScoreFromRating(ev.nota, gamificationConfig.ratingScores)
                     }));
                  }
             }
@@ -70,7 +76,7 @@ export function useEvaluationsData(getGamificationConfig: () => GamificationConf
             localStorage.setItem(EVALUATIONS_STORAGE_KEY, JSON.stringify(INITIAL_EVALUATIONS));
             return INITIAL_EVALUATIONS;
         }
-    }, [getGamificationConfig]);
+    }, [gamificationConfig]);
 
     const getAiAnalysisFromStorage = useCallback((): EvaluationAnalysis[] => {
         if (typeof window === "undefined") return [];
@@ -111,11 +117,7 @@ export function useEvaluationsData(getGamificationConfig: () => GamificationConf
     };
 
     const addEvaluation = async (evaluationData: Omit<Evaluation, 'id' | 'data' | 'xpGained'>) => {
-        const gamificationConfig = getGamificationConfig();
-        const { ratingScores, globalXpMultiplier, seasons } = gamificationConfig;
-
-        const now = new Date();
-        const activeSeason = seasons.find(s => s.active && new Date(s.startDate) <= now && new Date(s.endDate) >= now);
+        const { ratingScores, globalXpMultiplier } = gamificationConfig;
 
         const baseScore = getScoreFromRating(evaluationData.nota, ratingScores);
         const seasonMultiplier = activeSeason?.xpMultiplier ?? 1;
@@ -133,6 +135,12 @@ export function useEvaluationsData(getGamificationConfig: () => GamificationConf
 
         const newEvaluations = [...currentEvaluations, newEvaluation];
         saveEvaluationsToStorage(newEvaluations);
+
+        // Trigger achievement check
+        const attendant = attendants.find(a => a.id === evaluationData.attendantId);
+        if (attendant) {
+            onNewEvaluation(attendant);
+        }
     };
 
     const runAiAnalysis = async () => {

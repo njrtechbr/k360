@@ -50,34 +50,31 @@ type XpEvent = {
 export default function AttendantProfilePage() {
     const { id } = useParams();
     const router = useRouter();
-    const { attendants, evaluations, loading, user, aiAnalysisResults, gamificationConfig, achievements, activeSeason } = useAuth();
+    const { attendants, evaluations, loading, user, unlockedAchievements, gamificationConfig, achievements, activeSeason } = useAuth();
 
     const attendant = useMemo(() => attendants.find(a => a.id === id), [attendants, id]);
     
     const seasonEvaluations = useMemo(() => {
         const evs = evaluations.filter(e => e.attendantId === id);
-        if (!activeSeason) return evs;
+        if (!activeSeason) return []; // Return empty if no active season
         return evs.filter(e => new Date(e.data) >= new Date(activeSeason.startDate) && new Date(e.data) <= new Date(activeSeason.endDate));
     }, [evaluations, id, activeSeason]);
 
-    const globalMultiplier = gamificationConfig.globalXpMultiplier || 1;
-    const seasonMultiplier = activeSeason?.xpMultiplier ?? 1;
-    const totalMultiplier = globalMultiplier * seasonMultiplier;
-
-    
-    const unlockedAchievements = useMemo(() => {
-        if (!attendant || !achievements) return [];
-        return achievements.filter(ach => ach.active && ach.isUnlocked(attendant, seasonEvaluations, evaluations, attendants, aiAnalysisResults));
-    }, [attendant, seasonEvaluations, evaluations, attendants, aiAnalysisResults, achievements]);
+    const seasonUnlockedAchievements = useMemo(() => {
+        if (!activeSeason) return [];
+        return unlockedAchievements.filter(ua => 
+            ua.attendantId === id &&
+            new Date(ua.unlockedAt) >= new Date(activeSeason.startDate) &&
+            new Date(ua.unlockedAt) <= new Date(activeSeason.endDate)
+        );
+    }, [unlockedAchievements, id, activeSeason]);
     
     const currentScore = useMemo(() => {
         if (!attendant) return 0;
-        
         const scoreFromRatings = seasonEvaluations.reduce((acc, ev) => acc + (ev.xpGained || 0), 0);
-        const scoreFromAchievements = unlockedAchievements.reduce((acc, ach) => acc + (ach.xp * totalMultiplier), 0);
-
+        const scoreFromAchievements = seasonUnlockedAchievements.reduce((acc, ua) => acc + (ua.xpGained || 0), 0);
         return scoreFromRatings + scoreFromAchievements;
-    }, [attendant, seasonEvaluations, unlockedAchievements, totalMultiplier]);
+    }, [attendant, seasonEvaluations, seasonUnlockedAchievements]);
 
     const xpHistory = useMemo(() => {
         const evaluationEvents: XpEvent[] = seasonEvaluations.map(ev => ({
@@ -88,20 +85,21 @@ export default function AttendantProfilePage() {
             icon: Star,
         }));
         
-        const lastEvaluationDate = seasonEvaluations.length > 0 ? seasonEvaluations[seasonEvaluations.length - 1].data : new Date(0).toISOString();
-
-        const achievementEvents: XpEvent[] = unlockedAchievements.map(ach => ({
-            reason: `Troféu: ${ach.title}`,
-            points: ach.xp * totalMultiplier,
-            date: lastEvaluationDate, 
-            type: 'achievement',
-            icon: Trophy,
-        }));
+        const achievementEvents: XpEvent[] = seasonUnlockedAchievements.map(ua => {
+            const achievement = achievements.find(a => a.id === ua.achievementId);
+            return {
+                reason: `Troféu: ${achievement?.title || 'Desconhecido'}`,
+                points: ua.xpGained,
+                date: ua.unlockedAt, 
+                type: 'achievement',
+                icon: Trophy,
+            }
+        });
 
         return [...evaluationEvents, ...achievementEvents]
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
             
-    }, [seasonEvaluations, unlockedAchievements, totalMultiplier]);
+    }, [seasonEvaluations, seasonUnlockedAchievements, achievements]);
 
 
     const stats = useMemo(() => {

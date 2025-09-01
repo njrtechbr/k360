@@ -33,7 +33,7 @@ type AchievementStat = Achievement & {
 };
 
 export default function GamificacaoPage() {
-    const { user, isAuthenticated, loading, evaluations, attendants, aiAnalysisResults, gamificationConfig, achievements, activeSeason } = useAuth();
+    const { user, isAuthenticated, loading, evaluations, attendants, unlockedAchievements, gamificationConfig, achievements, activeSeason } = useAuth();
     const router = useRouter();
     const [isAchievementDialogOpen, setIsAchievementDialogOpen] = useState(false);
     const [selectedAchievement, setSelectedAchievement] = useState<AchievementStat | null>(null);
@@ -53,42 +53,47 @@ export default function GamificacaoPage() {
             ? evaluations.filter(ev => 
                 new Date(ev.data) >= new Date(activeSeason.startDate) && new Date(ev.data) <= new Date(activeSeason.endDate)
             ) 
-            : evaluations;
+            : [];
         
+        const seasonUnlockedAchievements = activeSeason
+            ? unlockedAchievements.filter(ua => 
+                 new Date(ua.unlockedAt) >= new Date(activeSeason.startDate) && new Date(ua.unlockedAt) <= new Date(activeSeason.endDate)
+            )
+            : [];
+
         return attendants
             .map(attendant => {
                 const attendantEvaluations = seasonEvaluations.filter(ev => ev.attendantId === attendant.id);
-                
                 const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => acc + (ev.xpGained || 0), 0);
                 
-                const unlockedAchievements = achievements.filter(ach => ach.active && ach.isUnlocked(attendant, attendantEvaluations, seasonEvaluations, attendants, aiAnalysisResults));
-                const scoreFromAchievements = unlockedAchievements.reduce((acc, ach) => acc + (ach.xp * totalMultiplier), 0);
-
+                const attendantUnlockedAchievements = seasonUnlockedAchievements.filter(ua => ua.attendantId === attendant.id);
+                const scoreFromAchievements = attendantUnlockedAchievements.reduce((acc, ua) => acc + (ua.xpGained || 0), 0);
+                
                 const totalScore = scoreFromRatings + scoreFromAchievements;
 
                 return {
                     ...attendant,
                     score: Math.round(totalScore),
                     evaluationCount: attendantEvaluations.length,
-                    unlockedAchievements
+                    unlockedAchievements: attendantUnlockedAchievements
                 }
             })
-            .filter(att => att.evaluationCount > 0)
+            .filter(att => att.evaluationCount > 0 || att.unlockedAchievements.length > 0)
             .sort((a, b) => b.score - a.score);
 
-    }, [evaluations, attendants, aiAnalysisResults, gamificationConfig, achievements, activeSeason, totalMultiplier]);
+    }, [evaluations, attendants, unlockedAchievements, activeSeason]);
 
      const achievementStats: AchievementStat[] = useMemo(() => {
         return achievements
             .filter(ach => ach.active)
             .map(achievement => {
-                const unlockedBy: Attendant[] = [];
-                attendants.forEach(attendant => {
-                    const attendantEvaluations = evaluations.filter(ev => ev.attendantId === attendant.id);
-                    if (achievement.isUnlocked(attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults)) {
-                        unlockedBy.push(attendant);
-                    }
-                });
+                const unlockedByAttendantIds = new Set(unlockedAchievements
+                    .filter(ua => ua.achievementId === achievement.id)
+                    .map(ua => ua.attendantId)
+                );
+                
+                const unlockedBy = attendants.filter(att => unlockedByAttendantIds.has(att.id));
+
                 return {
                     ...achievement,
                     unlockedCount: unlockedBy.length,
@@ -97,7 +102,7 @@ export default function GamificacaoPage() {
                     unlockedBy,
                 };
             });
-    }, [attendants, evaluations, aiAnalysisResults, achievements]);
+    }, [attendants, unlockedAchievements, achievements]);
 
     const handleAchievementClick = (achievement: AchievementStat) => {
         setSelectedAchievement(achievement);

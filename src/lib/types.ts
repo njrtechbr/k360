@@ -130,6 +130,14 @@ export type Achievement = {
   ) => boolean;
 };
 
+export interface UnlockedAchievement {
+    id: string; // a unique id for this unlock event
+    attendantId: string;
+    achievementId: string;
+    unlockedAt: string; // ISO string date
+    xpGained: number;
+}
+
 
 export type LevelReward = {
     level: number;

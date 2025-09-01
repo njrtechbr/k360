@@ -3,7 +3,7 @@
 
 import type { ReactNode } from "react";
 import React, { useCallback } from "react";
-import type { User, Module, Role, Attendant, Evaluation, EvaluationAnalysis, GamificationConfig, Achievement, LevelReward, GamificationSeason } from "@/lib/types";
+import type { User, Module, Role, Attendant, Evaluation, EvaluationAnalysis, GamificationConfig, Achievement, LevelReward, GamificationSeason, UnlockedAchievement } from "@/lib/types";
 import { useAuthData } from "@/hooks/useAuthData";
 import { useUsersData } from "@/hooks/useUsersData";
 import { useModulesData } from "@/hooks/useModulesData";
@@ -53,6 +53,7 @@ interface AuthContextType {
   deleteSeason: (id: string) => Promise<void>;
   activeSeason: GamificationSeason | null;
   nextSeason: GamificationSeason | null;
+  unlockedAchievements: UnlockedAchievement[];
 }
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
@@ -94,7 +95,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
    const {
     gamificationConfig,
-    getGamificationConfigFromStorage,
     updateGamificationConfig,
     achievements,
     updateAchievement,
@@ -106,9 +106,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     deleteSeason,
     activeSeason,
     nextSeason,
+    unlockedAchievements,
+    checkAndRecordAchievements,
   } = useGamificationData();
   
-  const getGamificationConfigCb = useCallback(getGamificationConfigFromStorage, []);
   
   const {
     evaluations,
@@ -120,7 +121,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     analysisProgress,
     isProgressModalOpen,
     setIsProgressModalOpen,
-  } = useEvaluationsData(getGamificationConfigCb);
+  } = useEvaluationsData({
+    gamificationConfig,
+    activeSeason,
+    onNewEvaluation: (attendant) => {
+        checkAndRecordAchievements(attendant, attendants, evaluations, aiAnalysisResults);
+    },
+    attendants
+  });
 
 
 
@@ -213,6 +221,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     deleteSeason,
     activeSeason,
     nextSeason,
+    unlockedAchievements
   };
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;

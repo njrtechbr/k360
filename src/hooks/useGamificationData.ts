@@ -3,10 +3,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import type { GamificationConfig, Achievement, LevelReward, GamificationSeason } from '@/lib/types';
+import type { GamificationConfig, Achievement, LevelReward, GamificationSeason, Attendant, Evaluation, EvaluationAnalysis, UnlockedAchievement } from '@/lib/types';
 import { INITIAL_ACHIEVEMENTS, INITIAL_LEVEL_REWARDS } from '@/lib/achievements';
 
 const GAMIFICATION_CONFIG_KEY = "controle_acesso_gamification_config";
+const UNLOCKED_ACHIEVEMENTS_STORAGE_KEY = "controle_acesso_unlocked_achievements";
 
 export const getScoreFromRating = (rating: number, scores: GamificationConfig['ratingScores']): number => {
     const key = String(rating) as keyof typeof scores;
@@ -64,7 +65,20 @@ export function useGamificationData() {
     const [seasons, setSeasons] = useState<GamificationSeason[]>([]);
     const [activeSeason, setActiveSeason] = useState<GamificationSeason | null>(null);
     const [nextSeason, setNextSeason] = useState<GamificationSeason | null>(null);
+    const [unlockedAchievements, setUnlockedAchievements] = useState<UnlockedAchievement[]>([]);
     const { toast } = useToast();
+
+     const getUnlockedAchievementsFromStorage = useCallback((): UnlockedAchievement[] => {
+        if (typeof window === "undefined") return [];
+        try {
+            const unlockedJson = localStorage.getItem(UNLOCKED_ACHIEVEMENTS_STORAGE_KEY);
+            return unlockedJson ? JSON.parse(unlockedJson) : [];
+        } catch (error) {
+            console.error("Failed to parse unlocked achievements from localStorage", error);
+            return [];
+        }
+    }, []);
+
 
     const getGamificationConfigFromStorage = useCallback((): GamificationConfig => {
         if (typeof window === "undefined") return INITIAL_GAMIFICATION_CONFIG;
@@ -119,7 +133,14 @@ export function useGamificationData() {
         setLevelRewards(config.levelRewards);
         setSeasons(config.seasons);
         calculateActiveAndNextSeason(config.seasons);
-    }, [getGamificationConfigFromStorage, calculateActiveAndNextSeason]);
+        setUnlockedAchievements(getUnlockedAchievementsFromStorage());
+    }, [getGamificationConfigFromStorage, calculateActiveAndNextSeason, getUnlockedAchievementsFromStorage]);
+
+     const saveUnlockedAchievementsToStorage = (unlocked: UnlockedAchievement[]) => {
+        localStorage.setItem(UNLOCKED_ACHIEVEMENTS_STORAGE_KEY, JSON.stringify(unlocked));
+        setUnlockedAchievements(unlocked);
+    };
+
 
     const saveGamificationConfigToStorage = (config: GamificationConfig) => {
         const configToSave = {
@@ -188,6 +209,49 @@ export function useGamificationData() {
         toast({ title: "Sessão Removida!", description: "A sessão de gamificação foi removida." });
     };
 
+     const checkAndRecordAchievements = useCallback((
+        attendant: Attendant, 
+        allAttendants: Attendant[],
+        allEvaluations: Evaluation[],
+        allAiAnalysis: EvaluationAnalysis[]
+    ) => {
+        const now = new Date();
+        const currentActiveSeason = seasons.find(s => s.active && new Date(s.startDate) <= now && new Date(s.endDate) >= now);
+        const globalMultiplier = gamificationConfig.globalXpMultiplier || 1;
+        const seasonMultiplier = currentActiveSeason?.xpMultiplier ?? 1;
+        const totalMultiplier = globalMultiplier * seasonMultiplier;
+
+        const attendantEvaluations = allEvaluations.filter(ev => ev.attendantId === attendant.id);
+        const currentUnlocked = getUnlockedAchievementsFromStorage();
+        const attendantUnlockedIds = new Set(currentUnlocked.filter(ua => ua.attendantId === attendant.id).map(ua => ua.achievementId));
+
+        const newlyUnlocked: UnlockedAchievement[] = [];
+
+        for (const achievement of achievements) {
+            if (achievement.active && !attendantUnlockedIds.has(achievement.id)) {
+                if (achievement.isUnlocked(attendant, attendantEvaluations, allEvaluations, allAttendants, allAiAnalysis)) {
+                    const newUnlock: UnlockedAchievement = {
+                        id: crypto.randomUUID(),
+                        attendantId: attendant.id,
+                        achievementId: achievement.id,
+                        unlockedAt: now.toISOString(),
+                        xpGained: achievement.xp * totalMultiplier,
+                    };
+                    newlyUnlocked.push(newUnlock);
+                    toast({
+                        title: '🏆 Troféu Desbloqueado!',
+                        description: `${attendant.name} desbloqueou: ${achievement.title} (+${newUnlock.xpGained} XP)`,
+                    })
+                }
+            }
+        }
+
+        if (newlyUnlocked.length > 0) {
+            saveUnlockedAchievementsToStorage([...currentUnlocked, ...newlyUnlocked]);
+        }
+    }, [achievements, seasons, gamificationConfig, toast]);
+
+
     return { 
         gamificationConfig, 
         updateGamificationConfig,
@@ -201,5 +265,7 @@ export function useGamificationData() {
         deleteSeason,
         activeSeason,
         nextSeason,
+        unlockedAchievements,
+        checkAndRecordAchievements
     };
 }

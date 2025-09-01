@@ -23,7 +23,7 @@ const getMedal = (rank: number) => {
 };
 
 export default function NiveisPage() {
-    const { user, isAuthenticated, loading, evaluations, attendants, aiAnalysisResults, gamificationConfig, achievements, activeSeason } = useAuth();
+    const { user, isAuthenticated, loading, evaluations, attendants, unlockedAchievements, activeSeason } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
@@ -37,20 +37,21 @@ export default function NiveisPage() {
             ? evaluations.filter(ev => 
                 new Date(ev.data) >= new Date(activeSeason.startDate) && new Date(ev.data) <= new Date(activeSeason.endDate)
             ) 
-            : evaluations;
+            : [];
 
-        const globalMultiplier = gamificationConfig.globalXpMultiplier || 1;
-        const seasonMultiplier = activeSeason?.xpMultiplier ?? 1;
-        const totalMultiplier = globalMultiplier * seasonMultiplier;
+         const seasonUnlockedAchievements = activeSeason
+            ? unlockedAchievements.filter(ua => 
+                 new Date(ua.unlockedAt) >= new Date(activeSeason.startDate) && new Date(ua.unlockedAt) <= new Date(activeSeason.endDate)
+            )
+            : [];
 
         return attendants
             .map(attendant => {
                 const attendantEvaluations = seasonEvaluations.filter(ev => ev.attendantId === attendant.id);
-                
                 const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => acc + (ev.xpGained || 0), 0);
                 
-                const unlockedAchievements = achievements.filter(ach => ach.active && ach.isUnlocked(attendant, attendantEvaluations, seasonEvaluations, attendants, aiAnalysisResults));
-                const scoreFromAchievements = unlockedAchievements.reduce((acc, ach) => acc + (ach.xp * totalMultiplier), 0);
+                const attendantUnlockedAchievements = seasonUnlockedAchievements.filter(ua => ua.attendantId === attendant.id);
+                const scoreFromAchievements = attendantUnlockedAchievements.reduce((acc, ua) => acc + (ua.xpGained || 0), 0);
 
                 const totalScore = scoreFromRatings + scoreFromAchievements;
                 const levelData = getLevelFromXp(totalScore);
@@ -65,7 +66,7 @@ export default function NiveisPage() {
             })
             .sort((a, b) => b.score - a.score);
 
-    }, [evaluations, attendants, aiAnalysisResults, gamificationConfig, achievements, activeSeason]);
+    }, [evaluations, attendants, unlockedAchievements, activeSeason]);
 
 
     if (loading || !user) {
