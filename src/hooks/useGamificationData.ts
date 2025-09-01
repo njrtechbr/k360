@@ -8,6 +8,11 @@ import { INITIAL_ACHIEVEMENTS, INITIAL_LEVEL_REWARDS } from '@/lib/achievements'
 
 const GAMIFICATION_CONFIG_KEY = "controle_acesso_gamification_config";
 
+export const getScoreFromRating = (rating: number, scores: GamificationConfig['ratingScores']): number => {
+    const key = String(rating) as keyof typeof scores;
+    return scores[key] ?? 0;
+};
+
 const INITIAL_GAMIFICATION_CONFIG: GamificationConfig = {
     ratingScores: {
         '5': 5,
@@ -51,12 +56,6 @@ const mergeLevelRewardsWithDefaults = (savedRewards: Partial<LevelReward>[]): Le
 
     return finalRewards;
 }
-
-export const getScoreFromRating = (rating: number, scores: GamificationConfig['ratingScores']): number => {
-    const key = String(rating) as keyof typeof scores;
-    return scores[key] ?? 0;
-};
-
 
 export function useGamificationData() {
     const [gamificationConfig, setGamificationConfig] = useState<GamificationConfig>(INITIAL_GAMIFICATION_CONFIG);

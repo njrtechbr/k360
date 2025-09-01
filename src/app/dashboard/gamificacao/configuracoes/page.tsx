@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
-import { ChevronRight, Star, Trophy, GitBranch, Hourglass } from "lucide-react";
+import { ChevronRight, Star, Trophy, GitBranch, Hourglass, Percent } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -42,7 +42,23 @@ export default function GamificacaoConfiguracoesPage() {
                 </div>
                 <div>
                   <CardTitle>Pontos por Avaliação</CardTitle>
-                  <CardDescription>Defina o XP ganho ou perdido para cada nota de avaliação.</CardDescription>
+                  <CardDescription>Defina o XP base ganho ou perdido para cada nota de avaliação.</CardDescription>
+                </div>
+              </div>
+              <ChevronRight className="h-6 w-6 text-muted-foreground" />
+            </CardHeader>
+          </Card>
+        </Link>
+         <Link href="/dashboard/gamificacao/configuracoes/multiplicadores">
+          <Card className="hover:border-primary transition-colors cursor-pointer">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-teal-100 dark:bg-teal-900 rounded-lg">
+                    <Percent className="h-6 w-6 text-teal-600" />
+                </div>
+                <div>
+                  <CardTitle>Multiplicadores de XP</CardTitle>
+                  <CardDescription>Ajuste o multiplicador global e os bônus por temporada.</CardDescription>
                 </div>
               </div>
               <ChevronRight className="h-6 w-6 text-muted-foreground" />

@@ -6,10 +6,37 @@ import Link from "next/link";
 import { Button } from "./ui/button";
 import { ShieldCheck, LogOut, UserCircle, PanelLeft } from "lucide-react";
 import { useSidebar } from "./ui/sidebar";
+import { usePathname } from "next/navigation";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "./ui/breadcrumb";
+import React from "react";
+
+const getBreadcrumbItems = (pathname: string) => {
+    const pathParts = pathname.split('/').filter(part => part);
+    const breadcrumbItems = pathParts.map((part, index) => {
+        const href = `/${pathParts.slice(0, index + 1).join('/')}`;
+        const isLast = index === pathParts.length - 1;
+        const decodedPart = decodeURIComponent(part);
+        
+        let label = decodedPart.replace(/-/g, ' ');
+        // Basic capitalization
+        label = label.charAt(0).toUpperCase() + label.slice(1);
+
+        // Special labels
+        if (label.toLowerCase() === 'rh') label = 'Recursos Humanos';
+        if (label.toLowerCase() === 'pesquisa satisfacao') label = 'Pesquisa de Satisfação';
+        
+        return { href, label, isLast };
+    });
+
+    return [{ href: "/dashboard", label: "Dashboard", isLast: pathParts.length === 0 }, ...breadcrumbItems];
+}
 
 export default function SiteHeader() {
   const { user, isAuthenticated, logout } = useAuth();
   const { toggleSidebar } = useSidebar();
+  const pathname = usePathname();
+
+  const breadcrumbItems = getBreadcrumbItems(pathname);
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:px-6">
@@ -23,12 +50,25 @@ export default function SiteHeader() {
           <span className="sr-only">Toggle Menu</span>
         </Button>
         
-      <div className="flex items-center gap-2 md:ml-auto">
-          <Link href="/" className="flex items-center gap-2 font-bold text-lg text-primary">
-              <ShieldCheck className="h-6 w-6" />
-              <span className="hidden sm:inline">Koerner 360</span>
-          </Link>
-      </div>
+        <Breadcrumb className="hidden md:flex">
+            <BreadcrumbList>
+                 {breadcrumbItems.map((item, index) => (
+                    <React.Fragment key={item.href}>
+                         <BreadcrumbItem>
+                            {item.isLast ? (
+                                <BreadcrumbPage>{item.label}</BreadcrumbPage>
+                            ) : (
+                                <BreadcrumbLink asChild>
+                                    <Link href={item.href}>{item.label}</Link>
+                                </BreadcrumbLink>
+                            )}
+                        </BreadcrumbItem>
+                        {index < breadcrumbItems.length - 1 && <BreadcrumbSeparator />}
+                    </React.Fragment>
+                ))}
+            </BreadcrumbList>
+        </Breadcrumb>
+        
       <div className="ml-auto flex items-center gap-2">
         {isAuthenticated && user ? (
           <>
