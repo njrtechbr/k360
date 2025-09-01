@@ -102,7 +102,7 @@ export default function GamificacaoPontosPage() {
                   </FormItem>
               )} />
             </CardContent>
-            <CardHeader className="pt-0 border-t">
+            <CardHeader className="pt-0 mt-6 border-t">
                 <CardTitle>Pontos de Experiência (XP) Base</CardTitle>
                 <CardDescription>
                   Esses valores são a base para o cálculo da pontuação, antes dos multiplicadores.

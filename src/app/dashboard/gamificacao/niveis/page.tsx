@@ -41,13 +41,12 @@ export default function NiveisPage() {
             : evaluations;
 
         const globalMultiplier = gamificationConfig.globalXpMultiplier || 1;
+        const seasonMultiplier = activeSeason?.xpMultiplier ?? 1;
 
         return attendants
             .map(attendant => {
                 const attendantEvaluations = seasonEvaluations.filter(ev => ev.attendantId === attendant.id);
                 
-                const seasonMultiplier = activeSeason?.xpMultiplier ?? 1;
-
                 const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => {
                     const baseScore = getScoreFromRating(ev.nota, gamificationConfig.ratingScores);
                     return acc + (baseScore * seasonMultiplier * globalMultiplier);
