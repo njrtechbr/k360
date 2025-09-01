@@ -159,4 +159,5 @@ export interface GamificationConfig {
   achievements: Achievement[];
   levelRewards: LevelReward[];
   seasons: GamificationSeason[];
+  globalXpMultiplier: number;
 }

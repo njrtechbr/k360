@@ -69,18 +69,25 @@ export default function AttendantProfilePage() {
     
     const currentScore = useMemo(() => {
         if (!attendant) return 0;
-        const multiplier = activeSeason?.xpMultiplier ?? 1;
-        const scoreFromRatings = seasonEvaluations.reduce((acc, ev) => acc + (getScoreFromRating(ev.nota, gamificationConfig.ratingScores) * multiplier), 0);
+        const seasonMultiplier = activeSeason?.xpMultiplier ?? 1;
+        const globalMultiplier = gamificationConfig.globalXpMultiplier || 1;
+        
+        const scoreFromRatings = seasonEvaluations.reduce((acc, ev) => {
+            const baseScore = getScoreFromRating(ev.nota, gamificationConfig.ratingScores);
+            return acc + (baseScore * seasonMultiplier * globalMultiplier);
+        }, 0);
+
         const scoreFromAchievements = unlockedAchievements.reduce((acc, ach) => acc + ach.xp, 0);
         return scoreFromRatings + scoreFromAchievements;
     }, [attendant, seasonEvaluations, unlockedAchievements, gamificationConfig, activeSeason]);
 
     const xpHistory = useMemo(() => {
-        const multiplier = activeSeason?.xpMultiplier ?? 1;
+        const seasonMultiplier = activeSeason?.xpMultiplier ?? 1;
+        const globalMultiplier = gamificationConfig.globalXpMultiplier || 1;
 
         const evaluationEvents: XpEvent[] = seasonEvaluations.map(ev => ({
             reason: `Avaliação de ${ev.nota} estrela(s)`,
-            points: getScoreFromRating(ev.nota, gamificationConfig.ratingScores) * multiplier,
+            points: getScoreFromRating(ev.nota, gamificationConfig.ratingScores) * seasonMultiplier * globalMultiplier,
             date: ev.data,
             type: 'evaluation',
             icon: Star,

@@ -19,30 +19,37 @@ const INITIAL_GAMIFICATION_CONFIG: GamificationConfig = {
     achievements: INITIAL_ACHIEVEMENTS,
     levelRewards: INITIAL_LEVEL_REWARDS,
     seasons: [],
+    globalXpMultiplier: 1,
 };
 
 const mergeAchievementsWithDefaults = (savedAchievements: Partial<Achievement>[]): Achievement[] => {
     const defaultAchievementsMap = new Map(INITIAL_ACHIEVEMENTS.map(ach => [ach.id, ach]));
-    return savedAchievements.map(savedAch => {
-        const defaultAch = defaultAchievementsMap.get(savedAch.id!);
-        if (defaultAch) {
-            // Re-apply the function and icon from defaults, but keep saved properties
-            return { ...defaultAch, ...savedAch, isUnlocked: defaultAch.isUnlocked, icon: defaultAch.icon };
+    const savedAchievementsMap = new Map(savedAchievements.map(ach => [ach.id, ach]));
+    
+    const finalAchievements = INITIAL_ACHIEVEMENTS.map(defaultAch => {
+        const savedAch = savedAchievementsMap.get(defaultAch.id);
+        if (savedAch) {
+             return { ...defaultAch, ...savedAch, isUnlocked: defaultAch.isUnlocked, icon: defaultAch.icon };
         }
-        return null;
-    }).filter((ach): ach is Achievement => !!ach);
+        return defaultAch;
+    });
+
+    return finalAchievements;
 };
 
 const mergeLevelRewardsWithDefaults = (savedRewards: Partial<LevelReward>[]): LevelReward[] => {
     const defaultRewardsMap = new Map(INITIAL_LEVEL_REWARDS.map(r => [r.level, r]));
-    return savedRewards.map(savedReward => {
-        const defaultReward = defaultRewardsMap.get(savedReward.level!);
-        if (defaultReward) {
-             // Re-apply the icon component from defaults, but keep saved properties
+     const savedRewardsMap = new Map(savedRewards.map(r => [r.level, r]));
+
+    const finalRewards = INITIAL_LEVEL_REWARDS.map(defaultReward => {
+        const savedReward = savedRewardsMap.get(defaultReward.level);
+        if (savedReward) {
             return { ...defaultReward, ...savedReward, icon: defaultReward.icon };
         }
-        return null;
-    }).filter((r): r is LevelReward => !!r);
+        return defaultReward;
+    });
+
+    return finalRewards;
 }
 
 export const getScoreFromRating = (rating: number, scores: GamificationConfig['ratingScores']): number => {
@@ -131,7 +138,7 @@ export function useGamificationData() {
         calculateActiveAndNextSeason(fullConfig.seasons);
     };
 
-    const updateGamificationConfig = async (newConfig: Partial<Pick<GamificationConfig, 'ratingScores'>>) => {
+    const updateGamificationConfig = async (newConfig: Partial<Pick<GamificationConfig, 'ratingScores' | 'globalXpMultiplier'>>) => {
         const currentConfig = getGamificationConfigFromStorage();
         const updatedConfig = { ...currentConfig, ...newConfig };
         saveGamificationConfigToStorage(updatedConfig);

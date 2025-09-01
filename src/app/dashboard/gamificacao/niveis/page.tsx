@@ -40,13 +40,18 @@ export default function NiveisPage() {
             ) 
             : evaluations;
 
+        const globalMultiplier = gamificationConfig.globalXpMultiplier || 1;
+
         return attendants
             .map(attendant => {
                 const attendantEvaluations = seasonEvaluations.filter(ev => ev.attendantId === attendant.id);
                 
-                const multiplier = activeSeason?.xpMultiplier ?? 1;
+                const seasonMultiplier = activeSeason?.xpMultiplier ?? 1;
 
-                const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => acc + (getScoreFromRating(ev.nota, gamificationConfig.ratingScores) * multiplier), 0);
+                const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => {
+                    const baseScore = getScoreFromRating(ev.nota, gamificationConfig.ratingScores);
+                    return acc + (baseScore * seasonMultiplier * globalMultiplier);
+                }, 0);
                 
                 const unlockedAchievements = achievements.filter(ach => ach.active && ach.isUnlocked(attendant, attendantEvaluations, seasonEvaluations, attendants, aiAnalysisResults));
                 const scoreFromAchievements = unlockedAchievements.reduce((acc, ach) => acc + ach.xp, 0);

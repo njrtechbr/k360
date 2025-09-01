@@ -42,7 +42,7 @@ interface AuthContextType {
   isProgressModalOpen: boolean;
   setIsProgressModalOpen: (isOpen: boolean) => void;
   gamificationConfig: GamificationConfig;
-  updateGamificationConfig: (newConfig: Partial<Pick<GamificationConfig, 'ratingScores'>>) => Promise<void>;
+  updateGamificationConfig: (newConfig: Partial<Pick<GamificationConfig, 'ratingScores' | 'globalXpMultiplier'>>) => Promise<void>;
   achievements: Achievement[];
   updateAchievement: (id: string, data: Partial<Omit<Achievement, 'id' | 'icon' | 'color' | 'isUnlocked'>>) => Promise<void>;
   levelRewards: LevelReward[];
