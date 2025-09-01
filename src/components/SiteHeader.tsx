@@ -12,23 +12,35 @@ import React from "react";
 
 const getBreadcrumbItems = (pathname: string) => {
     const pathParts = pathname.split('/').filter(part => part);
-    const breadcrumbItems = pathParts.map((part, index) => {
-        const href = `/${pathParts.slice(0, index + 1).join('/')}`;
-        const isLast = index === pathParts.length - 1;
-        const decodedPart = decodeURIComponent(part);
-        
-        let label = decodedPart.replace(/-/g, ' ');
-        // Basic capitalization
-        label = label.charAt(0).toUpperCase() + label.slice(1);
 
-        // Special labels
-        if (label.toLowerCase() === 'rh') label = 'Recursos Humanos';
-        if (label.toLowerCase() === 'pesquisa satisfacao') label = 'Pesquisa de Satisfação';
-        
-        return { href, label, isLast };
-    });
+    const breadcrumbs = [{ href: "/dashboard", label: "Dashboard", isLast: pathParts.length === 0 }];
 
-    return [{ href: "/dashboard", label: "Dashboard", isLast: pathParts.length === 0 }, ...breadcrumbItems];
+    if (pathParts.length > 0 && pathParts[0] !== 'dashboard') {
+         pathParts.forEach((part, index) => {
+            const href = `/${pathParts.slice(0, index + 1).join('/')}`;
+            const isLast = index === pathParts.length - 1;
+            let label = decodeURIComponent(part).replace(/-/g, ' ');
+            label = label.charAt(0).toUpperCase() + label.slice(1);
+
+            if (label.toLowerCase() === 'rh') label = 'Recursos Humanos';
+            if (label.toLowerCase() === 'pesquisa satisfacao') label = 'Pesquisa de Satisfação';
+
+            breadcrumbs.push({ href, label, isLast });
+        });
+    } else if (pathParts.length > 1) {
+         pathParts.slice(1).forEach((part, index) => {
+            const href = `/dashboard/${pathParts.slice(1, index + 2).join('/')}`;
+            const isLast = index === pathParts.length - 2;
+            let label = decodeURIComponent(part).replace(/-/g, ' ');
+            label = label.charAt(0).toUpperCase() + label.slice(1);
+             if (label.toLowerCase() === 'rh') label = 'Recursos Humanos';
+            if (label.toLowerCase() === 'pesquisa satisfacao') label = 'Pesquisa de Satisfação';
+
+            breadcrumbs.push({ href, label, isLast });
+        });
+    }
+    
+    return breadcrumbs;
 }
 
 export default function SiteHeader() {
