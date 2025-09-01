@@ -90,6 +90,7 @@ export interface Evaluation {
   nota: number;
   comentario: string;
   data: string; // Storing as ISO string for simplicity
+  xpGained: number; // XP calculated at the time of evaluation
 }
 
 export const AnalyzeEvaluationInputSchema = z.object({

@@ -3,8 +3,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import type { Evaluation, EvaluationAnalysis } from '@/lib/types';
+import type { Evaluation, EvaluationAnalysis, GamificationConfig } from '@/lib/types';
 import { analyzeEvaluation } from '@/ai/flows/analyze-evaluation-flow';
+import { getScoreFromRating } from './useGamificationData';
+
 
 const EVALUATIONS_STORAGE_KEY = "controle_acesso_evaluations";
 const AI_ANALYSIS_STORAGE_KEY = "controle_acesso_ai_analysis";
@@ -26,13 +28,18 @@ const parseEvaluationDate = (dateString: string) => {
     return new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes), parseInt(seconds)).toISOString();
 }
 
-const INITIAL_EVALUATIONS: Evaluation[] = [
+const INITIAL_EVALUATIONS_RAW = [
   { "id": "6002ff6d-ac09-4c64-95b3-e5987cc0b841", "attendantId": "58cd3a1d-9214-4535-b8d8-6f9d9957a570", "nota": 5, "comentario": "(Sem comentário)", "data": parseEvaluationDate("05/08/2025 11:13:58") },
   // ... all other evaluations from the original file
 ];
 
+const INITIAL_EVALUATIONS: Evaluation[] = INITIAL_EVALUATIONS_RAW.map(ev => ({
+    ...ev,
+    xpGained: getScoreFromRating(ev.nota, { '1': -5, '2': -2, '3': 1, '4': 3, '5': 5 }), // Initial calculation
+}));
 
-export function useEvaluationsData() {
+
+export function useEvaluationsData(getGamificationConfig: () => GamificationConfig) {
     const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
     const [aiAnalysisResults, setAiAnalysisResults] = useState<EvaluationAnalysis[]>([]);
     const [lastAiAnalysis, setLastAiAnalysis] = useState<string | null>(null);
@@ -48,7 +55,13 @@ export function useEvaluationsData() {
             const evaluationsJson = localStorage.getItem(EVALUATIONS_STORAGE_KEY);
             if (evaluationsJson) {
                 const parsed = JSON.parse(evaluationsJson);
-                if (parsed && parsed.length > 0) return parsed;
+                 if (parsed && parsed.length > 0) {
+                     // Backwards compatibility: add xpGained if missing
+                    return parsed.map((ev: any) => ({
+                        ...ev,
+                        xpGained: ev.xpGained ?? getScoreFromRating(ev.nota, getGamificationConfig().ratingScores)
+                    }));
+                 }
             }
             localStorage.setItem(EVALUATIONS_STORAGE_KEY, JSON.stringify(INITIAL_EVALUATIONS));
             return INITIAL_EVALUATIONS;
@@ -57,7 +70,7 @@ export function useEvaluationsData() {
             localStorage.setItem(EVALUATIONS_STORAGE_KEY, JSON.stringify(INITIAL_EVALUATIONS));
             return INITIAL_EVALUATIONS;
         }
-    }, []);
+    }, [getGamificationConfig]);
 
     const getAiAnalysisFromStorage = useCallback((): EvaluationAnalysis[] => {
         if (typeof window === "undefined") return [];
@@ -97,12 +110,25 @@ export function useEvaluationsData() {
         setLastAiAnalysis(date);
     };
 
-    const addEvaluation = async (evaluationData: Omit<Evaluation, 'id' | 'data'>) => {
+    const addEvaluation = async (evaluationData: Omit<Evaluation, 'id' | 'data' | 'xpGained'>) => {
+        const gamificationConfig = getGamificationConfig();
+        const { ratingScores, globalXpMultiplier, seasons } = gamificationConfig;
+
+        const now = new Date();
+        const activeSeason = seasons.find(s => s.active && new Date(s.startDate) <= now && new Date(s.endDate) >= now);
+
+        const baseScore = getScoreFromRating(evaluationData.nota, ratingScores);
+        const seasonMultiplier = activeSeason?.xpMultiplier ?? 1;
+        const totalMultiplier = globalXpMultiplier * seasonMultiplier;
+
+        const xpGained = baseScore * totalMultiplier;
+
         const currentEvaluations = getEvaluationsFromStorage();
         const newEvaluation: Evaluation = {
             ...evaluationData,
             id: crypto.randomUUID(),
             data: new Date().toISOString(),
+            xpGained: xpGained,
         };
 
         const newEvaluations = [...currentEvaluations, newEvaluation];

@@ -59,15 +59,12 @@ export default function GamificacaoPage() {
             .map(attendant => {
                 const attendantEvaluations = seasonEvaluations.filter(ev => ev.attendantId === attendant.id);
                 
-                const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => {
-                    const baseScore = getScoreFromRating(ev.nota, gamificationConfig.ratingScores);
-                    return acc + baseScore;
-                }, 0);
+                const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => acc + (ev.xpGained || 0), 0);
                 
                 const unlockedAchievements = achievements.filter(ach => ach.active && ach.isUnlocked(attendant, attendantEvaluations, seasonEvaluations, attendants, aiAnalysisResults));
-                const scoreFromAchievements = unlockedAchievements.reduce((acc, ach) => acc + ach.xp, 0);
+                const scoreFromAchievements = unlockedAchievements.reduce((acc, ach) => acc + (ach.xp * totalMultiplier), 0);
 
-                const totalScore = (scoreFromRatings + scoreFromAchievements) * totalMultiplier;
+                const totalScore = scoreFromRatings + scoreFromAchievements;
 
                 return {
                     ...attendant,
@@ -225,7 +222,7 @@ export default function GamificacaoPage() {
                                     <StarIcon className="h-4 w-4 text-yellow-400 fill-yellow-400"/> 5 Estrelas
                                 </div>
                                 <div className="flex items-center gap-1 font-bold text-green-600 dark:text-green-400">
-                                    <TrendingUp size={16}/> +{Math.round(ratingScores[5] * totalMultiplier)} XP
+                                    <TrendingUp size={16}/> +{Math.round(getScoreFromRating(5, ratingScores) * totalMultiplier)} XP
                                 </div>
                             </div>
                              <div className="flex justify-between items-center p-2 rounded-md bg-lime-50 dark:bg-lime-950">
@@ -233,7 +230,7 @@ export default function GamificacaoPage() {
                                     <StarIcon className="h-4 w-4 text-yellow-400 fill-yellow-400"/> 4 Estrelas
                                 </div>
                                 <div className="flex items-center gap-1 font-bold text-lime-600 dark:text-lime-400">
-                                     <TrendingUp size={16}/> +{Math.round(ratingScores[4] * totalMultiplier)} XP
+                                     <TrendingUp size={16}/> +{Math.round(getScoreFromRating(4, ratingScores) * totalMultiplier)} XP
                                 </div>
                             </div>
                              <div className="flex justify-between items-center p-2 rounded-md bg-blue-50 dark:bg-blue-950">
@@ -241,7 +238,7 @@ export default function GamificacaoPage() {
                                     <StarIcon className="h-4 w-4 text-yellow-400 fill-yellow-400"/> 3 Estrelas
                                 </div>
                                 <div className="flex items-center gap-1 font-bold text-blue-600 dark:text-blue-400">
-                                    <TrendingUp size={16}/> +{Math.round(ratingScores[3] * totalMultiplier)} XP
+                                    <TrendingUp size={16}/> +{Math.round(getScoreFromRating(3, ratingScores) * totalMultiplier)} XP
                                 </div>
                             </div>
                              <div className="flex justify-between items-center p-2 rounded-md bg-orange-50 dark:bg-orange-950">
@@ -249,7 +246,7 @@ export default function GamificacaoPage() {
                                     <StarIcon className="h-4 w-4 text-yellow-400 fill-yellow-400"/> 2 Estrelas
                                 </div>
                                 <div className="flex items-center gap-1 font-bold text-orange-600 dark:text-orange-400">
-                                    <TrendingDown size={16}/> {Math.round(ratingScores[2] * totalMultiplier)} XP
+                                    <TrendingDown size={16}/> {Math.round(getScoreFromRating(2, ratingScores) * totalMultiplier)} XP
                                 </div>
                             </div>
                              <div className="flex justify-between items-center p-2 rounded-md bg-red-50 dark:bg-red-950">
@@ -257,7 +254,7 @@ export default function GamificacaoPage() {
                                     <StarIcon className="h-4 w-4 text-yellow-400 fill-yellow-400"/> 1 Estrela
                                 </div>
                                 <div className="flex items-center gap-1 font-bold text-red-600 dark:text-red-400">
-                                    <TrendingDown size={16}/> {Math.round(ratingScores[1] * totalMultiplier)} XP
+                                    <TrendingDown size={16}/> {Math.round(getScoreFromRating(1, ratingScores) * totalMultiplier)} XP
                                 </div>
                             </div>
                         </CardContent>

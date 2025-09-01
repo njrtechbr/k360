@@ -2,7 +2,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import React, from "react";
+import React, { useCallback } from "react";
 import type { User, Module, Role, Attendant, Evaluation, EvaluationAnalysis, GamificationConfig, Achievement, LevelReward, GamificationSeason } from "@/lib/types";
 import { useAuthData } from "@/hooks/useAuthData";
 import { useUsersData } from "@/hooks/useUsersData";
@@ -33,7 +33,7 @@ interface AuthContextType {
   updateAttendant: (attendantId: string, attendantData: Partial<Omit<Attendant, 'id'>>) => Promise<void>;
   deleteAttendant: (attendantId: string) => Promise<void>;
   evaluations: Evaluation[];
-  addEvaluation: (evaluationData: Omit<Evaluation, 'id' | 'data'>) => Promise<void>;
+  addEvaluation: (evaluationData: Omit<Evaluation, 'id' | 'data' | 'xpGained'>) => Promise<void>;
   aiAnalysisResults: EvaluationAnalysis[];
   lastAiAnalysis: string | null;
   runAiAnalysis: () => Promise<void>;
@@ -91,21 +91,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     updateAttendant,
     deleteAttendant,
   } = useAttendantsData();
-  
-  const {
-    evaluations,
-    addEvaluation,
-    aiAnalysisResults,
-    lastAiAnalysis,
-    isAiAnalysisRunning,
-    runAiAnalysis,
-    analysisProgress,
-    isProgressModalOpen,
-    setIsProgressModalOpen,
-  } = useEvaluationsData();
 
-  const {
+   const {
     gamificationConfig,
+    getGamificationConfigFromStorage,
     updateGamificationConfig,
     achievements,
     updateAchievement,
@@ -118,6 +107,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     activeSeason,
     nextSeason,
   } = useGamificationData();
+  
+  const getGamificationConfigCb = useCallback(getGamificationConfigFromStorage, []);
+  
+  const {
+    evaluations,
+    addEvaluation,
+    aiAnalysisResults,
+    lastAiAnalysis,
+    isAiAnalysisRunning,
+    runAiAnalysis,
+    analysisProgress,
+    isProgressModalOpen,
+    setIsProgressModalOpen,
+  } = useEvaluationsData(getGamificationConfigCb);
+
+
 
   const registerUser = async (userData: Omit<User, "id">) => {
     const currentUsers = getUsersFromStorage();

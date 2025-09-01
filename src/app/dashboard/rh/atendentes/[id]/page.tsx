@@ -14,7 +14,6 @@ import { ptBR } from "date-fns/locale";
 import { ArrowLeft, BarChart3, Calendar, FileText, Hash, History, Mail, Phone, Sparkles, Star, TrendingDown, TrendingUp, Trophy, UserCircle, UserCog } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { getScoreFromRating } from "@/hooks/useGamificationData";
 
 const RatingStars = ({ rating, className }: { rating: number, className?: string }) => {
     const totalStars = 5;
@@ -61,6 +60,10 @@ export default function AttendantProfilePage() {
         return evs.filter(e => new Date(e.data) >= new Date(activeSeason.startDate) && new Date(e.data) <= new Date(activeSeason.endDate));
     }, [evaluations, id, activeSeason]);
 
+    const globalMultiplier = gamificationConfig.globalXpMultiplier || 1;
+    const seasonMultiplier = activeSeason?.xpMultiplier ?? 1;
+    const totalMultiplier = globalMultiplier * seasonMultiplier;
+
     
     const unlockedAchievements = useMemo(() => {
         if (!attendant || !achievements) return [];
@@ -69,27 +72,17 @@ export default function AttendantProfilePage() {
     
     const currentScore = useMemo(() => {
         if (!attendant) return 0;
-        const seasonMultiplier = activeSeason?.xpMultiplier ?? 1;
-        const globalMultiplier = gamificationConfig.globalXpMultiplier || 1;
-        const totalMultiplier = seasonMultiplier * globalMultiplier;
         
-        const scoreFromRatings = seasonEvaluations.reduce((acc, ev) => {
-            const baseScore = getScoreFromRating(ev.nota, gamificationConfig.ratingScores);
-            return acc + baseScore;
-        }, 0);
+        const scoreFromRatings = seasonEvaluations.reduce((acc, ev) => acc + (ev.xpGained || 0), 0);
+        const scoreFromAchievements = unlockedAchievements.reduce((acc, ach) => acc + (ach.xp * totalMultiplier), 0);
 
-        const scoreFromAchievements = unlockedAchievements.reduce((acc, ach) => acc + ach.xp, 0);
-        return (scoreFromRatings + scoreFromAchievements) * totalMultiplier;
-    }, [attendant, seasonEvaluations, unlockedAchievements, gamificationConfig, activeSeason]);
+        return scoreFromRatings + scoreFromAchievements;
+    }, [attendant, seasonEvaluations, unlockedAchievements, totalMultiplier]);
 
     const xpHistory = useMemo(() => {
-        const seasonMultiplier = activeSeason?.xpMultiplier ?? 1;
-        const globalMultiplier = gamificationConfig.globalXpMultiplier || 1;
-        const totalMultiplier = seasonMultiplier * globalMultiplier;
-
         const evaluationEvents: XpEvent[] = seasonEvaluations.map(ev => ({
             reason: `Avaliação de ${ev.nota} estrela(s)`,
-            points: getScoreFromRating(ev.nota, gamificationConfig.ratingScores),
+            points: ev.xpGained,
             date: ev.data,
             type: 'evaluation',
             icon: Star,
@@ -99,17 +92,16 @@ export default function AttendantProfilePage() {
 
         const achievementEvents: XpEvent[] = unlockedAchievements.map(ach => ({
             reason: `Troféu: ${ach.title}`,
-            points: ach.xp,
+            points: ach.xp * totalMultiplier,
             date: lastEvaluationDate, 
             type: 'achievement',
             icon: Trophy,
         }));
 
         return [...evaluationEvents, ...achievementEvents]
-            .map(event => ({ ...event, points: event.points * totalMultiplier }))
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
             
-    }, [seasonEvaluations, unlockedAchievements, gamificationConfig, activeSeason]);
+    }, [seasonEvaluations, unlockedAchievements, totalMultiplier]);
 
 
     const stats = useMemo(() => {
@@ -255,9 +247,9 @@ export default function AttendantProfilePage() {
                                                     {ev.reason}
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Badge variant={ev.points > 0 ? 'secondary' : 'destructive'} className="flex items-center gap-1 w-fit">
-                                                        {ev.points > 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                                                        {ev.points > 0 ? `+${Math.round(ev.points)}` : Math.round(ev.points)} XP
+                                                    <Badge variant={ev.points >= 0 ? 'secondary' : 'destructive'} className="flex items-center gap-1 w-fit">
+                                                        {ev.points >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                                                        {ev.points >= 0 ? `+${Math.round(ev.points)}` : Math.round(ev.points)} XP
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell className="text-right text-sm text-muted-foreground">

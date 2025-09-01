@@ -14,7 +14,6 @@ import RewardTrack from "@/components/RewardTrack";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import GamificationSeasonStatus from "@/components/GamificationSeasonStatus";
-import { getScoreFromRating } from "@/hooks/useGamificationData";
 
 const getMedal = (rank: number) => {
     if (rank === 1) return <span className="text-2xl" title="1º Lugar">🥇</span>;
@@ -48,15 +47,12 @@ export default function NiveisPage() {
             .map(attendant => {
                 const attendantEvaluations = seasonEvaluations.filter(ev => ev.attendantId === attendant.id);
                 
-                const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => {
-                    const baseScore = getScoreFromRating(ev.nota, gamificationConfig.ratingScores);
-                    return acc + baseScore;
-                }, 0);
+                const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => acc + (ev.xpGained || 0), 0);
                 
                 const unlockedAchievements = achievements.filter(ach => ach.active && ach.isUnlocked(attendant, attendantEvaluations, seasonEvaluations, attendants, aiAnalysisResults));
-                const scoreFromAchievements = unlockedAchievements.reduce((acc, ach) => acc + ach.xp, 0);
+                const scoreFromAchievements = unlockedAchievements.reduce((acc, ach) => acc + (ach.xp * totalMultiplier), 0);
 
-                const totalScore = (scoreFromRatings + scoreFromAchievements) * totalMultiplier;
+                const totalScore = scoreFromRatings + scoreFromAchievements;
                 const levelData = getLevelFromXp(totalScore);
 
                 return {
