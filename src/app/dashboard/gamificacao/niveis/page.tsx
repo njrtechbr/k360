@@ -136,11 +136,11 @@ export default function NiveisPage() {
                                         <div className="flex flex-col">
                                             <Progress value={att.progress} className="h-2" />
                                             <span className="text-xs text-muted-foreground mt-1 text-center">
-                                                {att.score} / {att.xpForNextLevel} XP
+                                                {Math.round(att.score)} / {att.xpForNextLevel} XP
                                             </span>
                                         </div>
                                     </TableCell>
-                                    <TableCell className="text-right font-bold text-lg">{att.score}</TableCell>
+                                    <TableCell className="text-right font-bold text-lg">{Math.round(att.score)}</TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>

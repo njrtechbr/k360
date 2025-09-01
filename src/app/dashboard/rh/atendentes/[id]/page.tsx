@@ -213,7 +213,7 @@ export default function AttendantProfilePage() {
                                    <Sparkles size={18}/>
                                    <span className="text-sm">Pontos de Experiência</span>
                                </div>
-                               <span className="font-bold text-lg">{currentScore} XP</span>
+                               <span className="font-bold text-lg">{Math.round(currentScore)} XP</span>
                            </div>
                         </CardContent>
                     </Card>
@@ -256,7 +256,7 @@ export default function AttendantProfilePage() {
                                                 <TableCell>
                                                     <Badge variant={ev.points > 0 ? 'secondary' : 'destructive'} className="flex items-center gap-1 w-fit">
                                                         {ev.points > 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                                                        {ev.points > 0 ? `+${ev.points}` : ev.points} XP
+                                                        {ev.points > 0 ? `+${Math.round(ev.points)}` : Math.round(ev.points)} XP
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell className="text-right text-sm text-muted-foreground">

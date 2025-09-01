@@ -83,6 +83,7 @@ export function useGamificationData() {
                     achievements: mergedAchievements,
                     levelRewards: mergedLevelRewards,
                     seasons: parsed.seasons || INITIAL_GAMIFICATION_CONFIG.seasons,
+                    globalXpMultiplier: parsed.globalXpMultiplier ?? INITIAL_GAMIFICATION_CONFIG.globalXpMultiplier,
                 };
             }
             localStorage.setItem(GAMIFICATION_CONFIG_KEY, JSON.stringify(INITIAL_GAMIFICATION_CONFIG));

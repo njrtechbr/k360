@@ -15,6 +15,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -77,17 +78,17 @@ export default function GamificacaoPontosPage() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Multiplicador de XP Global</CardTitle>
-          <CardDescription>
-            Este fator se aplica a todos os pontos de avaliação, em conjunto com multiplicadores de temporada.
-          </CardDescription>
-        </CardHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <Card>
+            <CardHeader>
+              <CardTitle>Multiplicador de XP Global</CardTitle>
+              <CardDescription>
+                Este fator se aplica a todos os pontos de avaliação, em conjunto com multiplicadores de temporada.
+              </CardDescription>
+            </CardHeader>
             <CardContent>
-               <FormField control={form.control} name="globalXpMultiplier" render={({ field }) => (
+              <FormField control={form.control} name="globalXpMultiplier" render={({ field }) => (
                   <FormItem>
                       <FormLabel>Fator Multiplicador</FormLabel>
                       <div className="flex items-center gap-2">
@@ -101,7 +102,7 @@ export default function GamificacaoPontosPage() {
                   </FormItem>
               )} />
             </CardContent>
-             <CardHeader className="pt-0">
+            <CardHeader className="pt-0 border-t">
                 <CardTitle>Pontos de Experiência (XP) Base</CardTitle>
                 <CardDescription>
                   Esses valores são a base para o cálculo da pontuação, antes dos multiplicadores.
@@ -120,7 +121,7 @@ export default function GamificacaoPontosPage() {
                         {rating} Estrela{rating > 1 ? 's' : ''}
                       </FormLabel>
                       <div className="flex items-center gap-2">
-                         {field.value >= 0 ? <TrendingUp className="text-green-500" /> : <TrendingDown className="text-red-500" />}
+                         {Number(field.value) >= 0 ? <TrendingUp className="text-green-500" /> : <TrendingDown className="text-red-500" />}
                         <FormControl>
                           <Input type="number" className="w-24" {...field} />
                         </FormControl>
@@ -137,9 +138,9 @@ export default function GamificacaoPontosPage() {
                 {form.formState.isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
               </Button>
             </CardFooter>
-          </form>
-        </Form>
-      </Card>
+          </Card>
+        </form>
+      </Form>
     </div>
   );
 }
