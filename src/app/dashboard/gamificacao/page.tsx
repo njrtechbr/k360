@@ -53,6 +53,7 @@ export default function GamificacaoPage() {
         
         const globalMultiplier = gamificationConfig.globalXpMultiplier || 1;
         const seasonMultiplier = activeSeason?.xpMultiplier ?? 1;
+        const totalMultiplier = globalMultiplier * seasonMultiplier;
 
         return attendants
             .map(attendant => {
@@ -60,15 +61,17 @@ export default function GamificacaoPage() {
                 
                 const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => {
                     const baseScore = getScoreFromRating(ev.nota, gamificationConfig.ratingScores);
-                    return acc + (baseScore * seasonMultiplier * globalMultiplier);
+                    return acc + baseScore;
                 }, 0);
                 
                 const unlockedAchievements = achievements.filter(ach => ach.active && ach.isUnlocked(attendant, attendantEvaluations, seasonEvaluations, attendants, aiAnalysisResults));
                 const scoreFromAchievements = unlockedAchievements.reduce((acc, ach) => acc + ach.xp, 0);
 
+                const totalScore = (scoreFromRatings + scoreFromAchievements) * totalMultiplier;
+
                 return {
                     ...attendant,
-                    score: Math.round(scoreFromRatings + scoreFromAchievements),
+                    score: Math.round(totalScore),
                     evaluationCount: attendantEvaluations.length,
                     unlockedAchievements
                 }

@@ -71,36 +71,35 @@ export default function AttendantProfilePage() {
         if (!attendant) return 0;
         const seasonMultiplier = activeSeason?.xpMultiplier ?? 1;
         const globalMultiplier = gamificationConfig.globalXpMultiplier || 1;
+        const totalMultiplier = seasonMultiplier * globalMultiplier;
         
         const scoreFromRatings = seasonEvaluations.reduce((acc, ev) => {
             const baseScore = getScoreFromRating(ev.nota, gamificationConfig.ratingScores);
-            return acc + (baseScore * seasonMultiplier * globalMultiplier);
+            return acc + baseScore;
         }, 0);
 
         const scoreFromAchievements = unlockedAchievements.reduce((acc, ach) => acc + ach.xp, 0);
-        return scoreFromRatings + scoreFromAchievements;
+        return (scoreFromRatings + scoreFromAchievements) * totalMultiplier;
     }, [attendant, seasonEvaluations, unlockedAchievements, gamificationConfig, activeSeason]);
 
     const xpHistory = useMemo(() => {
         const seasonMultiplier = activeSeason?.xpMultiplier ?? 1;
         const globalMultiplier = gamificationConfig.globalXpMultiplier || 1;
+        const totalMultiplier = seasonMultiplier * globalMultiplier;
 
         const evaluationEvents: XpEvent[] = seasonEvaluations.map(ev => ({
             reason: `Avaliação de ${ev.nota} estrela(s)`,
-            points: getScoreFromRating(ev.nota, gamificationConfig.ratingScores) * seasonMultiplier * globalMultiplier,
+            points: getScoreFromRating(ev.nota, gamificationConfig.ratingScores) * totalMultiplier,
             date: ev.data,
             type: 'evaluation',
             icon: Star,
         }));
         
-        // This is an approximation of when an achievement was unlocked.
-        // A more robust system would store the unlock date.
-        // For now, we use the date of the last evaluation as the unlock date.
         const lastEvaluationDate = seasonEvaluations.length > 0 ? seasonEvaluations[seasonEvaluations.length - 1].data : new Date(0).toISOString();
 
         const achievementEvents: XpEvent[] = unlockedAchievements.map(ach => ({
             reason: `Troféu: ${ach.title}`,
-            points: ach.xp,
+            points: ach.xp * totalMultiplier,
             date: lastEvaluationDate, 
             type: 'achievement',
             icon: Trophy,
