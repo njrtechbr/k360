@@ -2,7 +2,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect } from "react";
 import type { User, Module, Role, Attendant, Evaluation, EvaluationAnalysis, GamificationConfig, Achievement, LevelReward, GamificationSeason, UnlockedAchievement } from "@/lib/types";
 import { useAuthData } from "@/hooks/useAuthData";
 import { useUsersData } from "@/hooks/useUsersData";
@@ -110,10 +110,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     checkAndRecordAchievements,
   } = useGamificationData();
   
-  
   const {
     evaluations,
-    addEvaluation,
+    addEvaluation: addEvaluationFromHook,
     aiAnalysisResults,
     lastAiAnalysis,
     isAiAnalysisRunning,
@@ -124,12 +123,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   } = useEvaluationsData({
     gamificationConfig,
     activeSeason,
-    onNewEvaluation: (attendant) => {
-        checkAndRecordAchievements(attendant, attendants, evaluations, aiAnalysisResults);
-    },
-    attendants
   });
 
+  const handleAddEvaluation = useCallback(async (evaluationData: Omit<Evaluation, 'id' | 'data' | 'xpGained'>) => {
+    const newEvaluation = await addEvaluationFromHook(evaluationData);
+    const attendant = attendants.find(a => a.id === newEvaluation.attendantId);
+    if (attendant) {
+        checkAndRecordAchievements(attendant, attendants, [...evaluations, newEvaluation], aiAnalysisResults);
+    }
+  }, [addEvaluationFromHook, attendants, evaluations, aiAnalysisResults, checkAndRecordAchievements]);
 
 
   const registerUser = async (userData: Omit<User, "id">) => {
@@ -201,7 +203,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     updateAttendant,
     deleteAttendant,
     evaluations,
-    addEvaluation,
+    addEvaluation: handleAddEvaluation,
     aiAnalysisResults,
     lastAiAnalysis,
     runAiAnalysis,

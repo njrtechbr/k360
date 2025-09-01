@@ -41,11 +41,9 @@ const INITIAL_EVALUATIONS: Evaluation[] = INITIAL_EVALUATIONS_RAW.map(ev => ({
 type UseEvaluationsDataProps = {
     gamificationConfig: GamificationConfig;
     activeSeason: GamificationSeason | null;
-    attendants: Attendant[];
-    onNewEvaluation: (attendant: Attendant) => void;
 };
 
-export function useEvaluationsData({ gamificationConfig, activeSeason, onNewEvaluation, attendants }: UseEvaluationsDataProps) {
+export function useEvaluationsData({ gamificationConfig, activeSeason }: UseEvaluationsDataProps) {
     const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
     const [aiAnalysisResults, setAiAnalysisResults] = useState<EvaluationAnalysis[]>([]);
     const [lastAiAnalysis, setLastAiAnalysis] = useState<string | null>(null);
@@ -102,7 +100,7 @@ export function useEvaluationsData({ gamificationConfig, activeSeason, onNewEval
 
 
     const saveEvaluationsToStorage = (evaluationsToSave: Evaluation[]) => {
-        localStorage.setItem(EVALUATIONS_STORAGE_KEY, JSON.stringify(evaluationsToSave));
+        localStorage.setItem(EVALUations_STORAGE_KEY, JSON.stringify(evaluationsToSave));
         setEvaluations(evaluationsToSave);
     }
 
@@ -116,7 +114,7 @@ export function useEvaluationsData({ gamificationConfig, activeSeason, onNewEval
         setLastAiAnalysis(date);
     };
 
-    const addEvaluation = async (evaluationData: Omit<Evaluation, 'id' | 'data' | 'xpGained'>) => {
+    const addEvaluation = async (evaluationData: Omit<Evaluation, 'id' | 'data' | 'xpGained'>): Promise<Evaluation> => {
         const { ratingScores, globalXpMultiplier } = gamificationConfig;
 
         const baseScore = getScoreFromRating(evaluationData.nota, ratingScores);
@@ -135,12 +133,7 @@ export function useEvaluationsData({ gamificationConfig, activeSeason, onNewEval
 
         const newEvaluations = [...currentEvaluations, newEvaluation];
         saveEvaluationsToStorage(newEvaluations);
-
-        // Trigger achievement check
-        const attendant = attendants.find(a => a.id === evaluationData.attendantId);
-        if (attendant) {
-            onNewEvaluation(attendant);
-        }
+        return newEvaluation;
     };
 
     const runAiAnalysis = async () => {
