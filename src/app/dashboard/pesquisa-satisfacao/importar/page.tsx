@@ -142,6 +142,12 @@ export default function ImportarAvaliacoesPage() {
         try {
             const date = new Date(dateStr);
             if (isNaN(date.getTime())) {
+                 // Try parsing 'DD/MM/YYYY, HH:mm'
+                const parts = dateStr.match(/(\d{2})\/(\d{2})\/(\d{4}), (\d{2}):(\d{2})/);
+                if (parts) {
+                    const [, day, month, year] = parts;
+                    return `${day}/${month}/${year}`;
+                }
                 return 'Data inválida';
             }
             return format(date, 'dd/MM/yyyy');
@@ -155,6 +161,7 @@ export default function ImportarAvaliacoesPage() {
     }
 
     const allAgentsMapped = uniqueAgents.length > 0 && uniqueAgents.every(agent => agentMap[agent]);
+    const isMappingStarted = Object.keys(agentMap).length > 0;
 
     return (
         <div className="space-y-8">
@@ -203,7 +210,7 @@ export default function ImportarAvaliacoesPage() {
                 </Card>
             )}
 
-            {allAgentsMapped && (
+            {isMappingStarted && (
                 <Card className="shadow-lg animate-in fade-in-0 slide-in-from-bottom-5 duration-500">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2"><Check /> 3. Confirmar e Importar</CardTitle>
