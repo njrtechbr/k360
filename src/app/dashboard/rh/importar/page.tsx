@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ATTENDANT_STATUS, FUNCOES, SETORES, type Attendant, type Funcao, type Setor } from "@/lib/types";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type CsvRow = {
     id: string;
@@ -34,27 +35,26 @@ type CsvRow = {
     cpf: string;
 };
 
+type ImportConfig = {
+    csvRow: CsvRow;
+    isSelected: boolean;
+    setor: Setor | null;
+    funcao: Funcao | null;
+    isDuplicate: boolean;
+};
+
 export default function ImportarAtendentesPage() {
     const { user, isAuthenticated, loading, attendants, addAttendant } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
 
     const [file, setFile] = useState<File | null>(null);
-    const [parsedData, setParsedData] = useState<CsvRow[]>([]);
+    const [importConfig, setImportConfig] = useState<ImportConfig[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [importProgress, setImportProgress] = useState(0);
-    const [defaultSetor, setDefaultSetor] = useState<Setor | null>(null);
 
     const existingEmails = useMemo(() => new Set(attendants.map(a => a.email.toLowerCase())), [attendants]);
     const existingCpfs = useMemo(() => new Set(attendants.map(a => a.cpf)), [attendants]);
-
-    const attendantsToImport = useMemo(() => {
-        return parsedData.filter(row => 
-            !existingEmails.has(row.email.toLowerCase()) && 
-            !existingCpfs.has(row.cpf)
-        );
-    }, [parsedData, existingEmails, existingCpfs]);
-
 
     useEffect(() => {
         if (!loading && !isAuthenticated) {
@@ -65,7 +65,7 @@ export default function ImportarAtendentesPage() {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             setFile(e.target.files[0]);
-            setParsedData([]);
+            setImportConfig([]);
         }
     };
 
@@ -77,7 +77,19 @@ export default function ImportarAtendentesPage() {
             skipEmptyLines: true,
             complete: (results) => {
                 const validData = results.data.filter(row => row.name && row.email && row.cpf);
-                setParsedData(validData);
+                const config: ImportConfig[] = validData.map(row => {
+                    const isDuplicate = existingEmails.has(row.email.toLowerCase()) || existingCpfs.has(row.cpf);
+                    const preSelectedFuncao = FUNCOES.find(f => f.toLowerCase() === row.role?.toLowerCase());
+
+                    return {
+                        csvRow: row,
+                        isSelected: !isDuplicate, // Pre-select if not a duplicate
+                        setor: null,
+                        funcao: preSelectedFuncao || null,
+                        isDuplicate,
+                    }
+                });
+                setImportConfig(config);
                 setIsProcessing(false);
             },
             error: (error) => {
@@ -87,10 +99,37 @@ export default function ImportarAtendentesPage() {
             }
         });
     };
+
+    const handleSelectAll = (checked: boolean) => {
+        setImportConfig(prev => prev.map(config => config.isDuplicate ? config : { ...config, isSelected: checked }));
+    };
+
+    const handleSelectRow = (index: number, checked: boolean) => {
+        setImportConfig(prev => {
+            const newConfig = [...prev];
+            if (!newConfig[index].isDuplicate) {
+                 newConfig[index].isSelected = checked;
+            }
+            return newConfig;
+        });
+    };
+
+    const handleConfigChange = (index: number, type: 'setor' | 'funcao', value: string) => {
+        setImportConfig(prev => {
+            const newConfig = [...prev];
+            if (type === 'setor') newConfig[index].setor = value as Setor;
+            if (type === 'funcao') newConfig[index].funcao = value as Funcao;
+            return newConfig;
+        });
+    };
+
+    const attendantsToImport = useMemo(() => {
+        return importConfig.filter(config => config.isSelected && !config.isDuplicate && config.setor && config.funcao);
+    }, [importConfig]);
     
     const handleImport = async () => {
-        if (!user || !defaultSetor) {
-            toast({ variant: "destructive", title: "Erro", description: "Selecione um setor padrão para continuar."});
+        if (!user) {
+            toast({ variant: "destructive", title: "Erro", description: "Usuário não autenticado."});
             return;
         }
 
@@ -100,28 +139,29 @@ export default function ImportarAtendentesPage() {
         const totalToImport = attendantsToImport.length;
         let importedCount = 0;
 
-        for (const row of attendantsToImport) {
+        for (const config of attendantsToImport) {
+            const { csvRow, setor, funcao } = config;
             try {
                  const newAttendant: Omit<Attendant, 'id'> = {
-                    name: row.name || "Nome não informado",
-                    email: row.email || `sem-email-${importedCount}@invalido.com`,
-                    funcao: (FUNCOES.find(f => f.toLowerCase() === row.role?.toLowerCase()) || "Atendente") as Funcao,
-                    setor: defaultSetor,
-                    status: row.status?.toLowerCase() === 'ativo' ? ATTENDANT_STATUS.ACTIVE : ATTENDANT_STATUS.INACTIVE,
-                    avatarUrl: row.avatarUrl || "",
-                    telefone: row.telefone || "00000000000",
-                    portaria: row.portaria || "N/A",
-                    situacao: row.situacao || "N/A",
-                    dataAdmissao: row.dataAdmissao ? new Date(row.dataAdmissao).toISOString() : new Date().toISOString(),
-                    dataNascimento: row.dataNascimento ? new Date(row.dataNascimento).toISOString() : new Date().toISOString(),
-                    rg: row.rg || "000000000",
-                    cpf: row.cpf || `00000000000${importedCount}`,
+                    name: csvRow.name || "Nome não informado",
+                    email: csvRow.email || `sem-email-${importedCount}@invalido.com`,
+                    funcao: funcao!,
+                    setor: setor!,
+                    status: csvRow.status?.toLowerCase() === 'ativo' ? ATTENDANT_STATUS.ACTIVE : ATTENDANT_STATUS.INACTIVE,
+                    avatarUrl: csvRow.avatarUrl || "",
+                    telefone: csvRow.telefone || "00000000000",
+                    portaria: csvRow.portaria || "N/A",
+                    situacao: csvRow.situacao || "N/A",
+                    dataAdmissao: csvRow.dataAdmissao ? new Date(csvRow.dataAdmissao).toISOString() : new Date().toISOString(),
+                    dataNascimento: csvRow.dataNascimento ? new Date(csvRow.dataNascimento).toISOString() : new Date().toISOString(),
+                    rg: csvRow.rg || "000000000",
+                    cpf: csvRow.cpf || `00000000000${importedCount}`,
                 };
 
                 await addAttendant(newAttendant);
 
             } catch (error) {
-                console.error(`Erro ao importar atendente ${row.name}`, error);
+                console.error(`Erro ao importar atendente ${csvRow.name}`, error);
             }
              importedCount++;
              setImportProgress((importedCount / totalToImport) * 100);
@@ -134,7 +174,7 @@ export default function ImportarAtendentesPage() {
         });
         
         setFile(null);
-        setParsedData([]);
+        setImportConfig([]);
         setIsProcessing(false);
     };
     
@@ -142,9 +182,9 @@ export default function ImportarAtendentesPage() {
         return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
     }
     
-    const hasDataToImport = parsedData.length > 0;
-    const newAttendantsCount = attendantsToImport.length;
-    const skippedAttendantsCount = parsedData.length - newAttendantsCount;
+    const hasDataToConfigure = importConfig.length > 0;
+    const isReadyToImport = attendantsToImport.length > 0 && attendantsToImport.length === importConfig.filter(c => c.isSelected).length;
+    const selectedCount = importConfig.filter(c => c.isSelected && !c.isDuplicate).length;
 
     return (
         <div className="space-y-8">
@@ -167,62 +207,85 @@ export default function ImportarAtendentesPage() {
                     </CardContent>
                 </Card>
 
-                 {hasDataToImport && (
-                    <Card className="lg:col-span-2 shadow-lg animate-in fade-in-0 slide-in-from-bottom-5 duration-500">
+                 {hasDataToConfigure && (
+                    <Card className="lg:col-span-3 shadow-lg animate-in fade-in-0 slide-in-from-bottom-5 duration-500">
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><Check /> 2. Confirmar e Importar</CardTitle>
+                            <CardTitle className="flex items-center gap-2"><Check /> 2. Configurar e Importar</CardTitle>
                             <CardDescription>
-                                Revise os atendentes que serão adicionados. Atendentes com email ou CPF já existentes serão ignorados.
+                                Selecione os atendentes para importar e atribua a função e o setor corretos para cada um. Atendentes duplicados são ignorados.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <Alert>
-                                <AlertTitle className="flex items-center gap-2"><Users /> Resumo da Importação</AlertTitle>
-                                <AlertDescription>
-                                    <p>Serão importados <strong>{newAttendantsCount}</strong> novos atendentes.</p>
-                                    <p>Serão ignorados <strong>{skippedAttendantsCount}</strong> atendentes (e-mail ou CPF já existente).</p>
-                                </AlertDescription>
-                            </Alert>
-                             <div className="my-4">
-                                <Label>Setor Padrão</Label>
-                                <Select onValueChange={(value) => setDefaultSetor(value as Setor)}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Selecione um setor para os novos atendentes" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {SETORES.map(setor => (
-                                            <SelectItem key={setor} value={setor} className="capitalize">{setor}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="max-h-60 overflow-y-auto mt-4 border rounded-md">
+                            <div className="max-h-[60vh] overflow-y-auto mt-4 border rounded-md">
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Nome</TableHead>
+                                            <TableHead className="w-12">
+                                                <Checkbox
+                                                    checked={selectedCount > 0 && selectedCount === importConfig.filter(c => !c.isDuplicate).length}
+                                                    onCheckedChange={handleSelectAll}
+                                                />
+                                            </TableHead>
+                                            <TableHead>Nome (CSV)</TableHead>
                                             <TableHead>Email</TableHead>
                                             <TableHead>Função</TableHead>
+                                            <TableHead>Setor</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {attendantsToImport.map((row, index) => (
-                                            <TableRow key={index}>
-                                                <TableCell>{row.name}</TableCell>
-                                                <TableCell>{row.email}</TableCell>
-                                                <TableCell><Badge variant="outline">{row.role}</Badge></TableCell>
+                                        {importConfig.map((config, index) => (
+                                            <TableRow key={index} data-state={config.isSelected && "selected"} className={config.isDuplicate ? "bg-muted/50" : ""}>
+                                                <TableCell>
+                                                    <Checkbox
+                                                        checked={config.isSelected}
+                                                        onCheckedChange={(checked) => handleSelectRow(index, !!checked)}
+                                                        disabled={config.isDuplicate}
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <p className="font-medium">{config.csvRow.name}</p>
+                                                    {config.isDuplicate && <Badge variant="destructive">Duplicado</Badge>}
+                                                </TableCell>
+                                                <TableCell>{config.csvRow.email}</TableCell>
+                                                <TableCell>
+                                                     <Select 
+                                                        value={config.funcao ?? undefined} 
+                                                        onValueChange={(value) => handleConfigChange(index, 'funcao', value)}
+                                                        disabled={!config.isSelected || config.isDuplicate}
+                                                    >
+                                                        <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                                                        <SelectContent>
+                                                            {FUNCOES.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </TableCell>
+                                                 <TableCell>
+                                                     <Select 
+                                                        value={config.setor ?? undefined} 
+                                                        onValueChange={(value) => handleConfigChange(index, 'setor', value)}
+                                                        disabled={!config.isSelected || config.isDuplicate}
+                                                    >
+                                                        <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                                                        <SelectContent>
+                                                            {SETORES.map(s => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
                                 </Table>
-                            </div>
-                        </CardContent>
-                        <CardFooter className="flex-col items-stretch gap-4">
+                            </CardContent>
+                        </CardHeader>
+                        <CardFooter className="flex-col items-stretch gap-4 pt-6">
                             {isProcessing && <Progress value={importProgress} />}
-                            <Button onClick={handleImport} disabled={newAttendantsCount === 0 || isProcessing || !defaultSetor} size="lg" className="w-full">
+                            <Button onClick={handleImport} disabled={!isReadyToImport || isProcessing} size="lg" className="w-full">
                                 <Wand2 className="mr-2 h-4 w-4" />
-                                {isProcessing ? `Importando... ${Math.round(importProgress)}%` : `Importar ${newAttendantsCount} Atendentes`}
+                                {isProcessing ? `Importando... ${Math.round(importProgress)}%` : `Importar ${attendantsToImport.length} Atendentes`}
                             </Button>
+                            {!isReadyToImport && selectedCount > 0 &&
+                                <p className="text-sm text-center text-muted-foreground">Preencha a função e o setor para todos os atendentes selecionados para habilitar a importação.</p>
+                            }
                         </CardFooter>
                     </Card>
                 )}
@@ -230,3 +293,5 @@ export default function ImportarAtendentesPage() {
         </div>
     );
 }
+
+    
