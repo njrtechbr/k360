@@ -31,7 +31,7 @@ interface AuthContextType {
   toggleModuleStatus: (moduleId: string) => Promise<void>;
   deleteModule: (moduleId: string) => Promise<void>;
   attendants: Attendant[];
-  addAttendant: (attendantData: Omit<Attendant, 'id'>) => Promise<Attendant>;
+  addAttendant: (attendantData: Attendant) => Promise<Attendant>;
   updateAttendant: (attendantId: string, attendantData: Partial<Omit<Attendant, 'id'>>) => Promise<void>;
   deleteAttendants: (attendantIds: string[]) => Promise<void>;
   evaluations: Evaluation[];

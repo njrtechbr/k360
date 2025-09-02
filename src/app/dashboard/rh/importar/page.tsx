@@ -54,6 +54,7 @@ export default function ImportarAtendentesPage() {
 
     const existingEmails = useMemo(() => new Set(attendants.map(a => a.email.toLowerCase())), [attendants]);
     const existingCpfs = useMemo(() => new Set(attendants.map(a => a.cpf)), [attendants]);
+    const existingIds = useMemo(() => new Set(attendants.map(a => a.id)), [attendants]);
 
     useEffect(() => {
         if (!loading && !isAuthenticated) {
@@ -75,9 +76,9 @@ export default function ImportarAtendentesPage() {
             header: true,
             skipEmptyLines: true,
             complete: (results) => {
-                const validData = results.data.filter(row => row.name && row.email && row.cpf);
+                const validData = results.data.filter(row => row.name && row.email && row.cpf && row.id);
                 const config: ImportConfig[] = validData.map(row => {
-                    const isDuplicate = existingEmails.has(row.email.toLowerCase()) || existingCpfs.has(row.cpf);
+                    const isDuplicate = existingIds.has(row.id) || existingEmails.has(row.email.toLowerCase()) || existingCpfs.has(row.cpf);
                     const preSelectedFuncao = funcoes.find(f => f.toLowerCase() === row.role?.toLowerCase());
 
                     return {
@@ -142,7 +143,8 @@ export default function ImportarAtendentesPage() {
         for (const config of attendantsToImport) {
             const { csvRow, setor, funcao } = config;
             try {
-                 const newAttendantData: Omit<Attendant, 'id'> = {
+                 const newAttendantData: Attendant = {
+                    id: csvRow.id, // Use ID from CSV
                     name: csvRow.name || "Nome não informado",
                     email: csvRow.email || `sem-email-${importedCount}@invalido.com`,
                     funcao: funcao!,

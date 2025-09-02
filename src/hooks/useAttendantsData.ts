@@ -105,28 +105,24 @@ export function useAttendantsData() {
         setAttendantImports(importsToSave);
     }
 
-    const addAttendant = async (attendantData: Omit<Attendant, 'id'>): Promise<Attendant> => {
+    const addAttendant = async (attendantData: Attendant): Promise<Attendant> => {
         const currentAttendants = getAttendantsFromStorage();
+        if (currentAttendants.some(a => a.id === attendantData.id)) {
+            toast({ variant: "destructive", title: "Erro ao adicionar atendente", description: "Um atendente com este ID já existe." });
+            throw new Error("Atendente com este ID já existe");
+        }
         if (currentAttendants.some(a => a.email.toLowerCase() === attendantData.email.toLowerCase())) {
-            toast({
-                variant: "destructive",
-                title: "Erro ao adicionar atendente",
-                description: "Um atendente com este email já existe.",
-            });
+            toast({ variant: "destructive", title: "Erro ao adicionar atendente", description: "Um atendente com este email já existe." });
             throw new Error("Atendente já existe");
         }
         if (currentAttendants.some(a => a.cpf === attendantData.cpf && a.cpf !== '')) {
-            toast({
-                variant: "destructive",
-                title: "Erro ao adicionar atendente",
-                description: "Um atendente com este CPF já existe.",
-            });
+            toast({ variant: "destructive", title: "Erro ao adicionar atendente", description: "Um atendente com este CPF já existe." });
             throw new Error("CPF já existe");
         }
 
         const newAttendant: Attendant = {
             ...attendantData,
-            id: crypto.randomUUID(),
+            id: attendantData.id || crypto.randomUUID(), // Use provided ID or generate a new one
         }
 
         const newAttendants = [...currentAttendants, newAttendant];
