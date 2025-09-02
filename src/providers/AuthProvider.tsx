@@ -2,15 +2,28 @@
 "use client";
 
 import type { ReactNode } from "react";
-import React, { useCallback, useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import type { User, Module, Role, Attendant, Evaluation, EvaluationAnalysis, GamificationConfig, Achievement, LevelReward, GamificationSeason, UnlockedAchievement, EvaluationImport, AttendantImport, Funcao, Setor } from "@/lib/types";
-import { useAuthData } from "@/hooks/useAuthData";
-import { useUsersData } from "@/hooks/useUsersData";
+import { ROLES } from "@/lib/types";
+import { useToast } from "@/hooks/use-toast";
+
+// Firebase Imports
+import { auth, db } from "@/lib/firebase";
+import { 
+    onAuthStateChanged,
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    signOut,
+    updateProfile as updateFirebaseProfile,
+    updatePassword
+} from "firebase/auth";
+import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc, writeBatch } from "firebase/firestore";
+
+// Hooks
 import { useModulesData } from "@/hooks/useModulesData";
 import { useAttendantsData } from "@/hooks/useAttendantsData";
 import { useEvaluationsData } from "@/hooks/useEvaluationsData";
 import { useGamificationData } from "@/hooks/useGamificationData";
-import { useToast } from "./../hooks/use-toast";
 import { useRhConfigData } from "@/hooks/useRhConfigData";
 
 interface AuthContextType {
@@ -24,7 +37,7 @@ interface AuthContextType {
   allUsers: User[];
   updateUser: (userId: string, userData: { name: string; role: Role; modules: string[] }) => Promise<void>;
   deleteUser: (userId: string) => Promise<void>;
-  hasSuperAdmin: () => boolean;
+  hasSuperAdmin: () => Promise<boolean>;
   modules: Module[];
   addModule: (moduleData: Omit<Module, "id" | "active">) => Promise<void>;
   updateModule: (moduleId: string, moduleData: Partial<Omit<Module, "id" | "active">>) => Promise<void>;
@@ -78,97 +91,182 @@ const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
-  const {
-    user,
-    setUser,
-    loading,
-    login,
-    logout,
-  } = useAuthData();
+  const [user, setUser] = useState<User | null>(null);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const {
-    modules,
-    addModule,
-    updateModule,
-    toggleModuleStatus,
-    deleteModule,
-    getModulesFromStorage,
-  } = useModulesData();
+  // Still using these hooks for their respective data logic, but will adapt them to use Firebase.
+  // For now, only user auth is being migrated.
+  const { modules, addModule, updateModule, toggleModuleStatus, deleteModule } = useModulesData();
+  const { attendants, addAttendant, updateAttendant, deleteAttendants, attendantImports, addAttendantImportRecord, revertAttendantImport } = useAttendantsData();
+  const { gamificationConfig, updateGamificationConfig, achievements, updateAchievement, levelRewards, updateLevelReward, seasons, addSeason, updateSeason, deleteSeason, activeSeason, nextSeason, unlockedAchievements, checkAndRecordAchievements, recalculateAllGamificationData } = useGamificationData();
+  const { evaluations, addEvaluation: addEvaluationFromHook, deleteEvaluations: deleteEvaluationsFromHook, aiAnalysisResults, lastAiAnalysis, isAiAnalysisRunning, runAiAnalysis, analysisProgress, isProgressModalOpen, setIsProgressModalOpen, evaluationImports, addImportRecord, revertImport } = useEvaluationsData({ gamificationConfig, activeSeason });
+  const { funcoes, setores, addFuncao, updateFuncao, deleteFuncao, addSetor, updateSetor, deleteSetor } = useRhConfigData();
 
-  const {
-    allUsers,
-    setAllUsers,
-    updateUser,
-    deleteUser,
-    getUsersFromStorage,
-    hasSuperAdmin,
-  } = useUsersData({ user, setUser });
-
-  const {
-    attendants,
-    addAttendant,
-    updateAttendant,
-    deleteAttendants,
-    attendantImports,
-    addAttendantImportRecord,
-    revertAttendantImport,
-  } = useAttendantsData();
-
-   const {
-    gamificationConfig,
-    updateGamificationConfig,
-    achievements,
-    updateAchievement,
-    levelRewards,
-    updateLevelReward,
-    seasons,
-    addSeason,
-    updateSeason,
-    deleteSeason,
-    activeSeason,
-    nextSeason,
-    unlockedAchievements,
-    checkAndRecordAchievements,
-    recalculateAllGamificationData,
-  } = useGamificationData();
-  
-  const {
-    evaluations,
-    setEvaluations,
-    addEvaluation: addEvaluationFromHook,
-    deleteEvaluations: deleteEvaluationsFromHook,
-    aiAnalysisResults,
-    lastAiAnalysis,
-    isAiAnalysisRunning,
-    runAiAnalysis,
-    analysisProgress,
-    isProgressModalOpen,
-    setIsProgressModalOpen,
-    evaluationImports,
-    addImportRecord,
-    revertImport,
-  } = useEvaluationsData({
-    gamificationConfig,
-    activeSeason,
-  });
-
-   const {
-    funcoes,
-    setores,
-    addFuncao,
-    updateFuncao,
-    deleteFuncao,
-    addSetor,
-    updateSetor,
-    deleteSetor,
-  } = useRhConfigData();
+  const fetchAllUsers = useCallback(async () => {
+    const usersCollection = collection(db, "users");
+    const usersSnapshot = await getDocs(usersCollection);
+    const usersList = usersSnapshot.docs.map(doc => doc.data() as User);
+    setAllUsers(usersList);
+  }, []);
 
   useEffect(() => {
-    // This effect runs once on startup to ensure all data is in sync.
-    // It's a good place to run a recalculation if needed.
-    recalculateAllGamificationData(attendants, evaluations, aiAnalysisResults);
-  }, []); // Empty dependency array means it runs once when the provider mounts.
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setLoading(true);
+      if (firebaseUser) {
+        const userDocRef = doc(db, "users", firebaseUser.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          setUser({ id: userDoc.id, ...userDoc.data() } as User);
+        } else {
+          // This case might happen if a user is created in Auth but not in Firestore.
+          // Or if the user is deleted from firestore but not auth.
+          setUser(null);
+        }
+        await fetchAllUsers(); // Fetch all users when auth state changes and is logged in
+      } else {
+        setUser(null);
+        setAllUsers([]);
+      }
+      setLoading(false);
+    });
 
+    return () => unsubscribe();
+  }, [fetchAllUsers]);
+
+  const login = async (email: string, password: string) => {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      toast({
+        title: "Login bem-sucedido!",
+      });
+    } catch (error: any) {
+      console.error("Login Error:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro de autenticação",
+        description: "Email ou senha incorretos.",
+      });
+      throw error;
+    }
+  };
+
+  const register = async (userData: Omit<User, 'id'>) => {
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password!);
+      const firebaseUser = userCredential.user;
+
+      await updateFirebaseProfile(firebaseUser, { displayName: userData.name });
+
+      const newUser: User = {
+        id: firebaseUser.uid,
+        name: userData.name,
+        email: userData.email,
+        role: userData.role,
+        modules: userData.modules,
+      };
+
+      await setDoc(doc(db, "users", firebaseUser.uid), {
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+        modules: newUser.modules,
+      });
+
+      await fetchAllUsers(); // Refresh user list
+
+      toast({
+        title: "Conta Criada!",
+        description: "Sua conta foi criada com sucesso.",
+      });
+      
+    } catch (error: any) {
+      console.error("Registration Error:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro no Registro",
+        description: error.message,
+      });
+      throw error;
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await signOut(auth);
+      toast({
+        title: "Logout realizado",
+        description: "Você foi desconectado com sucesso.",
+      });
+    } catch (error: any) {
+       console.error("Logout Error:", error);
+       toast({
+        variant: "destructive",
+        title: "Erro no Logout",
+        description: error.message,
+      });
+    }
+  };
+
+  const updateProfile = async (userData: Partial<User>) => {
+    if (!auth.currentUser) {
+      throw new Error("Usuário não autenticado");
+    }
+    
+    const userDocRef = doc(db, "users", auth.currentUser.uid);
+    
+    if (userData.name) {
+        await updateFirebaseProfile(auth.currentUser, { displayName: userData.name });
+        await updateDoc(userDocRef, { name: userData.name });
+    }
+
+    if (userData.password) {
+        await updatePassword(auth.currentUser, userData.password);
+    }
+    
+    // Fetch the updated document to update local state
+    const updatedDoc = await getDoc(userDocRef);
+    if(updatedDoc.exists()) {
+        setUser({ id: updatedDoc.id, ...updatedDoc.data() } as User);
+    }
+
+    toast({
+        title: "Perfil Atualizado!",
+        description: "Suas informações foram atualizadas."
+    });
+  };
+
+  const hasSuperAdmin = async (): Promise<boolean> => {
+      // In a real Firestore app, we would query the collection
+      // For now, we can check the fetched allUsers list
+      if(loading) {
+          // if still loading, we can't know for sure, assume no for now
+          // to allow creation page to render. A better approach would be a dedicated loading state for this check
+          return false; 
+      }
+      return allUsers.some(u => u.role === ROLES.SUPERADMIN);
+  };
+  
+  const updateUser = async (userId: string, userData: { name: string; role: Role; modules: string[] }) => {
+    const userDocRef = doc(db, "users", userId);
+    await updateDoc(userDocRef, userData);
+    await fetchAllUsers(); // Refresh user list
+    toast({
+        title: "Usuário Atualizado!",
+        description: "Os dados do usuário foram atualizados com sucesso.",
+    });
+  };
+
+  const deleteUser = async (userId: string) => {
+    // Note: Deleting from Firestore does not delete from Firebase Auth.
+    // A cloud function is needed for that. This will just delete the user from our app's user list.
+    await deleteDoc(doc(db, "users", userId));
+    await fetchAllUsers();
+     toast({
+        title: "Usuário Removido!",
+        description: "O usuário foi removido do banco de dados (a autenticação pode precisar ser removida manualmente no Console Firebase).",
+    });
+  }
 
   const handleAddEvaluation = useCallback(async (evaluationData: Omit<Evaluation, 'id' | 'xpGained'>): Promise<Evaluation> => {
     const newEvaluation = await addEvaluationFromHook(evaluationData);
@@ -182,7 +280,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const handleDeleteEvaluations = async (evaluationIds: string[]) => {
     try {
       await deleteEvaluationsFromHook(evaluationIds);
-      // We must get the new list of evaluations *after* deletion to pass to the recalculation
       const currentEvaluations = JSON.parse(localStorage.getItem('controle_acesso_evaluations') || '[]');
       recalculateAllGamificationData(attendants, currentEvaluations, aiAnalysisResults);
       toast({
@@ -198,61 +295,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
-
-  const registerUser = async (userData: Omit<User, "id">) => {
-    const currentUsers = getUsersFromStorage();
-    if (currentUsers.find((u) => u.email === userData.email)) {
-      throw new Error("Email já cadastrado");
-    }
-    
-    const modulesToAssign = userData.role === 'superadmin'
-      ? getModulesFromStorage().map(m => m.id)
-      : userData.modules;
-
-    const newUser: User = {
-      ...userData,
-      id: new Date().toISOString(),
-      modules: modulesToAssign,
-    };
-
-    const newUsers = [...currentUsers, newUser];
-    setAllUsers(newUsers);
-    localStorage.setItem("controle_acesso_users", JSON.stringify(newUsers));
-    
-    if (!user) { // This means a public registration
-        setUser(newUser);
-        localStorage.setItem("controle_acesso_session", JSON.stringify(newUser));
-    }
-  };
-
-  const updateProfile = async (userData: Partial<User>) => {
-      if (!user) {
-          throw new Error("Usuário não autenticado");
-      }
-      
-      let updatedUsers = allUsers.map(u => {
-          if(u.id === user.id) {
-              return { ...u, ...userData };
-          }
-          return u;
-      });
-
-      setAllUsers(updatedUsers);
-      localStorage.setItem("controle_acesso_users", JSON.stringify(updatedUsers));
-      
-      const updatedSessionUser = { ...user, ...userData };
-      setUser(updatedSessionUser);
-      localStorage.setItem("controle_acesso_session", JSON.stringify(updatedSessionUser));
-  };
-
-
   const value = {
     user,
     isAuthenticated: user !== null,
     loading,
     login,
     logout,
-    register: registerUser,
+    register,
     updateProfile,
     allUsers,
     updateUser,
@@ -268,7 +317,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     updateAttendant,
     deleteAttendants,
     evaluations,
-    setEvaluations,
     addEvaluation: handleAddEvaluation,
     deleteEvaluations: handleDeleteEvaluations,
     aiAnalysisResults,
@@ -308,7 +356,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     revertAttendantImport,
   };
 
-  return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {
