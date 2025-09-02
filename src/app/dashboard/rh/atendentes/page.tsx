@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { type Attendant, ATTENDANT_STATUS, FUNCOES, SETORES } from "@/lib/types";
+import { type Attendant, ATTENDANT_STATUS } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
@@ -96,7 +96,7 @@ const formatTelefone = (tel: string) => {
 
 
 export default function AtendentesPage() {
-  const { user, isAuthenticated, loading, attendants, addAttendant, updateAttendant, deleteAttendant } = useAuth();
+  const { user, isAuthenticated, loading, attendants, addAttendant, updateAttendant, deleteAttendant, funcoes, setores } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const qrCodeRef = useRef<HTMLDivElement>(null);
@@ -344,7 +344,7 @@ export default function AtendentesPage() {
                                   <SelectTrigger><SelectValue placeholder="Selecione a função" /></SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  {FUNCOES.map((funcao) => (
+                                  {funcoes.map((funcao) => (
                                     <SelectItem key={funcao} value={funcao}>{funcao}</SelectItem>
                                   ))}
                                 </SelectContent>
@@ -361,7 +361,7 @@ export default function AtendentesPage() {
                                   <SelectTrigger><SelectValue placeholder="Selecione o setor" /></SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  {SETORES.map((setor) => (
+                                  {setores.map((setor) => (
                                     <SelectItem key={setor} value={setor} className="capitalize">{setor}</SelectItem>
                                   ))}
                                 </SelectContent>

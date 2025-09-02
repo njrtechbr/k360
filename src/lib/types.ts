@@ -41,7 +41,7 @@ export const ATTENDANT_STATUS = {
   AWAY: 'Afastado',
 } as const;
 
-export const FUNCOES = [
+export const INITIAL_FUNCOES: string[] = [
   'Escrevente II',
   'Auxiliar de cartório',
   'Escrevente',
@@ -51,21 +51,21 @@ export const FUNCOES = [
   'Escrevente Agile',
   'Atendente',
   'Assistente administrativo',
-] as const;
+];
 
-export const SETORES = [
+export const INITIAL_SETORES: string[] = [
     'escritura',
     'protesto',
     'procuração',
     'balcão',
     'agile',
     'administrativo',
-] as const;
+];
 
 
 export type AttendantStatus = (typeof ATTENDANT_STATUS)[keyof typeof ATTENDANT_STATUS];
-export type Funcao = (typeof FUNCOES)[number];
-export type Setor = (typeof SETORES)[number];
+export type Funcao = string;
+export type Setor = string;
 
 export interface Attendant {
   id: string;

@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ATTENDANT_STATUS, FUNCOES, SETORES, type Attendant, type Funcao, type Setor } from "@/lib/types";
+import { ATTENDANT_STATUS, type Attendant } from "@/lib/types";
 import { Checkbox } from "@/components/ui/checkbox";
 
 type CsvRow = {
@@ -38,13 +38,13 @@ type CsvRow = {
 type ImportConfig = {
     csvRow: CsvRow;
     isSelected: boolean;
-    setor: Setor | null;
-    funcao: Funcao | null;
+    setor: string | null;
+    funcao: string | null;
     isDuplicate: boolean;
 };
 
 export default function ImportarAtendentesPage() {
-    const { user, isAuthenticated, loading, attendants, addAttendant } = useAuth();
+    const { user, isAuthenticated, loading, attendants, addAttendant, funcoes, setores } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
 
@@ -79,7 +79,7 @@ export default function ImportarAtendentesPage() {
                 const validData = results.data.filter(row => row.name && row.email && row.cpf);
                 const config: ImportConfig[] = validData.map(row => {
                     const isDuplicate = existingEmails.has(row.email.toLowerCase()) || existingCpfs.has(row.cpf);
-                    const preSelectedFuncao = FUNCOES.find(f => f.toLowerCase() === row.role?.toLowerCase());
+                    const preSelectedFuncao = funcoes.find(f => f.toLowerCase() === row.role?.toLowerCase());
 
                     return {
                         csvRow: row,
@@ -117,8 +117,8 @@ export default function ImportarAtendentesPage() {
     const handleConfigChange = (index: number, type: 'setor' | 'funcao', value: string) => {
         setImportConfig(prev => {
             const newConfig = [...prev];
-            if (type === 'setor') newConfig[index].setor = value as Setor;
-            if (type === 'funcao') newConfig[index].funcao = value as Funcao;
+            if (type === 'setor') newConfig[index].setor = value;
+            if (type === 'funcao') newConfig[index].funcao = value;
             return newConfig;
         });
     };
@@ -255,7 +255,7 @@ export default function ImportarAtendentesPage() {
                                                     >
                                                         <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                                                         <SelectContent>
-                                                            {FUNCOES.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                                                            {funcoes.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
                                                         </SelectContent>
                                                     </Select>
                                                 </TableCell>
@@ -267,7 +267,7 @@ export default function ImportarAtendentesPage() {
                                                     >
                                                         <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                                                         <SelectContent>
-                                                            {SETORES.map(s => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}
+                                                            {setores.map(s => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}
                                                         </SelectContent>
                                                     </Select>
                                                 </TableCell>

@@ -4,7 +4,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/providers/AuthProvider";
-import { Users, Upload } from "lucide-react";
+import { Users, Upload, Settings } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -57,6 +57,23 @@ export default function RHPage() {
                             <Link href="/dashboard/rh/importar">
                                 <Upload className="mr-2 h-4 w-4" />
                                 Importar Dados
+                            </Link>
+                        </Button>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Configurações de RH</CardTitle>
+                        <CardDescription>Gerencie as Funções e Setores disponíveis.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground mb-4">
+                           Personalize as listas de funções e setores para o cadastro de atendentes.
+                        </p>
+                        <Button asChild>
+                            <Link href="/dashboard/rh/configuracoes">
+                                <Settings className="mr-2 h-4 w-4" />
+                                Ajustar Configurações
                             </Link>
                         </Button>
                     </CardContent>

@@ -3,7 +3,7 @@
 
 import type { ReactNode } from "react";
 import React, { useCallback, useEffect } from "react";
-import type { User, Module, Role, Attendant, Evaluation, EvaluationAnalysis, GamificationConfig, Achievement, LevelReward, GamificationSeason, UnlockedAchievement, EvaluationImport } from "@/lib/types";
+import type { User, Module, Role, Attendant, Evaluation, EvaluationAnalysis, GamificationConfig, Achievement, LevelReward, GamificationSeason, UnlockedAchievement, EvaluationImport, Funcao, Setor } from "@/lib/types";
 import { useAuthData } from "@/hooks/useAuthData";
 import { useUsersData } from "@/hooks/useUsersData";
 import { useModulesData } from "@/hooks/useModulesData";
@@ -11,6 +11,7 @@ import { useAttendantsData } from "@/hooks/useAttendantsData";
 import { useEvaluationsData } from "@/hooks/useEvaluationsData";
 import { useGamificationData } from "@/hooks/useGamificationData";
 import { useToast } from "./../hooks/use-toast";
+import { useRhConfigData } from "@/hooks/useRhConfigData";
 
 interface AuthContextType {
   user: User | null;
@@ -60,6 +61,14 @@ interface AuthContextType {
   addImportRecord: (importData: Omit<EvaluationImport, 'id' | 'importedAt' | 'importedBy'>, userId: string) => EvaluationImport;
   revertImport: (importId: string) => void;
   recalculateAllGamificationData: (attendants: Attendant[], evaluations: Evaluation[], aiAnalysisResults: EvaluationAnalysis[]) => void;
+  funcoes: Funcao[];
+  setores: Setor[];
+  addFuncao: (funcao: string) => Promise<void>;
+  updateFuncao: (oldFuncao: string, newFuncao: string) => Promise<void>;
+  deleteFuncao: (funcao: string) => Promise<void>;
+  addSetor: (setor: string) => Promise<void>;
+  updateSetor: (oldSetor: string, newSetor: string) => Promise<void>;
+  deleteSetor: (setor: string) => Promise<void>;
 }
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
@@ -135,6 +144,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     gamificationConfig,
     activeSeason,
   });
+
+   const {
+    funcoes,
+    setores,
+    addFuncao,
+    updateFuncao,
+    deleteFuncao,
+    addSetor,
+    updateSetor,
+    deleteSetor,
+  } = useRhConfigData();
 
   const handleAddEvaluation = useCallback(async (evaluationData: Omit<Evaluation, 'id' | 'xpGained'>) => {
     const newEvaluation = await addEvaluationFromHook(evaluationData);
@@ -257,6 +277,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     addImportRecord,
     revertImport,
     recalculateAllGamificationData,
+    funcoes,
+    setores,
+    addFuncao,
+    updateFuncao,
+    deleteFuncao,
+    addSetor,
+    updateSetor,
+    deleteSetor,
   };
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
