@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, Star, TrendingDown, TrendingUp } from "lucide-react";
-import { achievements } from "@/lib/achievements";
+import { INITIAL_ACHIEVEMENTS as achievements } from "@/lib/achievements";
 import Link from "next/link";
 import GamificationSeasonStatus from "@/components/GamificationSeasonStatus";
 
