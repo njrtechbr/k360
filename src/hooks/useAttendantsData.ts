@@ -31,9 +31,14 @@ export function useAttendantsData(isAuthenticated: boolean) {
                 });
                 await batch.commit();
                 console.log(`${INITIAL_ATTENDANTS.length} atendentes foram semeados com sucesso.`);
-                return true; // Indicates that data was seeded
+                 toast({
+                    title: "Migração Concluída!",
+                    description: "Seus atendentes foram carregados no banco de dados na nuvem.",
+                });
+                // Return the seeded data directly to avoid another fetch
+                return INITIAL_ATTENDANTS as Attendant[];
             }
-            return false; // No data was seeded
+            return null; // No data was seeded
         } catch (error) {
             console.error("Erro ao semear dados iniciais:", error);
             toast({
@@ -41,7 +46,7 @@ export function useAttendantsData(isAuthenticated: boolean) {
                 title: "Erro na Migração",
                 description: "Não foi possível popular o banco de dados com os dados iniciais."
             });
-            return false;
+            return null;
         }
     }, [toast]);
 
@@ -54,18 +59,15 @@ export function useAttendantsData(isAuthenticated: boolean) {
         }
         setLoading(true);
         try {
-            const dataWasSeeded = await seedInitialData();
+            const seededData = await seedInitialData();
 
-            const attendantsCollection = collection(db, "attendants");
-            const attendantsSnapshot = await getDocs(attendantsCollection);
-            const attendantsList = attendantsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Attendant));
-            setAttendants(attendantsList);
-
-            if (dataWasSeeded) {
-                 toast({
-                    title: "Migração Concluída!",
-                    description: "Seus atendentes foram carregados no banco de dados na nuvem.",
-                });
+            if (seededData) {
+                setAttendants(seededData);
+            } else {
+                const attendantsCollection = collection(db, "attendants");
+                const attendantsSnapshot = await getDocs(attendantsCollection);
+                const attendantsList = attendantsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Attendant));
+                setAttendants(attendantsList);
             }
 
         } catch (error) {
