@@ -152,7 +152,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const register = async (userData: Omit<User, 'id'>) => {
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, userData.password ? userData.password : "123456", userData.email);
+      const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password ? userData.password : "123456");
       const firebaseUser = userCredential.user;
 
       await updateFirebaseProfile(firebaseUser, { displayName: userData.name });
