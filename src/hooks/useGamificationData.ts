@@ -217,6 +217,8 @@ export function useGamificationData() {
     ) => {
         const now = new Date();
         const currentActiveSeason = seasons.find(s => s.active && new Date(s.startDate) <= now && new Date(s.endDate) >= now);
+        if (!currentActiveSeason) return; // Only award achievements during an active season
+        
         const globalMultiplier = gamificationConfig.globalXpMultiplier || 1;
         const seasonMultiplier = currentActiveSeason?.xpMultiplier ?? 1;
         const totalMultiplier = globalMultiplier * seasonMultiplier;
@@ -249,7 +251,53 @@ export function useGamificationData() {
         if (newlyUnlocked.length > 0) {
             saveUnlockedAchievementsToStorage([...currentUnlocked, ...newlyUnlocked]);
         }
-    }, [achievements, seasons, gamificationConfig, toast]);
+    }, [achievements, seasons, gamificationConfig, toast, getUnlockedAchievementsFromStorage]);
+
+    const recalculateAllGamificationData = useCallback((allAttendants: Attendant[], allEvaluations: Evaluation[], allAiAnalysis: EvaluationAnalysis[]) => {
+        console.log("Iniciando recalculo geral da gamificação...");
+        let allNewlyUnlocked: UnlockedAchievement[] = [];
+
+        for (const attendant of allAttendants) {
+            const now = new Date();
+            const currentActiveSeason = seasons.find(s => s.active && new Date(s.startDate) <= now && new Date(s.endDate) >= now);
+            if (!currentActiveSeason) continue;
+
+            const globalMultiplier = gamificationConfig.globalXpMultiplier || 1;
+            const seasonMultiplier = currentActiveSeason.xpMultiplier || 1;
+            const totalMultiplier = globalMultiplier * seasonMultiplier;
+
+            const attendantEvaluations = allEvaluations.filter(ev => ev.attendantId === attendant.id);
+            const currentUnlocked = getUnlockedAchievementsFromStorage();
+            const attendantUnlockedIds = new Set(currentUnlocked.filter(ua => ua.attendantId === attendant.id).map(ua => ua.achievementId));
+
+            for (const achievement of achievements) {
+                if (achievement.active && !attendantUnlockedIds.has(achievement.id)) {
+                    if (achievement.isUnlocked(attendant, attendantEvaluations, allEvaluations, allAttendants, allAiAnalysis)) {
+                        const newUnlock: UnlockedAchievement = {
+                            id: crypto.randomUUID(),
+                            attendantId: attendant.id,
+                            achievementId: achievement.id,
+                            unlockedAt: now.toISOString(),
+                            xpGained: achievement.xp * totalMultiplier,
+                        };
+                        allNewlyUnlocked.push(newUnlock);
+                    }
+                }
+            }
+        }
+
+        if (allNewlyUnlocked.length > 0) {
+            const currentUnlocked = getUnlockedAchievementsFromStorage();
+            saveUnlockedAchievementsToStorage([...currentUnlocked, ...allNewlyUnlocked]);
+            toast({
+                title: 'Conquistas Atualizadas!',
+                description: `${allNewlyUnlocked.length} novas conquistas foram desbloqueadas pela equipe.`,
+            });
+            console.log(`${allNewlyUnlocked.length} novas conquistas registradas.`);
+        } else {
+            console.log("Nenhuma nova conquista para registrar.");
+        }
+    }, [achievements, seasons, gamificationConfig, getUnlockedAchievementsFromStorage]);
 
 
     return { 
@@ -266,6 +314,7 @@ export function useGamificationData() {
         activeSeason,
         nextSeason,
         unlockedAchievements,
-        checkAndRecordAchievements
+        checkAndRecordAchievements,
+        recalculateAllGamificationData,
     };
 }

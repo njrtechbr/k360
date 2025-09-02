@@ -4,7 +4,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/providers/AuthProvider";
-import { Users, LayoutDashboard, ListChecks, Star, Sparkles, Upload } from "lucide-react";
+import { Users, LayoutDashboard, ListChecks, Star, Sparkles, Upload, History } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -91,6 +91,23 @@ export default function PesquisaSatisfacaoPage() {
                             <Link href="/dashboard/pesquisa-satisfacao/importar">
                                 <Upload className="mr-2 h-4 w-4" />
                                 Importar Dados
+                            </Link>
+                        </Button>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Histórico de Importações</CardTitle>
+                        <CardDescription>Veja e reverta importações de dados de avaliações.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground mb-4">
+                           Gerencie todos os lotes de avaliações importados para o sistema.
+                        </p>
+                        <Button asChild>
+                            <Link href="/dashboard/pesquisa-satisfacao/historico-importacoes">
+                                <History className="mr-2 h-4 w-4" />
+                                Ver Histórico
                             </Link>
                         </Button>
                     </CardContent>

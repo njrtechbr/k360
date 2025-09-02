@@ -91,6 +91,7 @@ export interface Evaluation {
   comentario: string;
   data: string; // Storing as ISO string for simplicity
   xpGained: number; // XP calculated at the time of evaluation
+  importId?: string; // Optional ID to link to an import batch
 }
 
 export const AnalyzeEvaluationInputSchema = z.object({
@@ -169,4 +170,13 @@ export interface GamificationConfig {
   levelRewards: LevelReward[];
   seasons: GamificationSeason[];
   globalXpMultiplier: number;
+}
+
+export interface EvaluationImport {
+  id: string;
+  importedBy: string; // User ID
+  importedAt: string; // ISO String
+  fileName: string;
+  evaluationIds: string[];
+  attendantMap: Record<string, string>; // Maps CSV agent name to system attendant ID
 }

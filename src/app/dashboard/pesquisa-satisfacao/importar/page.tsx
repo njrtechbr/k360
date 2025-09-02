@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
+import type { Evaluation } from "@/lib/types";
 
 type CsvRow = {
     Data: string;
@@ -32,7 +33,7 @@ type MappedReview = {
 }
 
 export default function ImportarAvaliacoesPage() {
-    const { user, isAuthenticated, loading, attendants, addEvaluation } = useAuth();
+    const { user, isAuthenticated, loading, attendants, addEvaluation, addImportRecord, recalculateAllGamificationData, evaluations, aiAnalysisResults } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
 
@@ -90,6 +91,7 @@ export default function ImportarAvaliacoesPage() {
                 const attendantId = agentMap[row.Agente];
                 if (!attendantId) return null;
                 
+                // Handles format "DD/MM/YYYY, HH:mm"
                 const [datePart, timePart] = row.Data.split(', ');
                 const [day, month, year] = datePart.split('/');
                 const date = new Date(`${year}-${month}-${day}T${timePart || '00:00:00'}`);
@@ -105,20 +107,29 @@ export default function ImportarAvaliacoesPage() {
     }, [parsedData, agentMap]);
     
     const handleImport = async () => {
+        if (!user) {
+            toast({ variant: "destructive", title: "Erro de Autenticação", description: "Usuário não encontrado."});
+            return;
+        }
+
         setIsProcessing(true);
         setImportProgress(0);
 
         const totalReviews = mappedReviews.length;
         let importedCount = 0;
+        const evaluationIds: string[] = [];
 
         for (const review of mappedReviews) {
             try {
-                await addEvaluation({
+                const newEvaluation = await addEvaluation({
                     attendantId: review.attendantId,
                     nota: review.rating,
                     comentario: `Importado do WhatsApp em ${format(new Date(review.date), 'dd/MM/yyyy')}`,
-                    data: review.date
+                    data: review.date,
+                    importId: "temp-id" // Placeholder, will be replaced by the real import ID
                 });
+                evaluationIds.push(newEvaluation.id);
+
             } catch (error) {
                 console.error(`Erro ao importar avaliação para ${review.agentName}`, error);
             }
@@ -127,9 +138,26 @@ export default function ImportarAvaliacoesPage() {
              await new Promise(res => setTimeout(res, 50)); // Small delay to allow UI update
         }
 
+        // Create a single import record
+        const importRecord = addImportRecord({
+            fileName: file?.name || "Arquivo Desconhecido",
+            evaluationIds: evaluationIds,
+            attendantMap: agentMap,
+        }, user.id);
+
+        // Update evaluations with the correct import ID
+        const allEvaluations = JSON.parse(localStorage.getItem('controle_acesso_evaluations') || '[]') as Evaluation[];
+        const updatedEvaluations = allEvaluations.map(ev => 
+            evaluationIds.includes(ev.id) ? { ...ev, importId: importRecord.id } : ev
+        );
+        localStorage.setItem('controle_acesso_evaluations', JSON.stringify(updatedEvaluations));
+
+        // Recalculate gamification data for all users
+        recalculateAllGamificationData(attendants, updatedEvaluations, aiAnalysisResults);
+
         toast({
             title: "Importação Concluída!",
-            description: `${importedCount} de ${totalReviews} avaliações foram importadas com sucesso.`,
+            description: `${importedCount} de ${totalReviews} avaliações foram importadas e a gamificação foi atualizada.`,
         });
         
         setFile(null);
@@ -142,7 +170,6 @@ export default function ImportarAvaliacoesPage() {
         try {
             const date = new Date(dateStr);
             if (isNaN(date.getTime())) {
-                 // Try parsing 'DD/MM/YYYY, HH:mm'
                 const parts = dateStr.match(/(\d{2})\/(\d{2})\/(\d{4}), (\d{2}):(\d{2})/);
                 if (parts) {
                     const [, day, month, year] = parts;

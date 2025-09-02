@@ -3,7 +3,7 @@
 
 import type { ReactNode } from "react";
 import React, { useCallback, useEffect } from "react";
-import type { User, Module, Role, Attendant, Evaluation, EvaluationAnalysis, GamificationConfig, Achievement, LevelReward, GamificationSeason, UnlockedAchievement } from "@/lib/types";
+import type { User, Module, Role, Attendant, Evaluation, EvaluationAnalysis, GamificationConfig, Achievement, LevelReward, GamificationSeason, UnlockedAchievement, EvaluationImport } from "@/lib/types";
 import { useAuthData } from "@/hooks/useAuthData";
 import { useUsersData } from "@/hooks/useUsersData";
 import { useModulesData } from "@/hooks/useModulesData";
@@ -54,6 +54,10 @@ interface AuthContextType {
   activeSeason: GamificationSeason | null;
   nextSeason: GamificationSeason | null;
   unlockedAchievements: UnlockedAchievement[];
+  evaluationImports: EvaluationImport[];
+  addImportRecord: (importData: Omit<EvaluationImport, 'id' | 'importedAt' | 'importedBy'>, userId: string) => EvaluationImport;
+  revertImport: (importId: string) => void;
+  recalculateAllGamificationData: (attendants: Attendant[], evaluations: Evaluation[], aiAnalysisResults: EvaluationAnalysis[]) => void;
 }
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
@@ -108,6 +112,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     nextSeason,
     unlockedAchievements,
     checkAndRecordAchievements,
+    recalculateAllGamificationData,
   } = useGamificationData();
   
   const {
@@ -120,6 +125,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     analysisProgress,
     isProgressModalOpen,
     setIsProgressModalOpen,
+    evaluationImports,
+    addImportRecord,
+    revertImport,
   } = useEvaluationsData({
     gamificationConfig,
     activeSeason,
@@ -223,7 +231,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     deleteSeason,
     activeSeason,
     nextSeason,
-    unlockedAchievements
+    unlockedAchievements,
+    evaluationImports,
+    addImportRecord,
+    revertImport,
+    recalculateAllGamificationData,
   };
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
