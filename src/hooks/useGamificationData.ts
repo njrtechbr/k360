@@ -255,24 +255,45 @@ export function useGamificationData() {
 
     const recalculateAllGamificationData = useCallback((allAttendants: Attendant[], allEvaluations: Evaluation[], allAiAnalysis: EvaluationAnalysis[]) => {
         console.log("Iniciando recalculo geral da gamificação...");
-        let allNewlyUnlocked: UnlockedAchievement[] = [];
+        
+        const currentConfig = getGamificationConfigFromStorage();
+        
+        // 1. Recalculate XP for all evaluations
+        const updatedEvaluations = allEvaluations.map(ev => {
+             const evaluationDate = new Date(ev.data);
+             const seasonForEvaluation = currentConfig.seasons.find(s => s.active && evaluationDate >= new Date(s.startDate) && evaluationDate <= new Date(s.endDate));
+             const baseScore = getScoreFromRating(ev.nota, currentConfig.ratingScores);
+             const seasonMultiplier = seasonForEvaluation?.xpMultiplier ?? 1;
+             const totalMultiplier = currentConfig.globalXpMultiplier * seasonMultiplier;
+             return {
+                 ...ev,
+                 xpGained: baseScore * totalMultiplier
+             }
+        });
+        localStorage.setItem('controle_acesso_evaluations', JSON.stringify(updatedEvaluations));
+        
+        // 2. Clear existing unlocked achievements
+        let newUnlockedAchievements: UnlockedAchievement[] = [];
 
+        // 3. Re-evaluate achievements for all attendants
         for (const attendant of allAttendants) {
             const now = new Date();
-            const currentActiveSeason = seasons.find(s => s.active && new Date(s.startDate) <= now && new Date(s.endDate) >= now);
-            if (!currentActiveSeason) continue;
+            
+            const attendantEvaluations = updatedEvaluations.filter(ev => ev.attendantId === attendant.id);
 
-            const globalMultiplier = gamificationConfig.globalXpMultiplier || 1;
-            const seasonMultiplier = currentActiveSeason.xpMultiplier || 1;
-            const totalMultiplier = globalMultiplier * seasonMultiplier;
+            for (const achievement of currentConfig.achievements) {
+                 const evaluationDateForAchievement = attendantEvaluations.length > 0
+                    ? new Date(attendantEvaluations[attendantEvaluations.length - 1].data)
+                    : now;
 
-            const attendantEvaluations = allEvaluations.filter(ev => ev.attendantId === attendant.id);
-            const currentUnlocked = getUnlockedAchievementsFromStorage();
-            const attendantUnlockedIds = new Set(currentUnlocked.filter(ua => ua.attendantId === attendant.id).map(ua => ua.achievementId));
+                const seasonForAchievement = currentConfig.seasons.find(s => s.active && evaluationDateForAchievement >= new Date(s.startDate) && evaluationDateForAchievement <= new Date(s.endDate));
 
-            for (const achievement of achievements) {
-                if (achievement.active && !attendantUnlockedIds.has(achievement.id)) {
-                    if (achievement.isUnlocked(attendant, attendantEvaluations, allEvaluations, allAttendants, allAiAnalysis)) {
+                if (achievement.active && seasonForAchievement) {
+                    if (achievement.isUnlocked(attendant, attendantEvaluations, updatedEvaluations, allAttendants, allAiAnalysis)) {
+                        
+                        const seasonMultiplier = seasonForAchievement.xpMultiplier || 1;
+                        const totalMultiplier = currentConfig.globalXpMultiplier * seasonMultiplier;
+                        
                         const newUnlock: UnlockedAchievement = {
                             id: crypto.randomUUID(),
                             attendantId: attendant.id,
@@ -280,24 +301,16 @@ export function useGamificationData() {
                             unlockedAt: now.toISOString(),
                             xpGained: achievement.xp * totalMultiplier,
                         };
-                        allNewlyUnlocked.push(newUnlock);
+                        newUnlockedAchievements.push(newUnlock);
                     }
                 }
             }
         }
+        
+        saveUnlockedAchievementsToStorage(newUnlockedAchievements);
+        console.log(`Recálculo concluído. ${newUnlockedAchievements.length} conquistas registradas.`);
 
-        if (allNewlyUnlocked.length > 0) {
-            const currentUnlocked = getUnlockedAchievementsFromStorage();
-            saveUnlockedAchievementsToStorage([...currentUnlocked, ...allNewlyUnlocked]);
-            toast({
-                title: 'Conquistas Atualizadas!',
-                description: `${allNewlyUnlocked.length} novas conquistas foram desbloqueadas pela equipe.`,
-            });
-            console.log(`${allNewlyUnlocked.length} novas conquistas registradas.`);
-        } else {
-            console.log("Nenhuma nova conquista para registrar.");
-        }
-    }, [achievements, seasons, gamificationConfig, getUnlockedAchievementsFromStorage]);
+    }, [getGamificationConfigFromStorage, achievements]);
 
 
     return { 

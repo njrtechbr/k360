@@ -60,7 +60,7 @@ interface AuthContextType {
   evaluationImports: EvaluationImport[];
   addImportRecord: (importData: Omit<EvaluationImport, 'id' | 'importedAt' | 'importedBy'>, userId: string) => EvaluationImport;
   revertImport: (importId: string) => void;
-  recalculateAllGamificationData: (attendants: Attendant[], evaluations: Evaluation[], aiAnalysisResults: EvaluationAnalysis[]) => void;
+  recalculateAllGamificationData: (allAttendants: Attendant[], allEvaluations: Evaluation[], allAiAnalysis: EvaluationAnalysis[]) => void;
   funcoes: Funcao[];
   setores: Setor[];
   addFuncao: (funcao: string) => Promise<void>;
@@ -134,6 +134,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   const {
     evaluations,
+    setEvaluations,
     addEvaluation: addEvaluationFromHook,
     deleteEvaluations: deleteEvaluationsFromHook,
     aiAnalysisResults,
@@ -174,7 +175,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const handleDeleteEvaluations = async (evaluationIds: string[]) => {
     try {
       await deleteEvaluationsFromHook(evaluationIds);
-      recalculateAllGamificationData(attendants, evaluations.filter(e => !evaluationIds.includes(e.id)), aiAnalysisResults);
+      // We must get the new list of evaluations *after* deletion to pass to the recalculation
+      const currentEvaluations = JSON.parse(localStorage.getItem('controle_acesso_evaluations') || '[]');
+      recalculateAllGamificationData(attendants, currentEvaluations, aiAnalysisResults);
       toast({
         title: "Avaliações Excluídas",
         description: `${evaluationIds.length} avaliações foram removidas com sucesso.`,
@@ -258,6 +261,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     updateAttendant,
     deleteAttendants,
     evaluations,
+    setEvaluations,
     addEvaluation: handleAddEvaluation,
     deleteEvaluations: handleDeleteEvaluations,
     aiAnalysisResults,

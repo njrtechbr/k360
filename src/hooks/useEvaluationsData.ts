@@ -142,17 +142,17 @@ export function useEvaluationsData({ gamificationConfig, activeSeason }: UseEval
     const addEvaluation = async (evaluationData: Omit<Evaluation, 'xpGained'> & { data?: string, xpGained?: number }): Promise<Evaluation> => {
         const currentEvaluations = getEvaluationsFromStorage();
         if(currentEvaluations.find(e => e.id === evaluationData.id)){
-            // This is likely from the legacy import which can have duplicate IDs.
-            // A more robust solution would be to check the source, but for now we can allow it
-            // and assume the user knows what they're doing when importing legacy data.
-             console.warn(`Evaluation with ID ${evaluationData.id} already exists. Allowing import.`);
+            console.warn(`Evaluation with ID ${evaluationData.id} already exists. Allowing import.`);
         }
 
 
         const { ratingScores, globalXpMultiplier } = gamificationConfig;
+        
+        const evaluationDate = new Date(evaluationData.data || new Date());
+        const seasonForEvaluation = seasons.find(s => s.active && evaluationDate >= new Date(s.startDate) && evaluationDate <= new Date(s.endDate));
 
         const baseScore = getScoreFromRating(evaluationData.nota, ratingScores);
-        const seasonMultiplier = activeSeason?.xpMultiplier ?? 1;
+        const seasonMultiplier = seasonForEvaluation?.xpMultiplier ?? 1;
         const totalMultiplier = globalXpMultiplier * seasonMultiplier;
 
         const xpGained = baseScore * totalMultiplier;
@@ -162,7 +162,7 @@ export function useEvaluationsData({ gamificationConfig, activeSeason }: UseEval
             attendantId: evaluationData.attendantId,
             nota: evaluationData.nota,
             comentario: evaluationData.comentario,
-            data: evaluationData.data || new Date().toISOString(),
+            data: evaluationDate.toISOString(),
             xpGained: xpGained,
             importId: evaluationData.importId,
         };
@@ -300,8 +300,12 @@ export function useEvaluationsData({ gamificationConfig, activeSeason }: UseEval
     };
 
 
+    const seasons = gamificationConfig.seasons;
+
+
     return {
         evaluations,
+        setEvaluations,
         addEvaluation,
         deleteEvaluations,
         aiAnalysisResults,
