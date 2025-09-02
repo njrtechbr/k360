@@ -28,7 +28,7 @@ export function useUsersData({ user, setUser }: UseUsersDataProps) {
             const usersCollection = collection(db, "users");
             const usersSnapshot = await getDocs(usersCollection);
             const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
-            setAllUsers(usersList);
+            setAllUsers(usersList); // This line was missing the state update
             console.log(`AUTH: ${usersList.length} usuários carregados com sucesso.`);
             return usersList;
         } catch (error) {
@@ -91,5 +91,3 @@ export function useUsersData({ user, setUser }: UseUsersDataProps) {
 
     return { allUsers, setAllUsers, fetchAllUsers, updateUser, deleteUser };
 }
-
-    
