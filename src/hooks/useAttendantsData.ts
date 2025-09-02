@@ -141,5 +141,5 @@ export function useAttendantsData(isAuthenticated: boolean) {
         });
     };
     
-    return { loadingAttendants: loading, attendants, addAttendant, updateAttendant, deleteAttendants, attendantImports, addAttendantImportRecord, revertAttendantImport };
+    return { loadingAttendants: loading, attendants, addAttendant, updateAttendant, deleteAttendants, attendantImports, addAttendantImportRecord, revertAttendantImport, fetchAttendants };
 }

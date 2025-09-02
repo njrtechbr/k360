@@ -25,6 +25,7 @@ import { useAttendantsData } from "@/hooks/useAttendantsData";
 import { useEvaluationsData } from "@/hooks/useEvaluationsData";
 import { useGamificationData } from "@/hooks/useGamificationData";
 import { useRhConfigData } from "@/hooks/useRhConfigData";
+import { INITIAL_ATTENDANTS } from "@/lib/initial-data";
 
 interface AuthContextType {
   user: User | null;
@@ -97,7 +98,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Hooks
   const { modules, addModule, updateModule, toggleModuleStatus, deleteModule } = useModulesData();
-  const { loadingAttendants, attendants, addAttendant, updateAttendant, deleteAttendants, attendantImports, addAttendantImportRecord, revertAttendantImport } = useAttendantsData(!!user);
+  const { loadingAttendants, attendants, addAttendant, updateAttendant, deleteAttendants, attendantImports, addAttendantImportRecord, revertAttendantImport, fetchAttendants } = useAttendantsData(!!user);
   const { gamificationConfig, updateGamificationConfig, achievements, updateAchievement, levelRewards, updateLevelReward, seasons, addSeason, updateSeason, deleteSeason, activeSeason, nextSeason, unlockedAchievements, checkAndRecordAchievements, recalculateAllGamificationData } = useGamificationData();
   const { evaluations, addEvaluation: addEvaluationFromHook, deleteEvaluations: deleteEvaluationsFromHook, aiAnalysisResults, lastAiAnalysis, isAiAnalysisRunning, runAiAnalysis, analysisProgress, isProgressModalOpen, setIsProgressModalOpen, evaluationImports, addImportRecord, revertImport } = useEvaluationsData({ gamificationConfig, activeSeason });
   const { funcoes, setores, addFuncao, updateFuncao, deleteFuncao, addSetor, updateSetor, deleteSetor } = useRhConfigData();
@@ -109,6 +110,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setAllUsers(usersList);
     return usersList;
   }, []);
+  
+  const seedInitialData = useCallback(async () => {
+    try {
+        const attendantsCollection = collection(db, "attendants");
+        const countSnapshot = await getCountFromServer(attendantsCollection);
+
+        if (countSnapshot.data().count === 0) {
+            console.log("Banco de dados de atendentes vazio. Semeando dados iniciais...");
+            const batch = writeBatch(db);
+            INITIAL_ATTENDANTS.forEach(attendant => {
+                const docRef = doc(db, "attendants", attendant.id);
+                batch.set(docRef, attendant);
+            });
+            await batch.commit();
+            console.log(`${INITIAL_ATTENDANTS.length} atendentes foram semeados com sucesso.`);
+            await fetchAttendants(); // Refresca a lista após semear
+        }
+    } catch (error) {
+        console.error("Erro ao semear dados iniciais:", error);
+        toast({
+            variant: "destructive",
+            title: "Erro na Migração",
+            description: "Não foi possível popular o banco de dados com os dados iniciais."
+        });
+    }
+  }, [fetchAttendants, toast]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -119,9 +146,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (userDoc.exists()) {
           setUser({ id: userDoc.id, ...userDoc.data() } as User);
            await fetchAllUsers();
+           await seedInitialData();
         } else {
-          // This case handles users that exist in Auth but not in Firestore.
-          // It could be due to a partial registration. We log them out.
           await signOut(auth);
           setUser(null);
         }
@@ -133,16 +159,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => unsubscribe();
-  }, [fetchAllUsers]);
+  }, [fetchAllUsers, seedInitialData]);
 
   const login = async (email: string, password: string) => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // onAuthStateChanged will handle the rest
-      toast({
-          title: "Login bem-sucedido!",
-          description: `Bem-vindo de volta.`,
-      });
     } catch (error: any) {
       console.error("Login Error:", error);
       toast({
@@ -156,13 +177,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const register = async (userData: Omit<User, 'id'>) => {
     try {
-      // The password will not be stored in Firestore, only used for creation.
       const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password ? userData.password : "123456");
       const firebaseUser = userCredential.user;
 
       await updateFirebaseProfile(firebaseUser, { displayName: userData.name });
 
-      // Don't store password in the database
       const { password, ...userDataForDb } = userData;
 
       const newUser: Omit<User, 'id'> = {
@@ -171,7 +190,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       await setDoc(doc(db, "users", firebaseUser.uid), newUser);
 
-      await fetchAllUsers(); // Refresh user list
+      await fetchAllUsers();
 
       toast({
         title: "Conta Criada!",
@@ -257,7 +276,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const updateUser = async (userId: string, userData: { name: string; role: Role; modules: string[] }) => {
     const userDocRef = doc(db, "users", userId);
     await updateDoc(userDocRef, userData);
-    await fetchAllUsers(); // Refresh user list
+    await fetchAllUsers();
     toast({
         title: "Usuário Atualizado!",
         description: "Os dados do usuário foram atualizados com sucesso.",
@@ -265,8 +284,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const deleteUser = async (userId: string) => {
-    // Note: Deleting from Firestore does not delete from Firebase Auth.
-    // A cloud function is needed for that. This will just delete the user from our app's user list.
     await deleteDoc(doc(db, "users", userId));
     await fetchAllUsers();
      toast({
