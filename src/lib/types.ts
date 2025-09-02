@@ -82,6 +82,7 @@ export interface Attendant {
   dataNascimento: string; // Storing as ISO string
   rg: string;
   cpf: string;
+  importId?: string; // Optional ID to link to an import batch
 }
 
 export interface Evaluation {
@@ -179,4 +180,12 @@ export interface EvaluationImport {
   fileName: string;
   evaluationIds: string[];
   attendantMap: Record<string, string>; // Maps CSV agent name to system attendant ID
+}
+
+export interface AttendantImport {
+  id: string;
+  importedBy: string; // User ID
+  importedAt: string; // ISO String
+  fileName: string;
+  attendantIds: string[];
 }

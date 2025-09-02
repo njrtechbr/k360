@@ -3,11 +3,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import type { Attendant } from '@/lib/types';
+import type { Attendant, AttendantImport } from '@/lib/types';
 import { ATTENDANT_STATUS } from '@/lib/types';
 
 const ATTENDANTS_STORAGE_KEY = "controle_acesso_attendants";
 const EVALUATIONS_STORAGE_KEY = "controle_acesso_evaluations";
+const ATTENDANT_IMPORTS_STORAGE_KEY = "controle_acesso_attendant_imports";
+
 
 const parseDate = (dateString: string | null) => {
     if (!dateString || dateString.toLowerCase() === 'não informado' || dateString.split('/').length !== 3) {
@@ -56,6 +58,7 @@ const INITIAL_ATTENDANTS: Attendant[] = [
 
 export function useAttendantsData() {
     const [attendants, setAttendants] = useState<Attendant[]>([]);
+    const [attendantImports, setAttendantImports] = useState<AttendantImport[]>([]);
     const { toast } = useToast();
 
     const getAttendantsFromStorage = useCallback((): Attendant[] => {
@@ -75,16 +78,34 @@ export function useAttendantsData() {
         }
     }, []);
 
+     const getAttendantImportsFromStorage = useCallback((): AttendantImport[] => {
+        if (typeof window === "undefined") return [];
+        try {
+            const importsJson = localStorage.getItem(ATTENDANT_IMPORTS_STORAGE_KEY);
+            return importsJson ? JSON.parse(importsJson) : [];
+        } catch (error) {
+            console.error("Failed to parse attendant imports from localStorage", error);
+            return [];
+        }
+    }, []);
+
+
     useEffect(() => {
         setAttendants(getAttendantsFromStorage());
-    }, [getAttendantsFromStorage]);
+        setAttendantImports(getAttendantImportsFromStorage());
+    }, [getAttendantsFromStorage, getAttendantImportsFromStorage]);
 
     const saveAttendantsToStorage = (attendantsToSave: Attendant[]) => {
         localStorage.setItem(ATTENDANTS_STORAGE_KEY, JSON.stringify(attendantsToSave));
         setAttendants(attendantsToSave);
     }
 
-    const addAttendant = async (attendantData: Omit<Attendant, 'id'>) => {
+     const saveAttendantImportsToStorage = (importsToSave: AttendantImport[]) => {
+        localStorage.setItem(ATTENDANT_IMPORTS_STORAGE_KEY, JSON.stringify(importsToSave));
+        setAttendantImports(importsToSave);
+    }
+
+    const addAttendant = async (attendantData: Omit<Attendant, 'id'>): Promise<Attendant> => {
         const currentAttendants = getAttendantsFromStorage();
         if (currentAttendants.some(a => a.email.toLowerCase() === attendantData.email.toLowerCase())) {
             toast({
@@ -105,15 +126,12 @@ export function useAttendantsData() {
 
         const newAttendant: Attendant = {
             ...attendantData,
-            id: new Date().toISOString(),
+            id: crypto.randomUUID(),
         }
 
         const newAttendants = [...currentAttendants, newAttendant];
         saveAttendantsToStorage(newAttendants);
-        toast({
-            title: "Atendente Adicionado!",
-            description: `O atendente "${newAttendant.name}" foi adicionado com sucesso.`
-        });
+        return newAttendant;
     };
 
     const updateAttendant = async (attendantId: string, attendantData: Partial<Omit<Attendant, 'id'>>) => {
@@ -138,21 +156,52 @@ export function useAttendantsData() {
         });
     };
 
-    const deleteAttendant = async (attendantId: string) => {
+    const deleteAttendants = async (attendantIds: string[]) => {
         const currentAttendants = getAttendantsFromStorage();
-        const newAttendants = currentAttendants.filter(a => a.id !== attendantId);
+        const newAttendants = currentAttendants.filter(a => !attendantIds.includes(a.id));
         saveAttendantsToStorage(newAttendants);
         
         const evaluationsJson = localStorage.getItem(EVALUATIONS_STORAGE_KEY);
         const currentEvaluations = evaluationsJson ? JSON.parse(evaluationsJson) : [];
-        const newEvaluations = currentEvaluations.filter((e: any) => e.attendantId !== attendantId);
+        const newEvaluations = currentEvaluations.filter((e: any) => !attendantIds.includes(e.attendantId));
         localStorage.setItem(EVALUATIONS_STORAGE_KEY, JSON.stringify(newEvaluations));
 
         toast({
-            title: "Atendente Removido!",
-            description: "O atendente e todas as suas avaliações foram removidos do sistema."
+            title: "Atendentes Removidos!",
+            description: `${attendantIds.length} atendente(s) e suas avaliações foram removidos.`
+        });
+    };
+
+    const addAttendantImportRecord = (importData: Omit<AttendantImport, 'id' | 'importedAt'>, userId: string): AttendantImport => {
+        const newImport: AttendantImport = {
+            ...importData,
+            id: crypto.randomUUID(),
+            importedAt: new Date().toISOString(),
+            importedBy: userId,
+        };
+        const allImports = getAttendantImportsFromStorage();
+        saveAttendantImportsToStorage([...allImports, newImport]);
+        return newImport;
+    };
+
+    const revertAttendantImport = (importId: string) => {
+        const importToRevert = getAttendantImportsFromStorage().find(i => i.id === importId);
+        if (!importToRevert) {
+            toast({ variant: 'destructive', title: 'Erro', description: 'Importação não encontrada.' });
+            return;
+        }
+
+        deleteAttendants(importToRevert.attendantIds);
+        
+        const currentImports = getAttendantImportsFromStorage();
+        const importsToKeep = currentImports.filter(imp => imp.id !== importId);
+        saveAttendantImportsToStorage(importsToKeep);
+        
+        toast({
+            title: "Importação de Atendentes Revertida!",
+            description: "Os atendentes da importação selecionada foram removidos.",
         });
     };
     
-    return { attendants, addAttendant, updateAttendant, deleteAttendant };
+    return { attendants, addAttendant, updateAttendant, deleteAttendants, attendantImports, addAttendantImportRecord, revertAttendantImport };
 }

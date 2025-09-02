@@ -9,8 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Papa from "papaparse";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { FileUp, Users, Check, Wand2 } from "lucide-react";
+import { FileUp, Check, Wand2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -44,7 +43,7 @@ type ImportConfig = {
 };
 
 export default function ImportarAtendentesPage() {
-    const { user, isAuthenticated, loading, attendants, addAttendant, funcoes, setores } = useAuth();
+    const { user, isAuthenticated, loading, attendants, addAttendant, funcoes, setores, addAttendantImportRecord } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
 
@@ -138,11 +137,12 @@ export default function ImportarAtendentesPage() {
 
         const totalToImport = attendantsToImport.length;
         let importedCount = 0;
+        const attendantIds: string[] = [];
 
         for (const config of attendantsToImport) {
             const { csvRow, setor, funcao } = config;
             try {
-                 const newAttendant: Omit<Attendant, 'id'> = {
+                 const newAttendantData: Omit<Attendant, 'id'> = {
                     name: csvRow.name || "Nome não informado",
                     email: csvRow.email || `sem-email-${importedCount}@invalido.com`,
                     funcao: funcao!,
@@ -156,9 +156,11 @@ export default function ImportarAtendentesPage() {
                     dataNascimento: csvRow.dataNascimento ? new Date(csvRow.dataNascimento).toISOString() : new Date().toISOString(),
                     rg: csvRow.rg || "000000000",
                     cpf: csvRow.cpf || `00000000000${importedCount}`,
+                    importId: "temp-id" // Placeholder
                 };
 
-                await addAttendant(newAttendant);
+                const newAttendant = await addAttendant(newAttendantData);
+                attendantIds.push(newAttendant.id);
 
             } catch (error) {
                 console.error(`Erro ao importar atendente ${csvRow.name}`, error);
@@ -167,6 +169,19 @@ export default function ImportarAtendentesPage() {
              setImportProgress((importedCount / totalToImport) * 100);
              await new Promise(res => setTimeout(res, 100)); // Small delay to allow UI update
         }
+
+        // Create a single import record
+        const importRecord = addAttendantImportRecord({
+            fileName: file?.name || "Arquivo Desconhecido",
+            attendantIds: attendantIds,
+        }, user.id);
+
+        // Update attendants with the correct import ID
+        const allAttendants = JSON.parse(localStorage.getItem('controle_acesso_attendants') || '[]') as Attendant[];
+        const updatedAttendants = allAttendants.map(att => 
+            attendantIds.includes(att.id) ? { ...att, importId: importRecord.id } : att
+        );
+        localStorage.setItem('controle_acesso_attendants', JSON.stringify(updatedAttendants));
 
         toast({
             title: "Importação Concluída!",

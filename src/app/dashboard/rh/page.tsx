@@ -4,7 +4,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/providers/AuthProvider";
-import { Users, Upload, Settings } from "lucide-react";
+import { Users, Upload, Settings, History, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -57,6 +57,40 @@ export default function RHPage() {
                             <Link href="/dashboard/rh/importar">
                                 <Upload className="mr-2 h-4 w-4" />
                                 Importar Dados
+                            </Link>
+                        </Button>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Histórico de Importações</CardTitle>
+                        <CardDescription>Veja e reverta importações de dados de atendentes.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground mb-4">
+                           Gerencie todos os lotes de atendentes importados para o sistema.
+                        </p>
+                        <Button asChild>
+                            <Link href="/dashboard/rh/historico-importacoes">
+                                <History className="mr-2 h-4 w-4" />
+                                Ver Histórico
+                            </Link>
+                        </Button>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Gerenciar Atendentes</CardTitle>
+                        <CardDescription>Exclua atendentes específicos ou todos de uma vez.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground mb-4">
+                           Ferramenta para limpeza de dados e gerenciamento de registros de atendentes.
+                        </p>
+                        <Button asChild variant="destructive">
+                            <Link href="/dashboard/rh/gerenciar">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Gerenciar Dados
                             </Link>
                         </Button>
                     </CardContent>

@@ -3,7 +3,7 @@
 
 import type { ReactNode } from "react";
 import React, { useCallback, useEffect } from "react";
-import type { User, Module, Role, Attendant, Evaluation, EvaluationAnalysis, GamificationConfig, Achievement, LevelReward, GamificationSeason, UnlockedAchievement, EvaluationImport, Funcao, Setor } from "@/lib/types";
+import type { User, Module, Role, Attendant, Evaluation, EvaluationAnalysis, GamificationConfig, Achievement, LevelReward, GamificationSeason, UnlockedAchievement, EvaluationImport, AttendantImport, Funcao, Setor } from "@/lib/types";
 import { useAuthData } from "@/hooks/useAuthData";
 import { useUsersData } from "@/hooks/useUsersData";
 import { useModulesData } from "@/hooks/useModulesData";
@@ -31,9 +31,9 @@ interface AuthContextType {
   toggleModuleStatus: (moduleId: string) => Promise<void>;
   deleteModule: (moduleId: string) => Promise<void>;
   attendants: Attendant[];
-  addAttendant: (attendantData: Omit<Attendant, 'id'>) => Promise<void>;
+  addAttendant: (attendantData: Omit<Attendant, 'id'>) => Promise<Attendant>;
   updateAttendant: (attendantId: string, attendantData: Partial<Omit<Attendant, 'id'>>) => Promise<void>;
-  deleteAttendant: (attendantId: string) => Promise<void>;
+  deleteAttendants: (attendantIds: string[]) => Promise<void>;
   evaluations: Evaluation[];
   addEvaluation: (evaluationData: Omit<Evaluation, 'id' | 'xpGained'>) => Promise<void>;
   deleteEvaluations: (evaluationIds: string[]) => Promise<void>;
@@ -69,6 +69,9 @@ interface AuthContextType {
   addSetor: (setor: string) => Promise<void>;
   updateSetor: (oldSetor: string, newSetor: string) => Promise<void>;
   deleteSetor: (setor: string) => Promise<void>;
+  attendantImports: AttendantImport[];
+  addAttendantImportRecord: (importData: Omit<AttendantImport, 'id' | 'importedAt' | 'importedBy'>, userId: string) => AttendantImport;
+  revertAttendantImport: (importId: string) => void;
 }
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
@@ -105,7 +108,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     attendants,
     addAttendant,
     updateAttendant,
-    deleteAttendant,
+    deleteAttendants,
+    attendantImports,
+    addAttendantImportRecord,
+    revertAttendantImport,
   } = useAttendantsData();
 
    const {
@@ -249,7 +255,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     attendants,
     addAttendant,
     updateAttendant,
-    deleteAttendant,
+    deleteAttendants,
     evaluations,
     addEvaluation: handleAddEvaluation,
     deleteEvaluations: handleDeleteEvaluations,
@@ -285,6 +291,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     addSetor,
     updateSetor,
     deleteSetor,
+    attendantImports,
+    addAttendantImportRecord,
+    revertAttendantImport,
   };
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
