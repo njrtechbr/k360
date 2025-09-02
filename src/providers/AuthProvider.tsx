@@ -27,7 +27,6 @@ import { useEvaluationsData } from "@/hooks/useEvaluationsData";
 import { useGamificationData } from "@/hooks/useGamificationData";
 import { useRhConfigData } from "@/hooks/useRhConfigData";
 import { INITIAL_ATTENDANTS } from "@/lib/initial-data";
-import { getScoreFromRating } from "@/hooks/useGamificationData";
 import { INITIAL_EVALUATIONS } from "@/lib/initial-data-evaluations";
 import { INITIAL_FUNCOES, INITIAL_SETORES } from "@/lib/types";
 
@@ -120,7 +119,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.log(`SEEDER: Coleção '${collectionName}' vazia. Semeando ${initialData.length} documentos...`);
         const batch = writeBatch(db);
         initialData.forEach(item => {
-            const docRef = doc(db, collectionName, item[idField] || item.name); // Use name as ID for funcoes/setores
+            const docId = item[idField] || item.name; // Use name as ID for funcoes/setores if idField is not present
+            if (!docId) {
+                console.error(`SEEDER: Item inválido na coleção ${collectionName}, sem ID ou nome.`, item);
+                return;
+            }
+            const docRef = doc(db, collectionName, docId);
             batch.set(docRef, item);
         });
         await batch.commit();
@@ -132,9 +136,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const recalculateAllData = useCallback(async () => {
+    console.log("AUTH: Iniciando recalculo geral de dados de gamificação...");
     const allAttendants = await fetchAttendants();
     const allEvaluations = await fetchEvaluations();
     await recalcGamification(allAttendants, allEvaluations, aiAnalysisResults);
+     console.log("AUTH: Recalculo de gamificação concluído.");
   }, [fetchAttendants, fetchEvaluations, recalcGamification, aiAnalysisResults]);
   
   useEffect(() => {
@@ -142,25 +148,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.log("AUTH: Iniciando inicialização do App...");
         setLoading(true);
 
-        const seededAttendants = await seedCollection('attendants', INITIAL_ATTENDANTS);
-        if (seededAttendants) await fetchAttendants();
+        // Seed data in parallel
+        console.log("SEEDER: Iniciando verificação e semeadura de todas as coleções...");
+        await Promise.all([
+          seedCollection('attendants', INITIAL_ATTENDANTS),
+          seedCollection('evaluations', INITIAL_EVALUATIONS),
+          seedCollection('modules', INITIAL_MODULES),
+          seedCollection('funcoes', INITIAL_FUNCOES.map(name => ({name})), 'name'),
+          seedCollection('setores', INITIAL_SETORES.map(name => ({name})), 'name')
+        ]);
+        console.log("SEEDER: Verificação e semeadura concluídas.");
         
-        const seededEvals = await seedCollection('evaluations', INITIAL_EVALUATIONS);
-        if (seededEvals) await fetchEvaluations();
+        // Fetch all data in parallel
+        console.log("AUTH: Carregando todos os dados do Firestore...");
+        await Promise.all([
+            fetchAttendants(),
+            fetchEvaluations(),
+            fetchModules(),
+            fetchFuncoes(),
+            fetchSetores(),
+            fetchGamificationConfig(),
+            fetchUnlockedAchievements(),
+            fetchEvaluationImports(),
+            fetchAllUsers()
+        ]);
+         console.log("AUTH: Todos os dados carregados.");
 
-        const seededModules = await seedCollection('modules', INITIAL_MODULES);
-        if (seededModules) await fetchModules();
-        
-        const seededFuncoes = await seedCollection('funcoes', INITIAL_FUNCOES.map(name => ({name})), 'name');
-        if (seededFuncoes) await fetchFuncoes();
-        
-        const seededSetores = await seedCollection('setores', INITIAL_SETORES.map(name => ({name})), 'name');
-        if (seededSetores) await fetchSetores();
-
-        await fetchGamificationConfig();
-        await fetchUnlockedAchievements();
-        await fetchEvaluationImports();
-        
         console.log("AUTH: Verificando estado de autenticação...");
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
@@ -168,18 +181,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 const userDocRef = doc(db, "users", firebaseUser.uid);
                 const userDoc = await getDoc(userDocRef);
                 if (userDoc.exists()) {
-                    setUser({ id: userDoc.id, ...userDoc.data() } as User);
-                    console.log("AUTH: Dados do usuário carregados. Buscando todos os usuários...");
-                    await fetchAllUsers();
+                    const userData = { id: userDoc.id, ...userDoc.data() } as User;
+                    setUser(userData);
+                    console.log(`AUTH: Dados do usuário ${userData.name} carregados.`);
                 } else {
-                    console.warn(`AUTH: Usuário autenticado (UID: ${firebaseUser.uid}) não encontrado no Firestore. Fazendo logout.`);
-                    await signOut(auth);
-                    setUser(null);
+                    console.warn(`AUTH: Usuário autenticado (UID: ${firebaseUser.uid}) não encontrado no Firestore. Criando perfil padrão...`);
+                    const newUser: Omit<User, 'id'> = {
+                        name: firebaseUser.displayName || "Novo Usuário",
+                        email: firebaseUser.email!,
+                        role: ROLES.USER,
+                        modules: ['rh'] // Default module
+                    };
+                    await setDoc(userDocRef, newUser);
+                    const createdUserData = { id: firebaseUser.uid, ...newUser };
+                    setUser(createdUserData);
+                    console.log(`AUTH: Perfil padrão criado e sessão iniciada para ${createdUserData.name}.`);
                 }
             } else {
                 console.log("AUTH: Nenhum usuário autenticado.");
                 setUser(null);
-                setAllUsers([]);
             }
              console.log("AUTH: Inicialização concluída.");
              setLoading(false);
@@ -295,10 +315,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const newEvaluation = await addEvaluationFromHook(evaluationData, xpGained);
     const attendant = attendants.find(a => a.id === newEvaluation.attendantId);
     if (attendant) {
-        const currentEvaluations = [...evaluations, newEvaluation];
-        const allAttendants = attendants;
-        const currentAiAnalysis = aiAnalysisResults;
-        // checkAndRecordAchievements(attendant, allAttendants, currentEvaluations, currentAiAnalysis);
         // Recalculating all might be better to ensure consistency after any addition
         await recalculateAllData();
     }
@@ -382,3 +398,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    
