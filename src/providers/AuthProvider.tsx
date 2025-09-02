@@ -134,10 +134,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      toast({
-        title: "Login bem-sucedido!",
-      });
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userDocRef = doc(db, "users", userCredential.user.uid);
+      const userDoc = await getDoc(userDocRef);
+
+      if (userDoc.exists()) {
+        const userData = { id: userDoc.id, ...userDoc.data() } as User;
+        setUser(userData);
+        toast({
+          title: "Login bem-sucedido!",
+          description: `Bem-vindo de volta, ${userData.name}.`,
+        });
+      } else {
+        throw new Error("Dados de usuário não encontrados no Firestore.");
+      }
+
     } catch (error: any) {
       console.error("Login Error:", error);
       toast({

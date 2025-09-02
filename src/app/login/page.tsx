@@ -26,7 +26,7 @@ const formSchema = z.object({
 });
 
 export default function LoginPage() {
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, loading } = useAuth();
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -38,14 +38,15 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (!loading && isAuthenticated) {
       router.push("/dashboard");
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, loading, router]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       await login(values.email, values.password);
+      // The useEffect above will handle the redirect
     } catch (error) {
       // Toast is handled in the auth provider
     }
@@ -87,8 +88,8 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Entrando...' : 'Entrar'}
+              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || loading}>
+                {form.formState.isSubmitting || loading ? 'Entrando...' : 'Entrar'}
               </Button>
             </form>
           </Form>
