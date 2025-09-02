@@ -4,7 +4,7 @@
 import type { ReactNode } from "react";
 import React, { useCallback, useEffect, useState } from "react";
 import type { User, Module, Role, Attendant, Evaluation, EvaluationAnalysis, GamificationConfig, Achievement, LevelReward, GamificationSeason, UnlockedAchievement, EvaluationImport, AttendantImport, Funcao, Setor } from "@/lib/types";
-import { ROLES, INITIAL_MODULES } from "@/lib/types";
+import { ROLES } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 
 // Firebase Imports
@@ -42,6 +42,7 @@ interface AuthContextType {
   deleteUser: (userId: string) => Promise<void>;
   hasSuperAdmin: () => Promise<boolean>;
   modules: Module[];
+  fetchModules: () => Promise<Module[]>;
   addModule: (moduleData: Omit<Module, "id" | "active">) => Promise<void>;
   updateModule: (moduleId: string, moduleData: Partial<Omit<Module, "id" | "active">>) => Promise<void>;
   toggleModuleStatus: (moduleId: string) => Promise<void>;
@@ -104,20 +105,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   // Hooks
-  const usersData = useUsersData({ user, setUser });
   const modulesData = useModulesData();
+  const usersData = useUsersData({ user, setUser, fetchAllUsers: modulesData.fetchModules } as any);
   const attendantsData = useAttendantsData();
   const gamificationData = useGamificationData();
   const evaluationsData = useEvaluationsData({ gamificationConfig: gamificationData.gamificationConfig, seasons: gamificationData.seasons });
   const rhConfigData = useRhConfigData();
 
   const { fetchAllUsers } = usersData;
-  
+  const { fetchModules } = modulesData;
+  const { fetchFuncoes, fetchSetores } = rhConfigData;
+
   useEffect(() => {
     const initializeApp = async () => {
         console.log("AUTH: Iniciando inicialização do App...");
         setLoading(true);
 
+        await Promise.all([
+          fetchModules(),
+          fetchFuncoes(),
+          fetchSetores(),
+        ]);
+        
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
                 const userDocRef = doc(db, "users", firebaseUser.uid);
@@ -127,12 +136,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     setUser(userData);
                     console.log(`AUTH: Usuário autenticado e encontrado no Firestore (UID: ${firebaseUser.uid}).`);
                 } else {
-                    console.log(`AUTH: Usuário autenticado (UID: ${firebaseUser.uid}) não encontrado no Firestore. Criando novo perfil...`);
+                     console.log(`AUTH: Usuário autenticado (UID: ${firebaseUser.uid}) não encontrado no Firestore. Criando novo perfil...`);
                     const newUser: Omit<User, 'id'> = {
                         name: firebaseUser.displayName || "Novo Usuário",
                         email: firebaseUser.email!,
                         role: ROLES.USER,
-                        modules: ['rh']
+                        modules: [] // Start with no modules, admin should assign
                     };
                     await setDoc(userDocRef, newUser);
                     const createdUserData = { id: firebaseUser.uid, ...newUser };
@@ -145,21 +154,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
              console.log("AUTH: Inicialização concluída.");
              setLoading(false);
         });
-
+        
         return () => {
-            console.log("AUTH: Limpando listener de autenticação.");
-            unsubscribe();
+             console.log("AUTH: Limpando listener de autenticação.");
+             unsubscribe();
         };
     };
 
     initializeApp();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const login = async (email: string, password: string) => {
     try {
       console.log(`AUTH: Tentativa de login para ${email}`);
       await signInWithEmailAndPassword(auth, email, password);
-      // onAuthStateChanged will handle setting the user state
       toast({ title: "Login bem-sucedido!", description: `Bem-vindo de volta.` });
     } catch (error: any) {
       console.error("AUTH: Erro no Login:", error);
@@ -257,7 +266,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const xpGained = baseScore * totalMultiplier;
 
     const newEvaluation = await evaluationsData.addEvaluation(evaluationData, xpGained);
-    await recalculateAllGamificationData(); // This still recalculates achievements for everyone, but doesn't recalculate evaluation XP
+    await recalculateAllGamificationData();
     return newEvaluation;
   };
 
@@ -291,6 +300,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     deleteUser: usersData.deleteUser,
     hasSuperAdmin,
     modules: modulesData.modules,
+    fetchModules: modulesData.fetchModules,
     addModule: modulesData.addModule,
     updateModule: modulesData.updateModule,
     toggleModuleStatus: modulesData.toggleModuleStatus,
