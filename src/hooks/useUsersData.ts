@@ -89,5 +89,5 @@ export function useUsersData({ user, setUser }: UseUsersDataProps) {
         }
     };
 
-    return { allUsers, fetchAllUsers, updateUser, deleteUser };
+    return { allUsers, setAllUsers, fetchAllUsers, updateUser, deleteUser };
 }

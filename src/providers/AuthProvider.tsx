@@ -100,7 +100,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   // Hooks
-  const { allUsers, fetchAllUsers, updateUser, deleteUser } = useUsersData({ user, setUser });
+  const { allUsers, setAllUsers, fetchAllUsers, updateUser, deleteUser } = useUsersData({ user, setUser });
   const { modules, fetchModules, addModule, updateModule, toggleModuleStatus, deleteModule: deleteModuleFromHook } = useModulesData();
   const { attendants, fetchAttendants, addAttendant, updateAttendant, deleteAttendants, attendantImports, addAttendantImportRecord, revertAttendantImport } = useAttendantsData();
   const { gamificationConfig, fetchGamificationConfig, updateGamificationConfig, achievements, updateAchievement, levelRewards, updateLevelReward, seasons, addSeason, updateSeason, deleteSeason, activeSeason, nextSeason, unlockedAchievements, fetchUnlockedAchievements, recalculateAllGamificationData: recalcGamification } = useGamificationData();
