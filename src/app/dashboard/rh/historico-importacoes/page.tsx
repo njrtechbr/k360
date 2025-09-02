@@ -4,13 +4,13 @@
 import { useAuth } from "@/providers/AuthProvider";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { File, Calendar, User, List, Trash2, AlertCircle } from "lucide-react";
+import { File, Calendar, User, List, Trash2, AlertCircle, Eye, UserCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import type { AttendantImport } from "@/lib/types";
+import type { Attendant, AttendantImport } from "@/lib/types";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,12 +21,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 
 export default function HistoricoImportacoesAtendentesPage() {
-    const { user, isAuthenticated, loading, allUsers, attendantImports, revertAttendantImport } = useAuth();
+    const { user, isAuthenticated, loading, allUsers, attendantImports, revertAttendantImport, attendants } = useAuth();
     const router = useRouter();
 
     const [isRevertDialogOpen, setIsRevertDialogOpen] = useState(false);
+    const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
     const [selectedImport, setSelectedImport] = useState<AttendantImport | null>(null);
 
     useEffect(() => {
@@ -42,10 +47,22 @@ export default function HistoricoImportacoesAtendentesPage() {
         }, {} as Record<string, string>);
     }, [allUsers]);
 
+    const attendantsForSelectedImport = useMemo(() => {
+        if (!selectedImport) return [];
+        const attendantIds = new Set(selectedImport.attendantIds);
+        return attendants.filter(att => attendantIds.has(att.id));
+    }, [selectedImport, attendants]);
+
+
     const handleRevertClick = (importRecord: AttendantImport) => {
         setSelectedImport(importRecord);
         setIsRevertDialogOpen(true);
     };
+
+    const handleDetailsClick = (importRecord: AttendantImport) => {
+        setSelectedImport(importRecord);
+        setIsDetailsDialogOpen(true);
+    }
 
     const handleRevertConfirm = async () => {
         if (!selectedImport) return;
@@ -68,7 +85,7 @@ export default function HistoricoImportacoesAtendentesPage() {
                     <CardHeader>
                         <CardTitle>Lotes Importados</CardTitle>
                         <CardDescription>
-                            Aqui está a lista de todas as importações de atendentes via CSV. Você pode reverter uma importação se ela foi feita incorretamente.
+                            Aqui está a lista de todas as importações de atendentes via CSV. Você pode ver os detalhes ou reverter uma importação.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -108,10 +125,12 @@ export default function HistoricoImportacoesAtendentesPage() {
                                                     {importRecord.attendantIds.length}
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="text-right">
+                                            <TableCell className="text-right space-x-2">
+                                                <Button variant="outline" size="sm" onClick={() => handleDetailsClick(importRecord)}>
+                                                    <Eye className="mr-2 h-4 w-4" /> Detalhes
+                                                </Button>
                                                 <Button variant="destructive" size="sm" onClick={() => handleRevertClick(importRecord)}>
-                                                    <Trash2 className="mr-2 h-4 w-4" />
-                                                    Reverter
+                                                    <Trash2 className="mr-2 h-4 w-4" /> Reverter
                                                 </Button>
                                             </TableCell>
                                         </TableRow>
@@ -129,6 +148,52 @@ export default function HistoricoImportacoesAtendentesPage() {
                 </Card>
             </div>
 
+            {/* Details Dialog */}
+            <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+                <DialogContent className="max-w-3xl">
+                    <DialogHeader>
+                        <DialogTitle>Atendentes Importados</DialogTitle>
+                         <DialogDescription>
+                           Arquivo: <span className="font-semibold">{selectedImport?.fileName}</span>
+                        </DialogDescription>
+                    </DialogHeader>
+                    <ScrollArea className="h-96">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Nome</TableHead>
+                                    <TableHead>Email</TableHead>
+                                    <TableHead>Função</TableHead>
+                                    <TableHead>Status</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {attendantsForSelectedImport.map(att => (
+                                    <TableRow key={att.id}>
+                                        <TableCell className="font-medium flex items-center gap-3">
+                                            <Avatar>
+                                                <AvatarImage src={att.avatarUrl} alt={att.name}/>
+                                                <AvatarFallback><UserCircle /></AvatarFallback>
+                                            </Avatar>
+                                            {att.name}
+                                        </TableCell>
+                                        <TableCell>{att.email}</TableCell>
+                                        <TableCell>{att.funcao}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={att.status === 'Ativo' ? 'secondary' : 'destructive'}>{att.status}</Badge>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </ScrollArea>
+                    <DialogFooter>
+                         <Button variant="outline" onClick={() => setIsDetailsDialogOpen(false)}>Fechar</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Revert Dialog */}
             <AlertDialog open={isRevertDialogOpen} onOpenChange={setIsRevertDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>

@@ -6,12 +6,11 @@ import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { File, Calendar, User, List, Trash2, AlertCircle } from "lucide-react";
+import { File, Calendar, User, List, Trash2, AlertCircle, Eye, Star } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import type { EvaluationImport } from "@/lib/types";
+import type { Evaluation, EvaluationImport } from "@/lib/types";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,12 +21,31 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+
+const RatingStars = ({ rating }: { rating: number }) => {
+    const totalStars = 5;
+    return (
+        <div className="flex items-center">
+            {[...Array(totalStars)].map((_, index) => (
+                <Star
+                    key={index}
+                    className={`h-4 w-4 ${index < rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}
+                />
+            ))}
+        </div>
+    );
+};
+
 
 export default function HistoricoImportacoesPage() {
-    const { user, isAuthenticated, loading, evaluationImports, allUsers, revertImport, recalculateAllGamificationData, attendants, evaluations, aiAnalysisResults } = useAuth();
+    const { user, isAuthenticated, loading, evaluationImports, allUsers, revertImport, evaluations, attendants } = useAuth();
     const router = useRouter();
 
     const [isRevertDialogOpen, setIsRevertDialogOpen] = useState(false);
+    const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
     const [selectedImport, setSelectedImport] = useState<EvaluationImport | null>(null);
 
     useEffect(() => {
@@ -43,19 +61,32 @@ export default function HistoricoImportacoesPage() {
         }, {} as Record<string, string>);
     }, [allUsers]);
 
+    const attendantMap = useMemo(() => {
+        return attendants.reduce((acc, a) => {
+            acc[a.id] = a.name;
+            return acc;
+        }, {} as Record<string, string>);
+    }, [attendants]);
+
+    const evaluationsForSelectedImport = useMemo(() => {
+        if (!selectedImport) return [];
+        const evaluationIds = new Set(selectedImport.evaluationIds);
+        return evaluations.filter(ev => evaluationIds.has(ev.id));
+    }, [selectedImport, evaluations]);
+
     const handleRevertClick = (importRecord: EvaluationImport) => {
         setSelectedImport(importRecord);
         setIsRevertDialogOpen(true);
     };
 
+    const handleDetailsClick = (importRecord: EvaluationImport) => {
+        setSelectedImport(importRecord);
+        setIsDetailsDialogOpen(true);
+    }
+
     const handleRevertConfirm = async () => {
         if (!selectedImport) return;
         revertImport(selectedImport.id);
-        
-        // After reverting, we need to get the new state of evaluations
-        const updatedEvaluations = JSON.parse(localStorage.getItem('controle_acesso_evaluations') || '[]');
-        recalculateAllGamificationData(attendants, updatedEvaluations, aiAnalysisResults);
-        
         setIsRevertDialogOpen(false);
         setSelectedImport(null);
     };
@@ -74,7 +105,7 @@ export default function HistoricoImportacoesPage() {
                     <CardHeader>
                         <CardTitle>Lotes Importados</CardTitle>
                         <CardDescription>
-                            Aqui está a lista de todas as importações de avaliações via CSV. Você pode reverter uma importação se ela foi feita incorretamente.
+                            Aqui está a lista de todas as importações de avaliações via CSV. Você pode ver os detalhes ou reverter uma importação.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -114,10 +145,12 @@ export default function HistoricoImportacoesPage() {
                                                     {importRecord.evaluationIds.length}
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="text-right">
+                                            <TableCell className="text-right space-x-2">
+                                                <Button variant="outline" size="sm" onClick={() => handleDetailsClick(importRecord)}>
+                                                    <Eye className="mr-2 h-4 w-4" /> Detalhes
+                                                </Button>
                                                 <Button variant="destructive" size="sm" onClick={() => handleRevertClick(importRecord)}>
-                                                    <Trash2 className="mr-2 h-4 w-4" />
-                                                    Reverter
+                                                    <Trash2 className="mr-2 h-4 w-4" /> Reverter
                                                 </Button>
                                             </TableCell>
                                         </TableRow>
@@ -135,6 +168,47 @@ export default function HistoricoImportacoesPage() {
                 </Card>
             </div>
 
+            {/* Details Dialog */}
+            <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+                <DialogContent className="max-w-3xl">
+                    <DialogHeader>
+                        <DialogTitle>Detalhes da Importação</DialogTitle>
+                        <DialogDescription>
+                           Arquivo: <span className="font-semibold">{selectedImport?.fileName}</span> <br/>
+                           Data: <span className="font-semibold">{selectedImport ? format(new Date(selectedImport.importedAt), "dd/MM/yyyy 'às' HH:mm") : ''}</span>
+                        </DialogDescription>
+                    </DialogHeader>
+                    <ScrollArea className="h-96">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Atendente</TableHead>
+                                    <TableHead>Nota</TableHead>
+                                    <TableHead>Comentário</TableHead>
+                                    <TableHead>Data</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {evaluationsForSelectedImport.map(ev => (
+                                    <TableRow key={ev.id}>
+                                        <TableCell>
+                                            <Badge variant="outline">{attendantMap[ev.attendantId] || 'Desconhecido'}</Badge>
+                                        </TableCell>
+                                        <TableCell><RatingStars rating={ev.nota} /></TableCell>
+                                        <TableCell className="text-muted-foreground">{ev.comentario}</TableCell>
+                                        <TableCell>{format(new Date(ev.data), 'dd/MM/yy HH:mm')}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </ScrollArea>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsDetailsDialogOpen(false)}>Fechar</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Revert Dialog */}
             <AlertDialog open={isRevertDialogOpen} onOpenChange={setIsRevertDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
