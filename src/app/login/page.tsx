@@ -46,12 +46,17 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       await login(values.email, values.password);
-      // onAuthStateChanged in the provider will set the user, 
-      // and the useEffect above will redirect.
     } catch (error) {
-      // Toast is handled in the auth provider
       console.error("Login failed, staying on login page.");
     }
+  }
+
+  if (loading) {
+     return (
+        <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-800">
+            <p>Carregando aplicação...</p>
+        </div>
+    )
   }
 
   return (
@@ -90,8 +95,8 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || loading}>
-                {form.formState.isSubmitting || loading ? 'Entrando...' : 'Entrar'}
+              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? 'Entrando...' : 'Entrar'}
               </Button>
             </form>
           </Form>

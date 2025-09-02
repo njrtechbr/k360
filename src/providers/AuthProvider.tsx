@@ -98,7 +98,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Hooks
   const { modules, addModule, updateModule, toggleModuleStatus, deleteModule } = useModulesData();
-  const { loadingAttendants, attendants, addAttendant, updateAttendant, deleteAttendants, attendantImports, addAttendantImportRecord, revertAttendantImport, fetchAttendants } = useAttendantsData(!!user);
+  const { loadingAttendants, attendants, setAttendants, addAttendant, updateAttendant, deleteAttendants, attendantImports, addAttendantImportRecord, revertAttendantImport } = useAttendantsData();
   const { gamificationConfig, updateGamificationConfig, achievements, updateAchievement, levelRewards, updateLevelReward, seasons, addSeason, updateSeason, deleteSeason, activeSeason, nextSeason, unlockedAchievements, checkAndRecordAchievements, recalculateAllGamificationData } = useGamificationData();
   const { evaluations, addEvaluation: addEvaluationFromHook, deleteEvaluations: deleteEvaluationsFromHook, aiAnalysisResults, lastAiAnalysis, isAiAnalysisRunning, runAiAnalysis, analysisProgress, isProgressModalOpen, setIsProgressModalOpen, evaluationImports, addImportRecord, revertImport } = useEvaluationsData({ gamificationConfig, activeSeason });
   const { funcoes, setores, addFuncao, updateFuncao, deleteFuncao, addSetor, updateSetor, deleteSetor } = useRhConfigData();
@@ -110,35 +110,75 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setAllUsers(usersList);
     return usersList;
   }, []);
+
+  const seedInitialData = useCallback(async () => {
+    try {
+        const attendantsCollection = collection(db, "attendants");
+        const countSnapshot = await getCountFromServer(attendantsCollection);
+
+        if (countSnapshot.data().count === 0) {
+            console.log("Banco de dados de atendentes vazio. Semeando dados iniciais...");
+            const batch = writeBatch(db);
+            INITIAL_ATTENDANTS.forEach(attendant => {
+                const docRef = doc(db, "attendants", attendant.id);
+                batch.set(docRef, attendant);
+            });
+            await batch.commit();
+            setAttendants(INITIAL_ATTENDANTS as Attendant[]);
+            toast({
+                title: "Migração Concluída!",
+                description: "Seus atendentes foram carregados no banco de dados na nuvem.",
+            });
+        }
+    } catch (error) {
+        console.error("Erro ao semear dados iniciais:", error);
+        toast({
+            variant: "destructive",
+            title: "Erro na Migração",
+            description: "Não foi possível popular o banco de dados com os dados iniciais."
+        });
+    }
+  }, [setAttendants, toast]);
   
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setAuthLoading(true);
-      if (firebaseUser) {
-        const userDocRef = doc(db, "users", firebaseUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-          setUser({ id: userDoc.id, ...userDoc.data() } as User);
-           await fetchAllUsers();
-        } else {
-          // This case handles users who are in Firebase Auth but not in Firestore DB.
-          await signOut(auth);
-          setUser(null);
-        }
-      } else {
-        setUser(null);
-        setAllUsers([]);
-      }
-      setAuthLoading(false);
-    });
+    const initializeApp = async () => {
+        setAuthLoading(true);
 
-    return () => unsubscribe();
-  }, [fetchAllUsers]);
+        // Seed data first if necessary
+        await seedInitialData();
+
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            if (firebaseUser) {
+                const userDocRef = doc(db, "users", firebaseUser.uid);
+                const userDoc = await getDoc(userDocRef);
+                if (userDoc.exists()) {
+                    setUser({ id: userDoc.id, ...userDoc.data() } as User);
+                    await fetchAllUsers();
+                } else {
+                    await signOut(auth);
+                    setUser(null);
+                }
+            } else {
+                setUser(null);
+                setAllUsers([]);
+            }
+             setAuthLoading(false);
+        });
+
+        return () => unsubscribe();
+    };
+
+    initializeApp();
+  }, [fetchAllUsers, seedInitialData]);
 
   const login = async (email: string, password: string) => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // onAuthStateChanged will handle the rest
+      toast({
+        title: "Login bem-sucedido!",
+        description: `Bem-vindo de volta.`,
+      });
+      // onAuthStateChanged will handle the rest, including redirect
     } catch (error: any) {
       console.error("Login Error:", error);
       let description = "Email ou senha incorretos.";
