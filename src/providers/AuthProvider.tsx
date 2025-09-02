@@ -137,40 +137,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const firebaseUser = userCredential.user;
-      const userDocRef = doc(db, "users", firebaseUser.uid);
-      const userDoc = await getDoc(userDocRef);
-
-      if (userDoc.exists()) {
-        const userData = { id: userDoc.id, ...userDoc.data() } as User;
-        setUser(userData); // This is the key part for the app state
-        toast({
+      await signInWithEmailAndPassword(auth, email, password);
+      // onAuthStateChanged will handle the rest
+      toast({
           title: "Login bem-sucedido!",
-          description: `Bem-vindo de volta, ${userData.name}.`,
-        });
-      } else {
-        // User exists in Auth, but not in Firestore. Create a default record and complete the login.
-        const defaultUserData: User = {
-          id: firebaseUser.uid,
-          name: firebaseUser.displayName || 'Usuário',
-          email: firebaseUser.email!,
-          role: ROLES.USER,
-          modules: [INITIAL_MODULES[0].id] // Default to first module
-        };
-        const { id, ...dataToSave } = defaultUserData;
-        await setDoc(userDocRef, dataToSave);
-        
-        setUser(defaultUserData); // Set the user in the state
-        fetchAllUsers(); // Refresh user list
-
-        toast({
-            variant: "default",
-            title: "Conta Recuperada",
-            description: "Seu perfil foi recriado. Bem-vindo de volta!",
-        });
-      }
-
+          description: `Bem-vindo de volta.`,
+      });
     } catch (error: any) {
       console.error("Login Error:", error);
       toast({
