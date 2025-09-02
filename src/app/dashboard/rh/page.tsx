@@ -4,7 +4,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/providers/AuthProvider";
-import { Users } from "lucide-react";
+import { Users, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -40,6 +40,23 @@ export default function RHPage() {
                             <Link href="/dashboard/rh/atendentes">
                                 <Users className="mr-2 h-4 w-4" />
                                 Gerenciar Atendentes
+                            </Link>
+                        </Button>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Importar Atendentes</CardTitle>
+                        <CardDescription>Importe múltiplos atendentes de um arquivo CSV.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground mb-4">
+                           Faça o upload de dados de outras plataformas para um cadastro em massa.
+                        </p>
+                        <Button asChild>
+                            <Link href="/dashboard/rh/importar">
+                                <Upload className="mr-2 h-4 w-4" />
+                                Importar Dados
                             </Link>
                         </Button>
                     </CardContent>
