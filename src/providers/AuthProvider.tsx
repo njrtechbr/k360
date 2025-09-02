@@ -4,7 +4,7 @@
 import type { ReactNode } from "react";
 import React, { useCallback, useEffect, useState } from "react";
 import type { User, Module, Role, Attendant, Evaluation, EvaluationAnalysis, GamificationConfig, Achievement, LevelReward, GamificationSeason, UnlockedAchievement, EvaluationImport, AttendantImport, Funcao, Setor } from "@/lib/types";
-import { ROLES } from "@/lib/types";
+import { ROLES, INITIAL_MODULES } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 
 // Firebase Imports
@@ -26,6 +26,7 @@ import { useAttendantsData } from "@/hooks/useAttendantsData";
 import { useEvaluationsData } from "@/hooks/useEvaluationsData";
 import { useGamificationData } from "@/hooks/useGamificationData";
 import { useRhConfigData } from "@/hooks/useRhConfigData";
+import { getScoreFromRating } from "@/hooks/useGamificationData";
 
 interface AuthContextType {
   user: User | null;
@@ -77,7 +78,7 @@ interface AuthContextType {
   fetchUnlockedAchievements: () => Promise<UnlockedAchievement[]>;
   evaluationImports: EvaluationImport[];
   fetchEvaluationImports: () => Promise<EvaluationImport[]>;
-  addImportRecord: (importData: Omit<EvaluationImport, 'id'>) => Promise<EvaluationImport>;
+  addImportRecord: (importData: Omit<EvaluationImport, 'id' | 'importedBy'>) => Promise<EvaluationImport>;
   revertImport: (importId: string) => Promise<void>;
   recalculateAllGamificationData: () => Promise<void>;
   funcoes: Funcao[];
@@ -91,7 +92,7 @@ interface AuthContextType {
   updateSetor: (oldSetor: string, newSetor: string) => Promise<void>;
   deleteSetor: (setor: string) => Promise<void>;
   attendantImports: AttendantImport[];
-  addAttendantImportRecord: (importData: Omit<AttendantImport, 'id'>, userId: string) => Promise<AttendantImport>;
+  addAttendantImportRecord: (importData: Omit<AttendantImport, 'id' | 'importedBy'>) => Promise<AttendantImport>;
   revertAttendantImport: (importId: string) => Promise<void>;
 }
 
@@ -110,47 +111,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const evaluationsData = useEvaluationsData({ gamificationConfig: gamificationData.gamificationConfig, seasons: gamificationData.seasons });
   const rhConfigData = useRhConfigData();
 
-  const { allUsers, fetchAllUsers, setAllUsers } = usersData;
-  const { modules, fetchModules } = modulesData;
-  const { funcoes, setores, fetchFuncoes, fetchSetores } = rhConfigData;
+  const { fetchAllUsers } = usersData;
   
   useEffect(() => {
     const initializeApp = async () => {
         console.log("AUTH: Iniciando inicialização do App...");
         setLoading(true);
-        
-        // Fetch essential data for layout and auth
-        await Promise.all([
-            fetchModules(),
-            fetchFuncoes(),
-            fetchSetores(),
-            gamificationData.fetchGamificationConfig(),
-        ]);
-        
+
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
-                console.log(`AUTH: Usuário autenticado encontrado (UID: ${firebaseUser.uid}). Buscando dados...`);
                 const userDocRef = doc(db, "users", firebaseUser.uid);
                 const userDoc = await getDoc(userDocRef);
                 if (userDoc.exists()) {
                     const userData = { id: userDoc.id, ...userDoc.data() } as User;
                     setUser(userData);
+                    console.log(`AUTH: Usuário autenticado e encontrado no Firestore (UID: ${firebaseUser.uid}).`);
                 } else {
+                    console.log(`AUTH: Usuário autenticado (UID: ${firebaseUser.uid}) não encontrado no Firestore. Criando novo perfil...`);
                     const newUser: Omit<User, 'id'> = {
                         name: firebaseUser.displayName || "Novo Usuário",
                         email: firebaseUser.email!,
                         role: ROLES.USER,
-                        modules: ['rh'] 
+                        modules: ['rh']
                     };
                     await setDoc(userDocRef, newUser);
                     const createdUserData = { id: firebaseUser.uid, ...newUser };
                     setUser(createdUserData);
                 }
             } else {
-                setUser(null);
+                 console.log("AUTH: Nenhum usuário autenticado.");
+                 setUser(null);
             }
-            console.log("AUTH: Verificação de autenticação concluída.");
-            setLoading(false);
+             console.log("AUTH: Inicialização concluída.");
+             setLoading(false);
         });
 
         return () => {
@@ -160,14 +153,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     initializeApp();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const login = async (email: string, password: string) => {
     try {
       console.log(`AUTH: Tentativa de login para ${email}`);
       await signInWithEmailAndPassword(auth, email, password);
-      // onAuthStateChanged will handle setting the user state and fetching data
+      // onAuthStateChanged will handle setting the user state
       toast({ title: "Login bem-sucedido!", description: `Bem-vindo de volta.` });
     } catch (error: any) {
       console.error("AUTH: Erro no Login:", error);
@@ -207,9 +199,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       await signOut(auth);
       console.log("AUTH: Logout realizado com sucesso.");
-      setUser(null);
-      setAllUsers([]);
-      toast({ title: "Logout realizado", description: "Você foi desconectado com sucesso." });
     } catch (error: any) {
        console.error("AUTH: Erro no Logout:", error);
        toast({ variant: "destructive", title: "Erro no Logout", description: error.message });
@@ -268,7 +257,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const xpGained = baseScore * totalMultiplier;
 
     const newEvaluation = await evaluationsData.addEvaluation(evaluationData, xpGained);
-    await recalculateAllGamificationData();
+    await recalculateAllGamificationData(); // This still recalculates achievements for everyone, but doesn't recalculate evaluation XP
     return newEvaluation;
   };
 
@@ -278,7 +267,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     toast({ title: "Avaliações Removidas", description: `${evaluationIds.length} avaliações foram removidas e a gamificação foi recalculada.` });
   }
 
-  const value = {
+  const addImportRecord = async (importData: Omit<EvaluationImport, 'id' | 'importedBy'>): Promise<EvaluationImport> => {
+      if(!user) throw new Error("Usuário não autenticado");
+      return evaluationsData.addImportRecord(importData, user.id);
+  }
+
+  const addAttendantImportRecord = async (importData: Omit<AttendantImport, 'id' | 'importedBy'>): Promise<AttendantImport> => {
+       if(!user) throw new Error("Usuário não autenticado");
+      return attendantsData.addAttendantImportRecord(importData, user.id);
+  }
+
+  const value: AuthContextType = {
     user,
     isAuthenticated: user !== null,
     loading,
@@ -286,12 +285,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     logout,
     register,
     updateProfile,
-    allUsers,
-    fetchAllUsers,
+    allUsers: usersData.allUsers,
+    fetchAllUsers: usersData.fetchAllUsers,
     updateUser: usersData.updateUser,
     deleteUser: usersData.deleteUser,
     hasSuperAdmin,
-    modules,
+    modules: modulesData.modules,
     addModule: modulesData.addModule,
     updateModule: modulesData.updateModule,
     toggleModuleStatus: modulesData.toggleModuleStatus,
@@ -314,22 +313,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsProgressModalOpen: evaluationsData.setIsProgressModalOpen,
     ...gamificationData,
     recalculateAllGamificationData,
-    funcoes,
-    setores,
-    fetchFuncoes,
-    fetchSetores,
-    addFuncao: rhConfigData.addFuncao,
-    updateFuncao: rhConfigData.updateFuncao,
-    deleteFuncao: rhConfigData.deleteFuncao,
-    addSetor: rhConfigData.addSetor,
-    updateSetor: rhConfigData.updateSetor,
-    deleteSetor: rhConfigData.deleteSetor,
+    ...rhConfigData,
     evaluationImports: evaluationsData.evaluationImports,
     fetchEvaluationImports: evaluationsData.fetchEvaluationImports,
-    addImportRecord: evaluationsData.addImportRecord,
+    addImportRecord,
     revertImport: evaluationsData.revertImport,
     attendantImports: attendantsData.attendantImports,
-    addAttendantImportRecord: attendantsData.addAttendantImportRecord,
+    addAttendantImportRecord,
     revertAttendantImport: attendantsData.revertAttendantImport,
   };
 
