@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuth } from "@/providers/AuthProvider";
@@ -16,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
 import type { Evaluation } from "@/lib/types";
-import { suggestAttendants } from "@/ai/flows/suggest-attendant-flow";
+import { suggestAttendants, type SuggestAttendantOutput } from "@/ai/flows/suggest-attendant-flow";
 import { Combobox } from "@/components/ui/combobox";
 
 
@@ -90,7 +91,7 @@ export default function ImportarAvaliacoesPage() {
     const handleAiSuggestion = async () => {
         setIsSuggesting(true);
         try {
-            const suggestions = await suggestAttendants({ 
+            const suggestions: SuggestAttendantOutput = await suggestAttendants({ 
                 agentNames: uniqueAgents, 
                 attendants: attendants.map(a => ({ id: a.id, name: a.name })) 
             });
