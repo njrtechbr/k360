@@ -163,6 +163,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     deleteSetor,
   } = useRhConfigData();
 
+  useEffect(() => {
+    // This effect runs once on startup to ensure all data is in sync.
+    // It's a good place to run a recalculation if needed.
+    recalculateAllGamificationData(attendants, evaluations, aiAnalysisResults);
+  }, []); // Empty dependency array means it runs once when the provider mounts.
+
+
   const handleAddEvaluation = useCallback(async (evaluationData: Omit<Evaluation, 'id' | 'xpGained'>): Promise<Evaluation> => {
     const newEvaluation = await addEvaluationFromHook(evaluationData);
     const attendant = attendants.find(a => a.id === newEvaluation.attendantId);
