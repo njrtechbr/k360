@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/label";
 import Papa from "papaparse";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { FileUp, Users, Check, Wand2, ArrowRight, Sparkles } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -19,6 +18,8 @@ import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
 import type { Evaluation } from "@/lib/types";
 import { suggestAttendants } from "@/ai/flows/suggest-attendant-flow";
+import { Combobox } from "@/components/ui/combobox";
+
 
 type CsvRow = {
     Data: string;
@@ -223,8 +224,19 @@ export default function ImportarAvaliacoesPage() {
         return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
     }
 
-    const allAgentsMapped = uniqueAgents.length > 0 && uniqueAgents.every(agent => agentMap[agent]);
     const isMappingStarted = Object.keys(agentMap).length > 0;
+    const allAgentsMapped = uniqueAgents.length > 0 && uniqueAgents.every(agent => agentMap[agent]);
+
+    const sortedAttendants = useMemo(() => {
+        return [...attendants].sort((a,b) => a.name.localeCompare(b.name));
+    }, [attendants])
+
+    const attendantOptions = useMemo(() => {
+        return sortedAttendants.map(att => ({
+            value: att.id,
+            label: att.name,
+        }));
+    }, [sortedAttendants]);
 
     return (
         <div className="space-y-8">
@@ -265,16 +277,13 @@ export default function ImportarAvaliacoesPage() {
                             <div key={agent} className="flex items-center gap-4 justify-between p-2 border rounded-md">
                                 <span className="font-medium">{agent}</span>
                                 <ArrowRight className="text-muted-foreground" />
-                                <Select onValueChange={(attendantId) => handleMappingChange(agent, attendantId)} value={agentMap[agent]}>
-                                    <SelectTrigger className="w-[250px]">
-                                        <SelectValue placeholder="Selecione um atendente" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {attendants.map(att => (
-                                            <SelectItem key={att.id} value={att.id}>{att.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <Combobox
+                                    options={attendantOptions}
+                                    value={agentMap[agent]}
+                                    onSelect={(attendantId) => handleMappingChange(agent, attendantId)}
+                                    placeholder="Selecione um atendente"
+                                    searchPlaceholder="Buscar atendente..."
+                                />
                             </div>
                         ))}
                     </CardContent>
