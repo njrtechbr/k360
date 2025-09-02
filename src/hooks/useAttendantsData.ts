@@ -5,7 +5,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import type { Attendant, AttendantImport } from '@/lib/types';
 import { db } from '@/lib/firebase';
-import { collection, doc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch, query } from 'firebase/firestore';
+import { collection, doc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch, query, getCountFromServer } from 'firebase/firestore';
+import { INITIAL_ATTENDANTS } from '@/lib/initial-data';
 
 
 const ATTENDANT_IMPORTS_STORAGE_KEY = "controle_acesso_attendant_imports";
@@ -16,6 +17,35 @@ export function useAttendantsData(isAuthenticated: boolean) {
     const [attendantImports, setAttendantImports] = useState<AttendantImport[]>([]);
     const { toast } = useToast();
 
+    const seedInitialData = useCallback(async () => {
+        try {
+            const attendantsCollection = collection(db, "attendants");
+            const countSnapshot = await getCountFromServer(attendantsCollection);
+
+            if (countSnapshot.data().count === 0) {
+                console.log("Banco de dados de atendentes vazio. Semeando dados iniciais...");
+                const batch = writeBatch(db);
+                INITIAL_ATTENDANTS.forEach(attendant => {
+                    const docRef = doc(db, "attendants", attendant.id);
+                    batch.set(docRef, attendant);
+                });
+                await batch.commit();
+                console.log(`${INITIAL_ATTENDANTS.length} atendentes foram semeados com sucesso.`);
+                return true; // Indicates that data was seeded
+            }
+            return false; // No data was seeded
+        } catch (error) {
+            console.error("Erro ao semear dados iniciais:", error);
+            toast({
+                variant: "destructive",
+                title: "Erro na Migração",
+                description: "Não foi possível popular o banco de dados com os dados iniciais."
+            });
+            return false;
+        }
+    }, [toast]);
+
+
     const fetchAttendants = useCallback(async () => {
         if (!isAuthenticated) {
             setAttendants([]);
@@ -24,17 +54,27 @@ export function useAttendantsData(isAuthenticated: boolean) {
         }
         setLoading(true);
         try {
+            const dataWasSeeded = await seedInitialData();
+
             const attendantsCollection = collection(db, "attendants");
             const attendantsSnapshot = await getDocs(attendantsCollection);
             const attendantsList = attendantsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Attendant));
             setAttendants(attendantsList);
+
+            if (dataWasSeeded) {
+                 toast({
+                    title: "Migração Concluída!",
+                    description: "Seus atendentes foram carregados no banco de dados na nuvem.",
+                });
+            }
+
         } catch (error) {
             console.error("Error fetching attendants from Firestore: ", error);
             toast({ variant: "destructive", title: "Erro ao carregar atendentes", description: "Não foi possível buscar os dados do Firestore." });
         } finally {
             setLoading(false);
         }
-    }, [isAuthenticated, toast]);
+    }, [isAuthenticated, toast, seedInitialData]);
 
 
      const getAttendantImportsFromStorage = useCallback((): AttendantImport[] => {
@@ -50,9 +90,13 @@ export function useAttendantsData(isAuthenticated: boolean) {
 
 
     useEffect(() => {
-        fetchAttendants();
+        if (isAuthenticated) {
+            fetchAttendants();
+        } else {
+            setLoading(false);
+        }
         setAttendantImports(getAttendantImportsFromStorage());
-    }, [fetchAttendants, getAttendantImportsFromStorage]);
+    }, [isAuthenticated, fetchAttendants, getAttendantImportsFromStorage]);
 
 
      const saveAttendantImportsToStorage = (importsToSave: AttendantImport[]) => {

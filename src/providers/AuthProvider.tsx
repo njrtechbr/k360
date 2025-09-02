@@ -111,32 +111,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return usersList;
   }, []);
   
-  const seedInitialData = useCallback(async () => {
-    try {
-        const attendantsCollection = collection(db, "attendants");
-        const countSnapshot = await getCountFromServer(attendantsCollection);
-
-        if (countSnapshot.data().count === 0) {
-            console.log("Banco de dados de atendentes vazio. Semeando dados iniciais...");
-            const batch = writeBatch(db);
-            INITIAL_ATTENDANTS.forEach(attendant => {
-                const docRef = doc(db, "attendants", attendant.id);
-                batch.set(docRef, attendant);
-            });
-            await batch.commit();
-            console.log(`${INITIAL_ATTENDANTS.length} atendentes foram semeados com sucesso.`);
-            await fetchAttendants(); // Refresca a lista após semear
-        }
-    } catch (error) {
-        console.error("Erro ao semear dados iniciais:", error);
-        toast({
-            variant: "destructive",
-            title: "Erro na Migração",
-            description: "Não foi possível popular o banco de dados com os dados iniciais."
-        });
-    }
-  }, [fetchAttendants, toast]);
-
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setAuthLoading(true);
@@ -146,8 +120,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (userDoc.exists()) {
           setUser({ id: userDoc.id, ...userDoc.data() } as User);
            await fetchAllUsers();
-           await seedInitialData();
         } else {
+          // This case handles users who are in Firebase Auth but not in Firestore DB.
           await signOut(auth);
           setUser(null);
         }
@@ -159,17 +133,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => unsubscribe();
-  }, [fetchAllUsers, seedInitialData]);
+  }, [fetchAllUsers]);
 
   const login = async (email: string, password: string) => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      // onAuthStateChanged will handle the rest
     } catch (error: any) {
       console.error("Login Error:", error);
+      let description = "Email ou senha incorretos.";
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        description = "Email ou senha incorretos.";
+      } else {
+        description = "Ocorreu um erro desconhecido durante o login."
+      }
       toast({
         variant: "destructive",
         title: "Erro de autenticação",
-        description: error.message || "Email ou senha incorretos.",
+        description: description,
       });
       throw error;
     }
