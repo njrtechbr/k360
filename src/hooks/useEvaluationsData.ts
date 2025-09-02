@@ -5,12 +5,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import type { Evaluation, EvaluationAnalysis, GamificationConfig, GamificationSeason, Attendant, EvaluationImport } from '@/lib/types';
 import { analyzeEvaluation } from '@/ai/flows/analyze-evaluation-flow';
-import { getScoreFromRating } from './useGamificationData';
+import { db } from '@/lib/firebase';
+import { collection, doc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 
 
-const EVALUATIONS_STORAGE_KEY = "controle_acesso_evaluations";
-const EVALUATION_IMPORTS_STORAGE_KEY = "controle_acesso_evaluation_imports";
-const AI_ANALYSIS_STORAGE_KEY = "controle_acesso_ai_analysis";
+const AI_ANALYSIS_STORAGE_KEY = "controle_acesso_ai_analysis"; // Can be migrated later if needed
 const LAST_AI_ANALYSIS_DATE_KEY = "controle_acesso_last_ai_analysis_date";
 
 type AnalysisProgress = {
@@ -22,35 +21,12 @@ type AnalysisProgress = {
     lastResult: EvaluationAnalysis | null;
 };
 
-const parseEvaluationDate = (dateString: string) => {
-    // Handles dates like "05/08/2025 11:13:58"
-    const parts = dateString.split(/[\s/:]/);
-    if (parts.length < 3) return new Date(0).toISOString();
-    const day = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1;
-    const year = parseInt(parts[2], 10);
-    const hours = parts.length > 3 ? parseInt(parts[3], 10) : 0;
-    const minutes = parts.length > 4 ? parseInt(parts[4], 10) : 0;
-    const seconds = parts.length > 5 ? parseInt(parts[5], 10) : 0;
-    return new Date(year, month, day, hours, minutes, seconds).toISOString();
-}
-
-const INITIAL_EVALUATIONS_RAW = [
-  { "id": "6002ff6d-ac09-4c64-95b3-e5987cc0b841", "attendantId": "58cd3a1d-9214-4535-b8d8-6f9d9957a570", "nota": 5, "comentario": "(Sem comentário)", "data": parseEvaluationDate("05/08/2025 11:13:58") },
-  // ... all other evaluations from the original file
-];
-
-const INITIAL_EVALUATIONS: Evaluation[] = INITIAL_EVALUATIONS_RAW.map(ev => ({
-    ...ev,
-    xpGained: getScoreFromRating(ev.nota, { '1': -5, '2': -2, '3': 1, '4': 3, '5': 5 }), // Initial calculation
-}));
-
 type UseEvaluationsDataProps = {
     gamificationConfig: GamificationConfig;
-    activeSeason: GamificationSeason | null;
+    seasons: GamificationSeason[];
 };
 
-export function useEvaluationsData({ gamificationConfig, activeSeason }: UseEvaluationsDataProps) {
+export function useEvaluationsData({ gamificationConfig, seasons }: UseEvaluationsDataProps) {
     const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
     const [evaluationImports, setEvaluationImports] = useState<EvaluationImport[]>([]);
     const [aiAnalysisResults, setAiAnalysisResults] = useState<EvaluationAnalysis[]>([]);
@@ -61,73 +37,56 @@ export function useEvaluationsData({ gamificationConfig, activeSeason }: UseEval
 
     const { toast } = useToast();
 
-    const getEvaluationsFromStorage = useCallback((): Evaluation[] => {
-        if (typeof window === "undefined") return [];
+    const fetchEvaluations = useCallback(async () => {
+        console.log("EVALUATIONS: Buscando avaliações do Firestore...");
         try {
-            const evaluationsJson = localStorage.getItem(EVALUATIONS_STORAGE_KEY);
-            if (evaluationsJson) {
-                const parsed = JSON.parse(evaluationsJson);
-                 if (parsed && parsed.length > 0) {
-                     // Backwards compatibility: add xpGained if missing
-                    return parsed.map((ev: any) => ({
-                        ...ev,
-                        xpGained: ev.xpGained ?? getScoreFromRating(ev.nota, gamificationConfig.ratingScores)
-                    }));
-                 }
-            }
-            localStorage.setItem(EVALUATIONS_STORAGE_KEY, JSON.stringify(INITIAL_EVALUATIONS));
-            return INITIAL_EVALUATIONS;
+            const snapshot = await getDocs(collection(db, "evaluations"));
+            const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Evaluation));
+            setEvaluations(list);
+            console.log(`EVALUATIONS: ${list.length} avaliações carregadas.`);
+            return list;
         } catch (error) {
-            console.error("Failed to parse evaluations from localStorage", error);
-            localStorage.setItem(EVALUATIONS_STORAGE_KEY, JSON.stringify(INITIAL_EVALUATIONS));
-            return INITIAL_EVALUATIONS;
-        }
-    }, [gamificationConfig]);
-
-    const getEvaluationImportsFromStorage = useCallback((): EvaluationImport[] => {
-        if (typeof window === "undefined") return [];
-        try {
-            const importsJson = localStorage.getItem(EVALUATION_IMPORTS_STORAGE_KEY);
-            return importsJson ? JSON.parse(importsJson) : [];
-        } catch (error) {
-            console.error("Failed to parse evaluation imports from localStorage", error);
+            console.error("EVALUATIONS: Erro ao buscar avaliações:", error);
             return [];
         }
     }, []);
 
+    const fetchEvaluationImports = useCallback(async () => {
+        console.log("EVALUATIONS: Buscando histórico de importação...");
+         try {
+            const snapshot = await getDocs(collection(db, "evaluationImports"));
+            const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as EvaluationImport));
+            setEvaluationImports(list);
+            console.log(`EVALUATIONS: ${list.length} históricos de importação carregados.`);
+            return list;
+        } catch (error) {
+            console.error("EVALUATIONS: Erro ao buscar históricos:", error);
+            return [];
+        }
+    }, []);
+
+
+    // For AI Analysis, we keep it in localStorage for now as it's less critical
     const getAiAnalysisFromStorage = useCallback((): EvaluationAnalysis[] => {
         if (typeof window === "undefined") return [];
         try {
             const analysisJson = localStorage.getItem(AI_ANALYSIS_STORAGE_KEY);
             return analysisJson ? JSON.parse(analysisJson) : [];
         } catch (error) {
-            console.error("Failed to parse AI analysis from localStorage", error);
             return [];
         }
     }, []);
 
-    const getLastAiAnalysisDateFromStorage = useCallback((): string | null => {
+     const getLastAiAnalysisDateFromStorage = useCallback((): string | null => {
         if (typeof window === "undefined") return null;
         return localStorage.getItem(LAST_AI_ANALYSIS_DATE_KEY);
     }, []);
 
     useEffect(() => {
-        setEvaluations(getEvaluationsFromStorage());
-        setEvaluationImports(getEvaluationImportsFromStorage());
         setAiAnalysisResults(getAiAnalysisFromStorage());
         setLastAiAnalysis(getLastAiAnalysisDateFromStorage());
-    }, [getEvaluationsFromStorage, getEvaluationImportsFromStorage, getAiAnalysisFromStorage, getLastAiAnalysisDateFromStorage]);
+    }, [getAiAnalysisFromStorage, getLastAiAnalysisDateFromStorage]);
 
-
-    const saveEvaluationsToStorage = (evaluationsToSave: Evaluation[]) => {
-        localStorage.setItem(EVALUATIONS_STORAGE_KEY, JSON.stringify(evaluationsToSave));
-        setEvaluations(evaluationsToSave);
-    }
-    
-    const saveEvaluationImportsToStorage = (importsToSave: EvaluationImport[]) => {
-        localStorage.setItem(EVALUATION_IMPORTS_STORAGE_KEY, JSON.stringify(importsToSave));
-        setEvaluationImports(importsToSave);
-    }
 
     const saveAiAnalysisToStorage = (analysis: EvaluationAnalysis[]) => {
         localStorage.setItem(AI_ANALYSIS_STORAGE_KEY, JSON.stringify(analysis));
@@ -139,74 +98,62 @@ export function useEvaluationsData({ gamificationConfig, activeSeason }: UseEval
         setLastAiAnalysis(date);
     };
 
-    const addEvaluation = async (evaluationData: Omit<Evaluation, 'xpGained'> & { data?: string, xpGained?: number }): Promise<Evaluation> => {
-        const currentEvaluations = getEvaluationsFromStorage();
-        if(currentEvaluations.find(e => e.id === evaluationData.id)){
-            console.warn(`Evaluation with ID ${evaluationData.id} already exists. Allowing import.`);
-        }
-
-
-        const { ratingScores, globalXpMultiplier } = gamificationConfig;
-        
-        const evaluationDate = new Date(evaluationData.data || new Date());
-        const seasonForEvaluation = seasons.find(s => s.active && evaluationDate >= new Date(s.startDate) && evaluationDate <= new Date(s.endDate));
-
-        const baseScore = getScoreFromRating(evaluationData.nota, ratingScores);
-        const seasonMultiplier = seasonForEvaluation?.xpMultiplier ?? 1;
-        const totalMultiplier = globalXpMultiplier * seasonMultiplier;
-
-        const xpGained = baseScore * totalMultiplier;
-
-        const newEvaluation: Evaluation = {
-            id: evaluationData.id || crypto.randomUUID(),
-            attendantId: evaluationData.attendantId,
-            nota: evaluationData.nota,
-            comentario: evaluationData.comentario,
-            data: evaluationDate.toISOString(),
-            xpGained: xpGained,
-            importId: evaluationData.importId,
+    const addEvaluation = async (evaluationData: Omit<Evaluation, 'id' | 'xpGained'>, xpGained: number): Promise<Evaluation> => {
+        const newEvaluation: Omit<Evaluation, 'id'> = {
+            ...evaluationData,
+            data: evaluationData.data || new Date().toISOString(),
+            xpGained,
         };
-
-        const newEvaluations = [...currentEvaluations, newEvaluation];
-        saveEvaluationsToStorage(newEvaluations);
-        return newEvaluation;
+        const docRef = doc(collection(db, "evaluations"));
+        await setDoc(docRef, newEvaluation);
+        const finalEvaluation = { ...newEvaluation, id: docRef.id };
+        await fetchEvaluations();
+        return finalEvaluation;
     };
 
     const deleteEvaluations = async (evaluationIds: string[]) => {
-        const currentEvaluations = getEvaluationsFromStorage();
-        const evaluationsToKeep = currentEvaluations.filter(ev => !evaluationIds.includes(ev.id));
-        saveEvaluationsToStorage(evaluationsToKeep);
+         try {
+            const batch = writeBatch(db);
+            evaluationIds.forEach(id => {
+                batch.delete(doc(db, "evaluations", id));
+            });
+            await batch.commit();
+            await fetchEvaluations();
 
-        // Also delete AI analysis associated with these evaluations
-        const currentAiAnalysis = getAiAnalysisFromStorage();
-        const aiAnalysisToKeep = currentAiAnalysis.filter(ar => !evaluationIds.includes(ar.evaluationId));
-        saveAiAnalysisToStorage(aiAnalysisToKeep);
+            // Also delete AI analysis associated with these evaluations
+            const currentAiAnalysis = getAiAnalysisFromStorage();
+            const aiAnalysisToKeep = currentAiAnalysis.filter(ar => !evaluationIds.includes(ar.evaluationId));
+            saveAiAnalysisToStorage(aiAnalysisToKeep);
+
+        } catch (error) {
+            console.error("EVALUATIONS: Erro ao remover avaliações:", error);
+            throw error;
+        }
     };
 
-     const addImportRecord = (importData: Omit<EvaluationImport, 'id' | 'importedAt'>, userId: string): EvaluationImport => {
-        const newImport: EvaluationImport = {
-            ...importData,
-            id: crypto.randomUUID(),
-            importedAt: new Date().toISOString(),
-            importedBy: userId,
-        };
-        const allImports = getEvaluationImportsFromStorage();
-        saveEvaluationImportsToStorage([...allImports, newImport]);
-        return newImport;
+     const addImportRecord = async (importData: Omit<EvaluationImport, 'id'>): Promise<EvaluationImport> => {
+        try {
+            const docRef = doc(collection(db, "evaluationImports"));
+            const newImport = { ...importData, id: docRef.id };
+            await setDoc(docRef, newImport);
+            await fetchEvaluationImports();
+            return newImport;
+        } catch (error) {
+            console.error("EVALUATIONS: Erro ao salvar histórico de importação:", error);
+            throw error;
+        }
     };
 
-    const revertImport = (importId: string) => {
-        const importToRevert = getEvaluationImportsFromStorage().find(i => i.id === importId);
+    const revertImport = async (importId: string) => {
+        const importToRevert = evaluationImports.find(i => i.id === importId);
         if (!importToRevert) {
             toast({ variant: 'destructive', title: 'Erro', description: 'Importação não encontrada.' });
             return;
         }
 
-        deleteEvaluations(importToRevert.evaluationIds);
-        
-        const currentImports = getEvaluationImportsFromStorage();
-        const importsToKeep = currentImports.filter(imp => imp.id !== importId);
-        saveEvaluationImportsToStorage(importsToKeep);
+        await deleteEvaluations(importToRevert.evaluationIds);
+        await deleteDoc(doc(db, "evaluationImports", importId));
+        await fetchEvaluationImports();
         
         toast({
             title: "Importação Revertida!",
@@ -218,7 +165,7 @@ export function useEvaluationsData({ gamificationConfig, activeSeason }: UseEval
         setIsAiAnalysisRunning(true);
         setIsProgressModalOpen(true);
 
-        const allEvaluations = getEvaluationsFromStorage();
+        const allEvaluations = await fetchEvaluations();
         const existingAnalysis = getAiAnalysisFromStorage();
         const analyzedIds = new Set(existingAnalysis.map(a => a.evaluationId));
         
@@ -248,13 +195,11 @@ export function useEvaluationsData({ gamificationConfig, activeSeason }: UseEval
                         analyzedAt: new Date().toISOString(),
                     };
 
-                    // Save result immediately
                     const currentResults = getAiAnalysisFromStorage();
                     saveAiAnalysisToStorage([...currentResults, newResult]);
                     
                     setAnalysisProgress(prev => ({ ...prev, status: 'waiting', lastResult: newResult }));
 
-                    // Countdown before next request
                     const countdownDuration = 5;
                     for (let i = countdownDuration; i > 0; i--) {
                        setAnalysisProgress(prev => ({ ...prev, countdown: i }));
@@ -268,7 +213,6 @@ export function useEvaluationsData({ gamificationConfig, activeSeason }: UseEval
                         title: 'Erro na Análise de IA',
                         description: `Ocorreu um erro ao processar o comentário do ID ${ev.id}. Pulando para o próximo.`,
                     });
-                    // Skip this evaluation and continue with others after a pause
                     const countdownDuration = 5;
                     for (let i = countdownDuration; i > 0; i--) {
                        setAnalysisProgress(prev => ({ ...prev, countdown: i, status: 'waiting' }));
@@ -279,19 +223,11 @@ export function useEvaluationsData({ gamificationConfig, activeSeason }: UseEval
             
             const now = new Date().toISOString();
             saveLastAiAnalysisDate(now);
-
-            toast({
-                title: 'Análise Concluída!',
-                description: `${processedCount} novas avaliações foram processadas.`,
-            });
+            toast({ title: 'Análise Concluída!', description: `${processedCount} novas avaliações foram processadas.` });
 
         } catch (error) {
             console.error("A análise de IA falhou", error);
-            toast({
-                variant: "destructive",
-                title: 'Erro na Análise de IA',
-                description: 'Ocorreu um erro geral ao processar os comentários. Tente novamente mais tarde.',
-            });
+            toast({ variant: "destructive", title: 'Erro na Análise de IA', description: 'Ocorreu um erro geral. Tente novamente.' });
         } finally {
             setIsAiAnalysisRunning(false);
             setIsProgressModalOpen(false);
@@ -299,13 +235,9 @@ export function useEvaluationsData({ gamificationConfig, activeSeason }: UseEval
         }
     };
 
-
-    const seasons = gamificationConfig.seasons;
-
-
     return {
         evaluations,
-        setEvaluations,
+        fetchEvaluations,
         addEvaluation,
         deleteEvaluations,
         aiAnalysisResults,
@@ -316,6 +248,7 @@ export function useEvaluationsData({ gamificationConfig, activeSeason }: UseEval
         isProgressModalOpen,
         setIsProgressModalOpen,
         evaluationImports,
+        fetchEvaluationImports,
         addImportRecord,
         revertImport,
     };

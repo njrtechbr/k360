@@ -5,9 +5,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import type { GamificationConfig, Achievement, LevelReward, GamificationSeason, Attendant, Evaluation, EvaluationAnalysis, UnlockedAchievement } from '@/lib/types';
 import { INITIAL_ACHIEVEMENTS, INITIAL_LEVEL_REWARDS } from '@/lib/achievements';
+import { db } from '@/lib/firebase';
+import { collection, doc, getDoc, setDoc, updateDoc, getDocs, deleteDoc, writeBatch } from 'firebase/firestore';
 
-const GAMIFICATION_CONFIG_KEY = "controle_acesso_gamification_config";
-const UNLOCKED_ACHIEVEMENTS_STORAGE_KEY = "controle_acesso_unlocked_achievements";
 
 export const getScoreFromRating = (rating: number, scores: GamificationConfig['ratingScores']): number => {
     const key = String(rating) as keyof typeof scores;
@@ -29,34 +29,20 @@ const INITIAL_GAMIFICATION_CONFIG: GamificationConfig = {
 };
 
 const mergeAchievementsWithDefaults = (savedAchievements: Partial<Achievement>[]): Achievement[] => {
-    const defaultAchievementsMap = new Map(INITIAL_ACHIEVEMENTS.map(ach => [ach.id, ach]));
     const savedAchievementsMap = new Map(savedAchievements.map(ach => [ach.id, ach]));
-    
-    const finalAchievements = INITIAL_ACHIEVEMENTS.map(defaultAch => {
-        const savedAch = savedAchievementsMap.get(defaultAch.id);
-        if (savedAch) {
-             return { ...defaultAch, ...savedAch, isUnlocked: defaultAch.isUnlocked, icon: defaultAch.icon };
-        }
-        return defaultAch;
-    });
-
-    return finalAchievements;
+    return INITIAL_ACHIEVEMENTS.map(defaultAch => ({
+        ...defaultAch,
+        ...savedAchievementsMap.get(defaultAch.id),
+    }));
 };
 
 const mergeLevelRewardsWithDefaults = (savedRewards: Partial<LevelReward>[]): LevelReward[] => {
-    const defaultRewardsMap = new Map(INITIAL_LEVEL_REWARDS.map(r => [r.level, r]));
-     const savedRewardsMap = new Map(savedRewards.map(r => [r.level, r]));
-
-    const finalRewards = INITIAL_LEVEL_REWARDS.map(defaultReward => {
-        const savedReward = savedRewardsMap.get(defaultReward.level);
-        if (savedReward) {
-            return { ...defaultReward, ...savedReward, icon: defaultReward.icon };
-        }
-        return defaultReward;
-    });
-
-    return finalRewards;
-}
+    const savedRewardsMap = new Map(savedRewards.map(r => [r.level, r]));
+    return INITIAL_LEVEL_REWARDS.map(defaultReward => ({
+        ...defaultReward,
+        ...savedRewardsMap.get(defaultReward.level),
+    }));
+};
 
 export function useGamificationData() {
     const [gamificationConfig, setGamificationConfig] = useState<GamificationConfig>(INITIAL_GAMIFICATION_CONFIG);
@@ -68,195 +54,147 @@ export function useGamificationData() {
     const [unlockedAchievements, setUnlockedAchievements] = useState<UnlockedAchievement[]>([]);
     const { toast } = useToast();
 
-     const getUnlockedAchievementsFromStorage = useCallback((): UnlockedAchievement[] => {
-        if (typeof window === "undefined") return [];
+    const fetchGamificationConfig = useCallback(async () => {
+        console.log("GAMIFICATION: Buscando configurações do Firestore...");
         try {
-            const unlockedJson = localStorage.getItem(UNLOCKED_ACHIEVEMENTS_STORAGE_KEY);
-            return unlockedJson ? JSON.parse(unlockedJson) : [];
-        } catch (error) {
-            console.error("Failed to parse unlocked achievements from localStorage", error);
-            return [];
-        }
-    }, []);
+            const configDocRef = doc(db, "gamification", "config");
+            const configDoc = await getDoc(configDocRef);
+            if (configDoc.exists()) {
+                const data = configDoc.data();
+                const mergedAchievements = data.achievements ? mergeAchievementsWithDefaults(data.achievements) : INITIAL_ACHIEVEMENTS;
+                const mergedLevelRewards = data.levelRewards ? mergeLevelRewardsWithDefaults(data.levelRewards) : INITIAL_LEVEL_REWARDS;
 
-
-    const getGamificationConfigFromStorage = useCallback((): GamificationConfig => {
-        if (typeof window === "undefined") return INITIAL_GAMIFICATION_CONFIG;
-        try {
-            const configJson = localStorage.getItem(GAMIFICATION_CONFIG_KEY);
-            if (configJson) {
-                const parsed = JSON.parse(configJson);
-                const mergedAchievements = parsed.achievements ? mergeAchievementsWithDefaults(parsed.achievements) : INITIAL_ACHIEVEMENTS;
-                const mergedLevelRewards = parsed.levelRewards ? mergeLevelRewardsWithDefaults(parsed.levelRewards) : INITIAL_LEVEL_REWARDS;
-
-                return {
+                const loadedConfig = {
                     ...INITIAL_GAMIFICATION_CONFIG,
-                    ...parsed,
-                    ratingScores: { ...INITIAL_GAMIFICATION_CONFIG.ratingScores, ...parsed.ratingScores },
+                    ...data,
                     achievements: mergedAchievements,
                     levelRewards: mergedLevelRewards,
-                    seasons: parsed.seasons || INITIAL_GAMIFICATION_CONFIG.seasons,
-                    globalXpMultiplier: parsed.globalXpMultiplier ?? INITIAL_GAMIFICATION_CONFIG.globalXpMultiplier,
                 };
+                setGamificationConfig(loadedConfig);
+                setAchievements(mergedAchievements);
+                setLevelRewards(mergedLevelRewards);
+                setSeasons(data.seasons || []);
+                 console.log("GAMIFICATION: Configurações carregadas do Firestore.");
+                return loadedConfig;
+            } else {
+                console.log("GAMIFICATION: Nenhuma configuração encontrada, usando e salvando defaults.");
+                await setDoc(configDocRef, {
+                     ...INITIAL_GAMIFICATION_CONFIG,
+                    achievements: INITIAL_GAMIFICATION_CONFIG.achievements.map(({ isUnlocked, icon, ...ach }) => ach),
+                    levelRewards: INITIAL_GAMIFICATION_CONFIG.levelRewards.map(({ icon, ...reward }) => reward),
+                });
+                setGamificationConfig(INITIAL_GAMIFICATION_CONFIG);
+                 return INITIAL_GAMIFICATION_CONFIG;
             }
-            localStorage.setItem(GAMIFICATION_CONFIG_KEY, JSON.stringify(INITIAL_GAMIFICATION_CONFIG));
-            return INITIAL_GAMIFICATION_CONFIG;
         } catch (error) {
-            console.error("Failed to parse gamification config from localStorage", error);
+            console.error("GAMIFICATION: Erro ao buscar config:", error);
+            toast({ variant: "destructive", title: "Erro", description: "Não foi possível carregar as configurações de gamificação." });
             return INITIAL_GAMIFICATION_CONFIG;
+        }
+    }, [toast]);
+    
+    const fetchUnlockedAchievements = useCallback(async () => {
+        console.log("GAMIFICATION: Buscando conquistas desbloqueadas...");
+        try {
+            const snapshot = await getDocs(collection(db, "unlockedAchievements"));
+            const unlockedList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UnlockedAchievement));
+            setUnlockedAchievements(unlockedList);
+            console.log(`GAMIFICATION: ${unlockedList.length} conquistas desbloqueadas carregadas.`);
+            return unlockedList;
+        } catch (error) {
+            console.error("GAMIFICATION: Erro ao buscar conquistas desbloqueadas:", error);
+            return [];
         }
     }, []);
 
     const calculateActiveAndNextSeason = useCallback((allSeasons: GamificationSeason[]) => {
         const now = new Date();
-        
-        const currentActiveSeasons = allSeasons
-            .filter(s => s.active && new Date(s.startDate) <= now && new Date(s.endDate) >= now)
-            .sort((a,b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
-        
-        const currentActiveSeason = currentActiveSeasons.length > 0 ? currentActiveSeasons[0] : null;
+        const currentActiveSeason = allSeasons.find(s => s.active && new Date(s.startDate) <= now && new Date(s.endDate) >= now) || null;
         setActiveSeason(currentActiveSeason);
         
-        const upcomingSeasons = allSeasons
+        const nextUpcomingSeason = allSeasons
             .filter(s => s.active && new Date(s.startDate) > now)
-            .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
-        
-        const nextUpcomingSeason = upcomingSeasons.length > 0 ? upcomingSeasons[0] : null;
-
+            .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())[0] || null;
         setNextSeason(nextUpcomingSeason);
+
+         console.log("GAMIFICATION: Temporada ativa e próxima temporada calculadas.", { active: currentActiveSeason?.name, next: nextUpcomingSeason?.name });
     }, []);
 
     useEffect(() => {
-        const config = getGamificationConfigFromStorage();
-        setGamificationConfig(config);
-        setAchievements(config.achievements);
-        setLevelRewards(config.levelRewards);
-        setSeasons(config.seasons);
-        calculateActiveAndNextSeason(config.seasons);
-        setUnlockedAchievements(getUnlockedAchievementsFromStorage());
-    }, [getGamificationConfigFromStorage, calculateActiveAndNextSeason, getUnlockedAchievementsFromStorage]);
-
-     const saveUnlockedAchievementsToStorage = (unlocked: UnlockedAchievement[]) => {
-        localStorage.setItem(UNLOCKED_ACHIEVEMENTS_STORAGE_KEY, JSON.stringify(unlocked));
-        setUnlockedAchievements(unlocked);
-    };
-
-
-    const saveGamificationConfigToStorage = (config: GamificationConfig) => {
-        const configToSave = {
-            ...config,
-            achievements: config.achievements.map(({ isUnlocked, icon, ...ach }) => ach), // Remove function and icon before saving
-            levelRewards: config.levelRewards.map(({ icon, ...reward }) => reward) // Remove icon component before saving
-        };
-
-        localStorage.setItem(GAMIFICATION_CONFIG_KEY, JSON.stringify(configToSave));
-        
-        const fullConfig = getGamificationConfigFromStorage();
-        setGamificationConfig(fullConfig);
-        setAchievements(fullConfig.achievements);
-        setLevelRewards(fullConfig.levelRewards);
-        setSeasons(fullConfig.seasons);
-        calculateActiveAndNextSeason(fullConfig.seasons);
-    };
+        calculateActiveAndNextSeason(seasons);
+    }, [seasons, calculateActiveAndNextSeason]);
 
     const updateGamificationConfig = async (newConfig: Partial<Pick<GamificationConfig, 'ratingScores' | 'globalXpMultiplier'>>) => {
-        const currentConfig = getGamificationConfigFromStorage();
-        const updatedConfig = { ...currentConfig, ...newConfig };
-        saveGamificationConfigToStorage(updatedConfig);
-        toast({
-            title: "Configurações Salvas!",
-            description: "As regras de pontuação foram atualizadas.",
-        });
+        try {
+            const configDocRef = doc(db, "gamification", "config");
+            await updateDoc(configDocRef, newConfig);
+            await fetchGamificationConfig();
+            toast({ title: "Configurações Salvas!", description: "As regras de pontuação foram atualizadas." });
+        } catch (error) {
+             console.error("Erro ao salvar config:", error);
+             toast({ variant: "destructive", title: "Erro", description: "Não foi possível salvar as configurações." });
+        }
+    };
+    
+    const saveSeasons = async (newSeasons: GamificationSeason[]) => {
+         try {
+            const configDocRef = doc(db, "gamification", "config");
+            await updateDoc(configDocRef, { seasons: newSeasons });
+            await fetchGamificationConfig();
+        } catch (error) {
+             console.error("Erro ao salvar temporadas:", error);
+             toast({ variant: "destructive", title: "Erro", description: "Não foi possível salvar as temporadas." });
+        }
+    }
+    
+    const addSeason = (seasonData: Omit<GamificationSeason, 'id'>) => {
+        const newSeason: GamificationSeason = { ...seasonData, id: crypto.randomUUID() };
+        saveSeasons([...seasons, newSeason]);
+        toast({ title: "Sessão Adicionada!", description: "A nova sessão de gamificação foi criada." });
     };
 
+    const updateSeason = (id: string, seasonData: Partial<Omit<GamificationSeason, 'id'>>) => {
+        const updatedSeasons = seasons.map(s => s.id === id ? { ...s, ...seasonData } : s);
+        saveSeasons(updatedSeasons);
+        toast({ title: "Sessão Atualizada!", description: "As informações da sessão foram salvas." });
+    };
+
+    const deleteSeason = (id: string) => {
+        const updatedSeasons = seasons.filter(s => s.id !== id);
+        saveSeasons(updatedSeasons);
+        toast({ title: "Sessão Removida!", description: "A sessão de gamificação foi removida." });
+    };
+    
+    const updateFullConfig = async (config: GamificationConfig) => {
+        try {
+            const configToSave = {
+                ...config,
+                achievements: config.achievements.map(({ isUnlocked, icon, ...ach }) => ach),
+                levelRewards: config.levelRewards.map(({ icon, ...reward }) => reward),
+            };
+            await setDoc(doc(db, "gamification", "config"), configToSave);
+            await fetchGamificationConfig();
+        } catch (error) {
+            console.error("Erro ao salvar config completa:", error);
+        }
+    };
+    
     const updateAchievement = async (id: string, data: Partial<Omit<Achievement, 'id' | 'icon' | 'color' | 'isUnlocked'>>) => {
-        const currentConfig = getGamificationConfigFromStorage();
-        const updatedAchievements = currentConfig.achievements.map(ach =>
-            ach.id === id ? { ...ach, ...data } : ach
-        );
-        saveGamificationConfigToStorage({ ...currentConfig, achievements: updatedAchievements });
+        const updatedAchievements = achievements.map(ach => ach.id === id ? { ...ach, ...data } : ach);
+        await updateFullConfig({ ...gamificationConfig, achievements: updatedAchievements });
         toast({ title: "Troféu Atualizado!", description: "As informações do troféu foram salvas." });
     };
 
     const updateLevelReward = async (level: number, data: Partial<Omit<LevelReward, 'level' | 'icon' | 'color'>>) => {
-        const currentConfig = getGamificationConfigFromStorage();
-        const updatedLevelRewards = currentConfig.levelRewards.map(reward =>
-            reward.level === level ? { ...reward, ...data } : reward
-        );
-        saveGamificationConfigToStorage({ ...currentConfig, levelRewards: updatedLevelRewards });
+        const updatedLevelRewards = levelRewards.map(reward => reward.level === level ? { ...reward, ...data } : reward);
+        await updateFullConfig({ ...gamificationConfig, levelRewards: updatedLevelRewards });
         toast({ title: "Recompensa Atualizada!", description: "A recompensa do nível foi salva." });
     };
 
-    const addSeason = async (seasonData: Omit<GamificationSeason, 'id'>) => {
-        const currentConfig = getGamificationConfigFromStorage();
-        const newSeason: GamificationSeason = { ...seasonData, id: crypto.randomUUID() };
-        const updatedSeasons = [...currentConfig.seasons, newSeason];
-        saveGamificationConfigToStorage({ ...currentConfig, seasons: updatedSeasons });
-        toast({ title: "Sessão Adicionada!", description: "A nova sessão de gamificação foi criada." });
-    };
-
-    const updateSeason = async (id: string, seasonData: Partial<Omit<GamificationSeason, 'id'>>) => {
-        const currentConfig = getGamificationConfigFromStorage();
-        const updatedSeasons = currentConfig.seasons.map(s => s.id === id ? { ...s, ...seasonData } : s);
-        saveGamificationConfigToStorage({ ...currentConfig, seasons: updatedSeasons });
-        toast({ title: "Sessão Atualizada!", description: "As informações da sessão foram salvas." });
-    };
-
-    const deleteSeason = async (id: string) => {
-        const currentConfig = getGamificationConfigFromStorage();
-        const updatedSeasons = currentConfig.seasons.filter(s => s.id !== id);
-        saveGamificationConfigToStorage({ ...currentConfig, seasons: updatedSeasons });
-        toast({ title: "Sessão Removida!", description: "A sessão de gamificação foi removida." });
-    };
-
-     const checkAndRecordAchievements = useCallback((
-        attendant: Attendant, 
-        allAttendants: Attendant[],
-        allEvaluations: Evaluation[],
-        allAiAnalysis: EvaluationAnalysis[]
-    ) => {
-        const now = new Date();
-        const currentActiveSeason = seasons.find(s => s.active && new Date(s.startDate) <= now && new Date(s.endDate) >= now);
-        if (!currentActiveSeason) return; // Only award achievements during an active season
+    const recalculateAllGamificationData = useCallback(async (allAttendants: Attendant[], allEvaluations: Evaluation[], allAiAnalysis: EvaluationAnalysis[]) => {
+        console.log("GAMIFICATION: Iniciando recalculo geral...");
         
-        const globalMultiplier = gamificationConfig.globalXpMultiplier || 1;
-        const seasonMultiplier = currentActiveSeason?.xpMultiplier ?? 1;
-        const totalMultiplier = globalMultiplier * seasonMultiplier;
-
-        const attendantEvaluations = allEvaluations.filter(ev => ev.attendantId === attendant.id);
-        const currentUnlocked = getUnlockedAchievementsFromStorage();
-        const attendantUnlockedIds = new Set(currentUnlocked.filter(ua => ua.attendantId === attendant.id).map(ua => ua.achievementId));
-
-        const newlyUnlocked: UnlockedAchievement[] = [];
-
-        for (const achievement of achievements) {
-            if (achievement.active && !attendantUnlockedIds.has(achievement.id)) {
-                if (achievement.isUnlocked(attendant, attendantEvaluations, allEvaluations, allAttendants, allAiAnalysis)) {
-                    const newUnlock: UnlockedAchievement = {
-                        id: crypto.randomUUID(),
-                        attendantId: attendant.id,
-                        achievementId: achievement.id,
-                        unlockedAt: now.toISOString(),
-                        xpGained: achievement.xp * totalMultiplier,
-                    };
-                    newlyUnlocked.push(newUnlock);
-                    toast({
-                        title: '🏆 Troféu Desbloqueado!',
-                        description: `${attendant.name} desbloqueou: ${achievement.title} (+${newUnlock.xpGained} XP)`,
-                    })
-                }
-            }
-        }
-
-        if (newlyUnlocked.length > 0) {
-            saveUnlockedAchievementsToStorage([...currentUnlocked, ...newlyUnlocked]);
-        }
-    }, [achievements, seasons, gamificationConfig, toast, getUnlockedAchievementsFromStorage]);
-
-    const recalculateAllGamificationData = useCallback((allAttendants: Attendant[], allEvaluations: Evaluation[], allAiAnalysis: EvaluationAnalysis[]) => {
-        console.log("Iniciando recalculo geral da gamificação...");
-        
-        const currentConfig = getGamificationConfigFromStorage();
+        const currentConfig = await fetchGamificationConfig();
         
         // 1. Recalculate XP for all evaluations
         const updatedEvaluations = allEvaluations.map(ev => {
@@ -265,56 +203,63 @@ export function useGamificationData() {
              const baseScore = getScoreFromRating(ev.nota, currentConfig.ratingScores);
              const seasonMultiplier = seasonForEvaluation?.xpMultiplier ?? 1;
              const totalMultiplier = currentConfig.globalXpMultiplier * seasonMultiplier;
-             return {
-                 ...ev,
-                 xpGained: baseScore * totalMultiplier
-             }
+             return { ...ev, xpGained: baseScore * totalMultiplier };
         });
-        localStorage.setItem('controle_acesso_evaluations', JSON.stringify(updatedEvaluations));
-        
-        // 2. Clear existing unlocked achievements
-        let newUnlockedAchievements: UnlockedAchievement[] = [];
 
-        // 3. Re-evaluate achievements for all attendants
+        const evBatch = writeBatch(db);
+        updatedEvaluations.forEach(ev => {
+            const docRef = doc(db, "evaluations", ev.id);
+            evBatch.update(docRef, { xpGained: ev.xpGained });
+        });
+        await evBatch.commit();
+        console.log(`GAMIFICATION: XP de ${updatedEvaluations.length} avaliações recalculado.`);
+
+        // 2. Re-evaluate achievements for all attendants
+        const currentUnlocked = await fetchUnlockedAchievements();
+        const deleteBatch = writeBatch(db);
+        currentUnlocked.forEach(ua => deleteBatch.delete(doc(db, "unlockedAchievements", ua.id)));
+        await deleteBatch.commit();
+        console.log(`GAMIFICATION: ${currentUnlocked.length} conquistas desbloqueadas antigas removidas.`);
+
+        const addBatch = writeBatch(db);
+        let newUnlockCount = 0;
+
         for (const attendant of allAttendants) {
             const now = new Date();
-            
             const attendantEvaluations = updatedEvaluations.filter(ev => ev.attendantId === attendant.id);
 
             for (const achievement of currentConfig.achievements) {
-                 const evaluationDateForAchievement = attendantEvaluations.length > 0
-                    ? new Date(attendantEvaluations[attendantEvaluations.length - 1].data)
-                    : now;
-
+                const evaluationDateForAchievement = attendantEvaluations.length > 0 ? new Date(attendantEvaluations[attendantEvaluations.length - 1].data) : now;
                 const seasonForAchievement = currentConfig.seasons.find(s => s.active && evaluationDateForAchievement >= new Date(s.startDate) && evaluationDateForAchievement <= new Date(s.endDate));
 
                 if (achievement.active && seasonForAchievement) {
                     if (achievement.isUnlocked(attendant, attendantEvaluations, updatedEvaluations, allAttendants, allAiAnalysis)) {
-                        
                         const seasonMultiplier = seasonForAchievement.xpMultiplier || 1;
                         const totalMultiplier = currentConfig.globalXpMultiplier * seasonMultiplier;
                         
-                        const newUnlock: UnlockedAchievement = {
-                            id: crypto.randomUUID(),
+                        const newUnlock: Omit<UnlockedAchievement, 'id'> = {
                             attendantId: attendant.id,
                             achievementId: achievement.id,
                             unlockedAt: now.toISOString(),
                             xpGained: achievement.xp * totalMultiplier,
                         };
-                        newUnlockedAchievements.push(newUnlock);
+                        const newDocRef = doc(collection(db, "unlockedAchievements"));
+                        addBatch.set(newDocRef, newUnlock);
+                        newUnlockCount++;
                     }
                 }
             }
         }
-        
-        saveUnlockedAchievementsToStorage(newUnlockedAchievements);
-        console.log(`Recálculo concluído. ${newUnlockedAchievements.length} conquistas registradas.`);
 
-    }, [getGamificationConfigFromStorage, achievements]);
+        await addBatch.commit();
+        console.log(`GAMIFICATION: Recálculo concluído. ${newUnlockCount} novas conquistas registradas.`);
+        await fetchUnlockedAchievements(); // Refresh state
 
+    }, [fetchGamificationConfig, fetchUnlockedAchievements]);
 
     return { 
-        gamificationConfig, 
+        gamificationConfig,
+        fetchGamificationConfig,
         updateGamificationConfig,
         achievements,
         updateAchievement,
@@ -327,7 +272,7 @@ export function useGamificationData() {
         activeSeason,
         nextSeason,
         unlockedAchievements,
-        checkAndRecordAchievements,
+        fetchUnlockedAchievements,
         recalculateAllGamificationData,
     };
 }

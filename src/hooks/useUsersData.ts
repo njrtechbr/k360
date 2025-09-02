@@ -6,9 +6,12 @@ import { useToast } from '@/hooks/use-toast';
 import type { User, Role } from '@/lib/types';
 import { ROLES } from '@/lib/types';
 
-const USERS_STORAGE_KEY = "controle_acesso_users";
+// Firebase Imports
+import { auth, db } from "@/lib/firebase";
+import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc } from "firebase/firestore";
+
+
 const SESSION_STORAGE_KEY = "controle_acesso_session";
-const INITIAL_USERS: User[] = [];
 
 type UseUsersDataProps = {
   user: User | null;
@@ -18,50 +21,46 @@ type UseUsersDataProps = {
 export function useUsersData({ user, setUser }: UseUsersDataProps) {
     const [allUsers, setAllUsers] = useState<User[]>([]);
     const { toast } = useToast();
-
-    const getUsersFromStorage = useCallback((): User[] => {
-        if (typeof window === "undefined") return [];
+    
+    const fetchAllUsers = useCallback(async () => {
+        console.log("AUTH: Buscando todos os usuários do Firestore...");
         try {
-            const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
-            if (usersJson) {
-                return JSON.parse(usersJson);
-            }
-            localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(INITIAL_USERS));
-            return INITIAL_USERS;
+            const usersCollection = collection(db, "users");
+            const usersSnapshot = await getDocs(usersCollection);
+            const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+            setAllUsers(usersList);
+            console.log(`AUTH: ${usersList.length} usuários carregados com sucesso.`);
+            return usersList;
         } catch (error) {
-            console.error("Failed to parse users from localStorage", error);
-            return INITIAL_USERS;
+            console.error("AUTH: Erro ao buscar usuários do Firestore:", error);
+            toast({ variant: "destructive", title: "Erro Crítico", description: "Não foi possível carregar os usuários do sistema."})
+            return [];
         }
-    }, []);
+    }, [toast]);
 
-    useEffect(() => {
-        setAllUsers(getUsersFromStorage());
-    }, [getUsersFromStorage]);
-
-    const saveUsersToStorage = (users: User[]) => {
-        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
-        setAllUsers(users);
-    };
-
-    const hasSuperAdmin = (): boolean => {
-        const users = getUsersFromStorage();
-        return users.some(u => u.role === ROLES.SUPERADMIN);
-    };
 
     const updateUser = async (userId: string, userData: { name: string; role: Role; modules: string[] }) => {
-        let updatedUsers = allUsers.map(u => u.id === userId ? { ...u, ...userData } : u);
-        saveUsersToStorage(updatedUsers);
+        try {
+            const userDocRef = doc(db, "users", userId);
+            await updateDoc(userDocRef, userData);
 
-        if (user && user.id === userId) {
-            const updatedSessionUser = { ...user, ...userData };
-            setUser(updatedSessionUser);
-            localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(updatedSessionUser));
+            if (user && user.id === userId) {
+                const updatedSessionUser = { ...user, ...userData };
+                setUser(updatedSessionUser);
+                localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(updatedSessionUser));
+            }
+            
+            await fetchAllUsers();
+
+            toast({
+                title: "Usuário Atualizado!",
+                description: "Os dados do usuário foram atualizados com sucesso.",
+            });
+        } catch (error) {
+             console.error("Erro ao atualizar usuário:", error);
+             toast({ variant: "destructive", title: "Erro", description: "Não foi possível atualizar o usuário."});
+             throw error;
         }
-
-        toast({
-            title: "Usuário Atualizado!",
-            description: "Os dados do usuário foram atualizados com sucesso.",
-        });
     };
 
     const deleteUser = async (userId: string) => {
@@ -73,15 +72,22 @@ export function useUsersData({ user, setUser }: UseUsersDataProps) {
             });
             throw new Error("Auto-exclusão não é permitida");
         }
-
-        let updatedUsers = allUsers.filter(u => u.id !== userId);
-        saveUsersToStorage(updatedUsers);
-
-        toast({
-            title: "Usuário Excluído!",
-            description: "O usuário foi removido do sistema.",
-        });
+        
+        try {
+            // Note: This only deletes the Firestore record, not the Firebase Auth user.
+            // That must be done manually in the Firebase Console for security reasons.
+            await deleteDoc(doc(db, "users", userId));
+            await fetchAllUsers();
+            toast({
+                title: "Usuário Removido!",
+                description: "O registro do usuário foi removido do banco de dados.",
+            });
+        } catch (error) {
+             console.error("Erro ao remover usuário:", error);
+             toast({ variant: "destructive", title: "Erro", description: "Não foi possível remover o usuário."});
+             throw error;
+        }
     };
 
-    return { allUsers, setAllUsers, updateUser, deleteUser, getUsersFromStorage, hasSuperAdmin };
+    return { allUsers, fetchAllUsers, updateUser, deleteUser };
 }
