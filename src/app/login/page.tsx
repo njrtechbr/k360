@@ -46,9 +46,11 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       await login(values.email, values.password);
-      // The useEffect above will handle the redirect
+      // If login is successful, the onAuthStateChanged in the provider
+      // will set the user, and the useEffect above will redirect.
     } catch (error) {
       // Toast is handled in the auth provider
+      console.error("Login failed, staying on login page.");
     }
   }
 

@@ -4,7 +4,7 @@
 import type { ReactNode } from "react";
 import React, { useCallback, useEffect, useState } from "react";
 import type { User, Module, Role, Attendant, Evaluation, EvaluationAnalysis, GamificationConfig, Achievement, LevelReward, GamificationSeason, UnlockedAchievement, EvaluationImport, AttendantImport, Funcao, Setor } from "@/lib/types";
-import { ROLES } from "@/lib/types";
+import { ROLES, INITIAL_MODULES } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 
 // Firebase Imports
@@ -120,6 +120,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser({ id: userDoc.id, ...userDoc.data() } as User);
            await fetchAllUsers();
         } else {
+          // This case handles users that exist in Auth but not in Firestore.
+          // It could be due to a partial registration. We log them out.
+          await signOut(auth);
           setUser(null);
         }
       } else {
@@ -135,7 +138,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (email: string, password: string) => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const userDocRef = doc(db, "users", userCredential.user.uid);
+      const firebaseUser = userCredential.user;
+      const userDocRef = doc(db, "users", firebaseUser.uid);
       const userDoc = await getDoc(userDocRef);
 
       if (userDoc.exists()) {
@@ -146,7 +150,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           description: `Bem-vindo de volta, ${userData.name}.`,
         });
       } else {
-        throw new Error("Dados de usuário não encontrados no Firestore.");
+        // User exists in Auth, but not in Firestore. Create a default record.
+        const defaultUserData: Omit<User, 'id'> = {
+          name: firebaseUser.displayName || 'Usuário',
+          email: firebaseUser.email!,
+          role: ROLES.USER,
+          modules: [INITIAL_MODULES[0].id] // Default to first module
+        };
+        await setDoc(userDocRef, defaultUserData);
+        await signOut(auth); // Log out the user
+        
+        toast({
+            variant: "destructive",
+            title: "Conta Incompleta",
+            description: "Seu registro estava incompleto. Criamos um perfil padrão para você. Por favor, faça login novamente.",
+        });
+        throw new Error("Conta de usuário recriada. Por favor, tente fazer login novamente.");
       }
 
     } catch (error: any) {
@@ -154,7 +173,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({
         variant: "destructive",
         title: "Erro de autenticação",
-        description: "Email ou senha incorretos.",
+        description: error.message || "Email ou senha incorretos.",
       });
       throw error;
     }
@@ -162,16 +181,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const register = async (userData: Omit<User, 'id'>) => {
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
+      // The password will not be stored in Firestore, only used for creation.
+      const userCredential = await createUserWithEmailAndPassword(auth, userData.password, userData.email);
       const firebaseUser = userCredential.user;
 
       await updateFirebaseProfile(firebaseUser, { displayName: userData.name });
 
+      // Don't store password in the database
+      const { password, ...userDataForDb } = userData;
+
       const newUser: Omit<User, 'id'> = {
-        name: userData.name,
-        email: userData.email,
-        role: userData.role,
-        modules: userData.modules,
+        ...userDataForDb
       };
 
       await setDoc(doc(db, "users", firebaseUser.uid), newUser);
@@ -203,6 +223,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     try {
       await signOut(auth);
+      setUser(null);
+      setAllUsers([]);
       toast({
         title: "Logout realizado",
         description: "Você foi desconectado com sucesso.",
@@ -224,9 +246,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     const userDocRef = doc(db, "users", auth.currentUser.uid);
     
+    const dataToUpdate: Partial<Omit<User, 'id' | 'password'>> = {};
+
     if (userData.name) {
         await updateFirebaseProfile(auth.currentUser, { displayName: userData.name });
-        await updateDoc(userDocRef, { name: userData.name });
+        dataToUpdate.name = userData.name;
+    }
+
+    if (Object.keys(dataToUpdate).length > 0) {
+        await updateDoc(userDocRef, dataToUpdate);
     }
 
     if (userData.password) {
@@ -245,11 +273,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const hasSuperAdmin = async (): Promise<boolean> => {
-      if(authLoading && allUsers.length === 0) {
-        const users = await fetchAllUsers();
-        return users.some(u => u.role === ROLES.SUPERADMIN);
-      }
-      return allUsers.some(u => u.role === ROLES.SUPERADMIN);
+      const usersCol = collection(db, 'users');
+      const q = query(usersCol, where("role", "==", ROLES.SUPERADMIN));
+      const snapshot = await getCountFromServer(q);
+      return snapshot.data().count > 0;
   };
   
   const updateUser = async (userId: string, userData: { name: string; role: Role; modules: string[] }) => {
