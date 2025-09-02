@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useAuth } from "@/providers/AuthProvider";
@@ -202,24 +201,6 @@ export default function ImportarAvaliacoesPage() {
         setIsProcessing(false);
     };
 
-    const formatDate = (dateStr: string): string => {
-        try {
-            // Handles format "DD/MM/YYYY, HH:mm"
-            const [datePart, timePart] = dateStr.split(', ');
-            if (!datePart || !timePart) return "Data inválida";
-
-            const [day, month, year] = datePart.split('/');
-            if (!day || !month || !year) return "Data inválida";
-            
-            const date = new Date(`${year}-${month}-${day}T${timePart}:00`);
-            if (isNaN(date.getTime())) return "Data inválida";
-            
-            return format(date, 'dd/MM/yyyy');
-        } catch {
-            return 'Data inválida';
-        }
-    }
-    
     if (loading) {
         return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
     }
@@ -312,7 +293,7 @@ export default function ImportarAvaliacoesPage() {
                                         <TableRow key={index}>
                                             <TableCell><Badge variant="outline">{review.agentName}</Badge></TableCell>
                                             <TableCell className="font-medium">{attendants.find(a => a.id === review.attendantId)?.name}</TableCell>
-                                            <TableCell>{formatDate(review.date)}</TableCell>
+                                            <TableCell>{format(new Date(review.date), 'dd/MM/yyyy')}</TableCell>
                                             <TableCell className="text-right font-bold">{review.rating}</TableCell>
                                         </TableRow>
                                     ))}
