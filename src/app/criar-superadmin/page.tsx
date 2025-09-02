@@ -20,6 +20,7 @@ import Link from "next/link";
 import { useAuth } from "@/providers/AuthProvider";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ShieldAlert } from "lucide-react";
+import { useEffect, useState } from "react";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
@@ -28,8 +29,19 @@ const formSchema = z.object({
 });
 
 export default function CreateSuperAdminPage() {
-  const { register, hasSuperAdmin } = useAuth();
-  const superAdminExists = hasSuperAdmin();
+  const { register, hasSuperAdmin, loading } = useAuth();
+  const [superAdminExists, setSuperAdminExists] = useState(true); // Default to true to prevent flash
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    if (!loading) {
+      hasSuperAdmin().then(exists => {
+        setSuperAdminExists(exists);
+        setChecking(false);
+      });
+    }
+  }, [loading, hasSuperAdmin]);
+
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -49,10 +61,17 @@ export default function CreateSuperAdminPage() {
     }
   }
 
-  /*
+  if (checking) {
+      return (
+          <div className="flex items-center justify-center min-h-screen">
+              <p>Verificando...</p>
+          </div>
+      )
+  }
+
   if (superAdminExists) {
     return (
-        <div className="flex items-center justify-center py-12 px-4">
+        <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-800 px-4">
              <Alert variant="destructive" className="max-w-md">
                 <ShieldAlert className="h-4 w-4" />
                 <AlertTitle>Acesso Negado</AlertTitle>
@@ -66,7 +85,7 @@ export default function CreateSuperAdminPage() {
         </div>
     )
   }
-  */
+
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-800 px-4 py-8">

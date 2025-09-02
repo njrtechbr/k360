@@ -17,7 +17,7 @@ import {
     updateProfile as updateFirebaseProfile,
     updatePassword
 } from "firebase/auth";
-import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc, writeBatch } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc, writeBatch, query, where, getCountFromServer } from "firebase/firestore";
 
 // Hooks
 import { useModulesData } from "@/hooks/useModulesData";
@@ -106,8 +106,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchAllUsers = useCallback(async () => {
     const usersCollection = collection(db, "users");
     const usersSnapshot = await getDocs(usersCollection);
-    const usersList = usersSnapshot.docs.map(doc => doc.data() as User);
+    const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
     setAllUsers(usersList);
+    return usersList;
   }, []);
 
   useEffect(() => {
@@ -118,12 +119,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
           setUser({ id: userDoc.id, ...userDoc.data() } as User);
+           await fetchAllUsers();
         } else {
-          // This case might happen if a user is created in Auth but not in Firestore.
-          // Or if the user is deleted from firestore but not auth.
           setUser(null);
         }
-        await fetchAllUsers(); // Fetch all users when auth state changes and is logged in
       } else {
         setUser(null);
         setAllUsers([]);
@@ -153,25 +152,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const register = async (userData: Omit<User, 'id'>) => {
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password!);
+      const userCredential = await createUserWithEmailAndPassword(auth, userData.password ? userData.password : "123456", userData.email);
       const firebaseUser = userCredential.user;
 
       await updateFirebaseProfile(firebaseUser, { displayName: userData.name });
 
-      const newUser: User = {
-        id: firebaseUser.uid,
+      const newUser: Omit<User, 'id'> = {
         name: userData.name,
         email: userData.email,
         role: userData.role,
         modules: userData.modules,
       };
 
-      await setDoc(doc(db, "users", firebaseUser.uid), {
-        name: newUser.name,
-        email: newUser.email,
-        role: newUser.role,
-        modules: newUser.modules,
-      });
+      await setDoc(doc(db, "users", firebaseUser.uid), newUser);
 
       await fetchAllUsers(); // Refresh user list
 
@@ -182,10 +175,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
     } catch (error: any) {
       console.error("Registration Error:", error);
+       let description = "Ocorreu um erro desconhecido.";
+      if (error.code === 'auth/email-already-in-use') {
+        description = "Este endereço de email já está em uso.";
+      } else if (error.code === 'auth/weak-password') {
+        description = "A senha é muito fraca. Use pelo menos 6 caracteres.";
+      }
       toast({
         variant: "destructive",
         title: "Erro no Registro",
-        description: error.message,
+        description,
       });
       throw error;
     }
@@ -224,7 +223,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         await updatePassword(auth.currentUser, userData.password);
     }
     
-    // Fetch the updated document to update local state
     const updatedDoc = await getDoc(userDocRef);
     if(updatedDoc.exists()) {
         setUser({ id: updatedDoc.id, ...updatedDoc.data() } as User);
@@ -237,12 +235,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const hasSuperAdmin = async (): Promise<boolean> => {
-      // In a real Firestore app, we would query the collection
-      // For now, we can check the fetched allUsers list
-      if(loading) {
-          // if still loading, we can't know for sure, assume no for now
-          // to allow creation page to render. A better approach would be a dedicated loading state for this check
-          return false; 
+      if(loading && allUsers.length === 0) {
+        const users = await fetchAllUsers();
+        return users.some(u => u.role === ROLES.SUPERADMIN);
       }
       return allUsers.some(u => u.role === ROLES.SUPERADMIN);
   };
