@@ -35,7 +35,7 @@ interface AuthContextType {
   updateAttendant: (attendantId: string, attendantData: Partial<Omit<Attendant, 'id'>>) => Promise<void>;
   deleteAttendants: (attendantIds: string[]) => Promise<void>;
   evaluations: Evaluation[];
-  addEvaluation: (evaluationData: Omit<Evaluation, 'id' | 'xpGained'>) => Promise<void>;
+  addEvaluation: (evaluationData: Omit<Evaluation, 'id' | 'xpGained'>) => Promise<Evaluation>;
   deleteEvaluations: (evaluationIds: string[]) => Promise<void>;
   aiAnalysisResults: EvaluationAnalysis[];
   lastAiAnalysis: string | null;
@@ -162,12 +162,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     deleteSetor,
   } = useRhConfigData();
 
-  const handleAddEvaluation = useCallback(async (evaluationData: Omit<Evaluation, 'id' | 'xpGained'>) => {
+  const handleAddEvaluation = useCallback(async (evaluationData: Omit<Evaluation, 'id' | 'xpGained'>): Promise<Evaluation> => {
     const newEvaluation = await addEvaluationFromHook(evaluationData);
     const attendant = attendants.find(a => a.id === newEvaluation.attendantId);
     if (attendant) {
         checkAndRecordAchievements(attendant, attendants, [...evaluations, newEvaluation], aiAnalysisResults);
     }
+    return newEvaluation;
   }, [addEvaluationFromHook, attendants, evaluations, aiAnalysisResults, checkAndRecordAchievements]);
 
   const handleDeleteEvaluations = async (evaluationIds: string[]) => {

@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Papa from "papaparse";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { FileUp, Users, Check, Wand2, ArrowRight } from "lucide-react";
+import { FileUp, Users, Check, Wand2, ArrowRight, Sparkles } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
 import type { Evaluation } from "@/lib/types";
+import { suggestAttendants } from "@/ai/flows/suggest-attendant-flow";
 
 type CsvRow = {
     Data: string;
@@ -41,6 +42,7 @@ export default function ImportarAvaliacoesPage() {
     const [parsedData, setParsedData] = useState<CsvRow[]>([]);
     const [agentMap, setAgentMap] = useState<Record<string, string>>({});
     const [isProcessing, setIsProcessing] = useState(false);
+    const [isSuggesting, setIsSuggesting] = useState(false);
     const [importProgress, setImportProgress] = useState(0);
 
     const uniqueAgents = useMemo(() => {
@@ -84,6 +86,34 @@ export default function ImportarAvaliacoesPage() {
     const handleMappingChange = (agentName: string, attendantId: string) => {
         setAgentMap(prev => ({ ...prev, [agentName]: attendantId }));
     };
+    
+    const handleAiSuggestion = async () => {
+        setIsSuggesting(true);
+        try {
+            const suggestions = await suggestAttendants({ 
+                agentNames: uniqueAgents, 
+                attendants: attendants.map(a => ({ id: a.id, name: a.name })) 
+            });
+            
+            const newAgentMap = { ...agentMap };
+            let suggestionsMade = 0;
+            for (const agentName in suggestions) {
+                const attendantId = suggestions[agentName];
+                if (attendantId) {
+                    newAgentMap[agentName] = attendantId;
+                    suggestionsMade++;
+                }
+            }
+            setAgentMap(newAgentMap);
+            toast({ title: "Sugestões Aplicadas!", description: `${suggestionsMade} mapeamentos foram sugeridos pela IA.` });
+
+        } catch (error) {
+            console.error("AI Suggestion Error:", error);
+            toast({ variant: "destructive", title: "Erro na Sugestão de IA", description: "Não foi possível obter sugestões da IA. Tente novamente." });
+        } finally {
+            setIsSuggesting(false);
+        }
+    }
 
     const mappedReviews: MappedReview[] = useMemo(() => {
         return parsedData
@@ -93,8 +123,13 @@ export default function ImportarAvaliacoesPage() {
                 
                 // Handles format "DD/MM/YYYY, HH:mm"
                 const [datePart, timePart] = row.Data.split(', ');
+                if (!datePart || !timePart) return null;
+
                 const [day, month, year] = datePart.split('/');
+                if (!day || !month || !year) return null;
+                
                 const date = new Date(`${year}-${month}-${day}T${timePart || '00:00:00'}`);
+                if (isNaN(date.getTime())) return null;
 
                 return {
                     agentName: row.Agente,
@@ -166,17 +201,18 @@ export default function ImportarAvaliacoesPage() {
         setIsProcessing(false);
     };
 
-    const formatDate = (dateStr: string) => {
+    const formatDate = (dateStr: string): string => {
         try {
-            const date = new Date(dateStr);
-            if (isNaN(date.getTime())) {
-                const parts = dateStr.match(/(\d{2})\/(\d{2})\/(\d{4}), (\d{2}):(\d{2})/);
-                if (parts) {
-                    const [, day, month, year] = parts;
-                    return `${day}/${month}/${year}`;
-                }
-                return 'Data inválida';
-            }
+            // Handles format "DD/MM/YYYY, HH:mm"
+            const [datePart, timePart] = dateStr.split(', ');
+            if (!datePart || !timePart) return "Data inválida";
+
+            const [day, month, year] = datePart.split('/');
+            if (!day || !month || !year) return "Data inválida";
+            
+            const date = new Date(`${year}-${month}-${day}T${timePart}:00`);
+            if (isNaN(date.getTime())) return "Data inválida";
+            
             return format(date, 'dd/MM/yyyy');
         } catch {
             return 'Data inválida';
@@ -213,8 +249,16 @@ export default function ImportarAvaliacoesPage() {
             {uniqueAgents.length > 0 && (
                 <Card className="shadow-lg animate-in fade-in-0 slide-in-from-bottom-5 duration-500">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><Users /> 2. Mapeamento de Agentes</CardTitle>
-                        <CardDescription>Associe cada agente do arquivo CSV a um atendente cadastrado no sistema.</CardDescription>
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <CardTitle className="flex items-center gap-2"><Users /> 2. Mapeamento de Agentes</CardTitle>
+                                <CardDescription>Associe cada agente do arquivo CSV a um atendente cadastrado no sistema.</CardDescription>
+                            </div>
+                            <Button onClick={handleAiSuggestion} disabled={isSuggesting || isProcessing}>
+                                <Sparkles className="mr-2 h-4 w-4" />
+                                {isSuggesting ? "Sugerindo..." : "Sugerir com IA"}
+                            </Button>
+                        </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         {uniqueAgents.map(agent => (
