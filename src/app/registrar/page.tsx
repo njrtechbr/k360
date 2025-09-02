@@ -74,8 +74,8 @@ export default function RegisterPage() {
   const publicRoles = [ROLES.USER, ROLES.SUPERVISOR];
 
   return (
-    <div className="flex items-center justify-center py-12 px-4">
-      <Card className="w-full max-w-md shadow-lg">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-800 px-4 py-8">
+      <Card className="w-full max-w-md shadow-2xl rounded-2xl animate-in fade-in zoom-in-95">
         <CardHeader>
           <CardTitle className="text-2xl font-bold">Criar uma conta</CardTitle>
           <CardDescription>Insira seus dados para se registrar no sistema.</CardDescription>
@@ -157,39 +157,41 @@ export default function RegisterPage() {
                         Selecione os módulos que você precisará acessar.
                       </FormDescription>
                     </div>
-                    {activeModules.map((item) => (
-                      <FormField
-                        key={item.id}
-                        control={form.control}
-                        name="modules"
-                        render={({ field }) => {
-                          return (
-                            <FormItem
-                              key={item.id}
-                              className="flex flex-row items-start space-x-3 space-y-0"
-                            >
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value?.includes(item.id)}
-                                  onCheckedChange={(checked) => {
-                                    return checked
-                                      ? field.onChange([...(field.value || []), item.id])
-                                      : field.onChange(
-                                          (field.value || [])?.filter(
-                                            (value) => value !== item.id
-                                          )
-                                        )
-                                  }}
-                                />
-                              </FormControl>
-                              <FormLabel className="font-normal capitalize">
-                                {item.name}
-                              </FormLabel>
-                            </FormItem>
-                          )
-                        }}
-                      />
-                    ))}
+                    <div className="max-h-32 overflow-y-auto pr-2 space-y-2">
+                        {activeModules.map((item) => (
+                        <FormField
+                            key={item.id}
+                            control={form.control}
+                            name="modules"
+                            render={({ field }) => {
+                            return (
+                                <FormItem
+                                key={item.id}
+                                className="flex flex-row items-start space-x-3 space-y-0"
+                                >
+                                <FormControl>
+                                    <Checkbox
+                                    checked={field.value?.includes(item.id)}
+                                    onCheckedChange={(checked) => {
+                                        return checked
+                                        ? field.onChange([...(field.value || []), item.id])
+                                        : field.onChange(
+                                            (field.value || [])?.filter(
+                                                (value) => value !== item.id
+                                            )
+                                            )
+                                    }}
+                                    />
+                                </FormControl>
+                                <FormLabel className="font-normal capitalize">
+                                    {item.name}
+                                </FormLabel>
+                                </FormItem>
+                            )
+                            }}
+                        />
+                        ))}
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -210,5 +212,3 @@ export default function RegisterPage() {
     </div>
   );
 }
-
-    

@@ -6,7 +6,7 @@ import Link from 'next/link';
 
 export default function Home() {
   return (
-    <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] bg-background">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-800 px-4 py-8">
       <div className="container mx-auto px-4 py-16 text-center">
         <h1 className="text-4xl md:text-6xl font-bold font-heading bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60 pb-4">
           Koerner 360

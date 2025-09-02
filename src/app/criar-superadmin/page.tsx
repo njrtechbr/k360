@@ -69,8 +69,8 @@ export default function CreateSuperAdminPage() {
   */
 
   return (
-    <div className="flex items-center justify-center py-12 px-4">
-      <Card className="w-full max-w-md shadow-lg">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-800 px-4 py-8">
+      <Card className="w-full max-w-md shadow-2xl rounded-2xl animate-in fade-in zoom-in-95">
         <CardHeader>
           <CardTitle className="text-2xl font-bold">Criar Super Admin</CardTitle>
           <CardDescription>Crie o primeiro usuário com acesso total ao sistema.</CardDescription>

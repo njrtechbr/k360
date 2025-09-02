@@ -12,9 +12,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     const { state } = useSidebar();
     const pathname = usePathname();
 
-    const isSurveyPage = pathname === '/survey';
-
-    if (isSurveyPage) {
+    const noLayoutPages = ['/survey', '/login', '/registrar', '/criar-superadmin', '/'];
+    const isAuthOrSurveyPage = noLayoutPages.includes(pathname);
+    
+    // Special case for root, if it's exactly the root, treat as no layout.
+    // The previous check handles `/` already, but this is for clarity.
+    if (isAuthOrSurveyPage) {
         return <>{children}</>;
     }
     
