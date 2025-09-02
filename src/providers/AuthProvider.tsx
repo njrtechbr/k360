@@ -10,6 +10,7 @@ import { useModulesData } from "@/hooks/useModulesData";
 import { useAttendantsData } from "@/hooks/useAttendantsData";
 import { useEvaluationsData } from "@/hooks/useEvaluationsData";
 import { useGamificationData } from "@/hooks/useGamificationData";
+import { useToast } from "./../hooks/use-toast";
 
 interface AuthContextType {
   user: User | null;
@@ -34,6 +35,7 @@ interface AuthContextType {
   deleteAttendant: (attendantId: string) => Promise<void>;
   evaluations: Evaluation[];
   addEvaluation: (evaluationData: Omit<Evaluation, 'id' | 'xpGained'>) => Promise<void>;
+  deleteEvaluations: (evaluationIds: string[]) => Promise<void>;
   aiAnalysisResults: EvaluationAnalysis[];
   lastAiAnalysis: string | null;
   runAiAnalysis: () => Promise<void>;
@@ -63,7 +65,7 @@ interface AuthContextType {
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-
+  const { toast } = useToast();
   const {
     user,
     setUser,
@@ -118,6 +120,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const {
     evaluations,
     addEvaluation: addEvaluationFromHook,
+    deleteEvaluations: deleteEvaluationsFromHook,
     aiAnalysisResults,
     lastAiAnalysis,
     isAiAnalysisRunning,
@@ -140,6 +143,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         checkAndRecordAchievements(attendant, attendants, [...evaluations, newEvaluation], aiAnalysisResults);
     }
   }, [addEvaluationFromHook, attendants, evaluations, aiAnalysisResults, checkAndRecordAchievements]);
+
+  const handleDeleteEvaluations = async (evaluationIds: string[]) => {
+    try {
+      await deleteEvaluationsFromHook(evaluationIds);
+      recalculateAllGamificationData(attendants, evaluations.filter(e => !evaluationIds.includes(e.id)), aiAnalysisResults);
+      toast({
+        title: "Avaliações Excluídas",
+        description: `${evaluationIds.length} avaliações foram removidas com sucesso.`,
+      });
+    } catch(error) {
+       toast({
+        variant: "destructive",
+        title: "Erro ao Excluir",
+        description: `Não foi possível remover as avaliações.`,
+      });
+    }
+  }
 
 
   const registerUser = async (userData: Omit<User, "id">) => {
@@ -212,6 +232,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     deleteAttendant,
     evaluations,
     addEvaluation: handleAddEvaluation,
+    deleteEvaluations: handleDeleteEvaluations,
     aiAnalysisResults,
     lastAiAnalysis,
     runAiAnalysis,

@@ -164,6 +164,17 @@ export function useEvaluationsData({ gamificationConfig, activeSeason }: UseEval
         return newEvaluation;
     };
 
+    const deleteEvaluations = async (evaluationIds: string[]) => {
+        const currentEvaluations = getEvaluationsFromStorage();
+        const evaluationsToKeep = currentEvaluations.filter(ev => !evaluationIds.includes(ev.id));
+        saveEvaluationsToStorage(evaluationsToKeep);
+
+        // Also delete AI analysis associated with these evaluations
+        const currentAiAnalysis = getAiAnalysisFromStorage();
+        const aiAnalysisToKeep = currentAiAnalysis.filter(ar => !evaluationIds.includes(ar.evaluationId));
+        saveAiAnalysisToStorage(aiAnalysisToKeep);
+    };
+
      const addImportRecord = (importData: Omit<EvaluationImport, 'id' | 'importedAt'>, userId: string): EvaluationImport => {
         const newImport: EvaluationImport = {
             ...importData,
@@ -177,10 +188,14 @@ export function useEvaluationsData({ gamificationConfig, activeSeason }: UseEval
     };
 
     const revertImport = (importId: string) => {
-        const currentEvaluations = getEvaluationsFromStorage();
-        const evaluationsToKeep = currentEvaluations.filter(ev => ev.importId !== importId);
-        saveEvaluationsToStorage(evaluationsToKeep);
+        const importToRevert = getEvaluationImportsFromStorage().find(i => i.id === importId);
+        if (!importToRevert) {
+            toast({ variant: 'destructive', title: 'Erro', description: 'Importação não encontrada.' });
+            return;
+        }
 
+        deleteEvaluations(importToRevert.evaluationIds);
+        
         const currentImports = getEvaluationImportsFromStorage();
         const importsToKeep = currentImports.filter(imp => imp.id !== importId);
         saveEvaluationImportsToStorage(importsToKeep);
@@ -280,6 +295,7 @@ export function useEvaluationsData({ gamificationConfig, activeSeason }: UseEval
     return {
         evaluations,
         addEvaluation,
+        deleteEvaluations,
         aiAnalysisResults,
         lastAiAnalysis,
         isAiAnalysisRunning,
