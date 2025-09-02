@@ -93,12 +93,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
 
-  // Still using these hooks for their respective data logic, but will adapt them to use Firebase.
-  // For now, only user auth is being migrated.
+  // Hooks
   const { modules, addModule, updateModule, toggleModuleStatus, deleteModule } = useModulesData();
-  const { attendants, addAttendant, updateAttendant, deleteAttendants, attendantImports, addAttendantImportRecord, revertAttendantImport } = useAttendantsData();
+  const { loadingAttendants, attendants, addAttendant, updateAttendant, deleteAttendants, attendantImports, addAttendantImportRecord, revertAttendantImport } = useAttendantsData(!!user);
   const { gamificationConfig, updateGamificationConfig, achievements, updateAchievement, levelRewards, updateLevelReward, seasons, addSeason, updateSeason, deleteSeason, activeSeason, nextSeason, unlockedAchievements, checkAndRecordAchievements, recalculateAllGamificationData } = useGamificationData();
   const { evaluations, addEvaluation: addEvaluationFromHook, deleteEvaluations: deleteEvaluationsFromHook, aiAnalysisResults, lastAiAnalysis, isAiAnalysisRunning, runAiAnalysis, analysisProgress, isProgressModalOpen, setIsProgressModalOpen, evaluationImports, addImportRecord, revertImport } = useEvaluationsData({ gamificationConfig, activeSeason });
   const { funcoes, setores, addFuncao, updateFuncao, deleteFuncao, addSetor, updateSetor, deleteSetor } = useRhConfigData();
@@ -113,7 +112,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setLoading(true);
+      setAuthLoading(true);
       if (firebaseUser) {
         const userDocRef = doc(db, "users", firebaseUser.uid);
         const userDoc = await getDoc(userDocRef);
@@ -127,7 +126,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(null);
         setAllUsers([]);
       }
-      setLoading(false);
+      setAuthLoading(false);
     });
 
     return () => unsubscribe();
@@ -235,7 +234,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const hasSuperAdmin = async (): Promise<boolean> => {
-      if(loading && allUsers.length === 0) {
+      if(authLoading && allUsers.length === 0) {
         const users = await fetchAllUsers();
         return users.some(u => u.role === ROLES.SUPERADMIN);
       }
@@ -289,6 +288,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
     }
   }
+  
+  const loading = authLoading || loadingAttendants;
 
   const value = {
     user,

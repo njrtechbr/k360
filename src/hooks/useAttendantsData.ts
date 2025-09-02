@@ -4,79 +4,38 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import type { Attendant, AttendantImport } from '@/lib/types';
-import { ATTENDANT_STATUS } from '@/lib/types';
+import { db } from '@/lib/firebase';
+import { collection, doc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch, query } from 'firebase/firestore';
 
-const ATTENDANTS_STORAGE_KEY = "controle_acesso_attendants";
-const EVALUATIONS_STORAGE_KEY = "controle_acesso_evaluations";
+
 const ATTENDANT_IMPORTS_STORAGE_KEY = "controle_acesso_attendant_imports";
 
-
-const parseDate = (dateString: string | null) => {
-    if (!dateString || dateString.toLowerCase() === 'não informado' || dateString.split('/').length !== 3) {
-      return new Date(0).toISOString();
-    }
-    const parts = dateString.split('/');
-    return new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10)).toISOString();
-};
-
-
-const INITIAL_ATTENDANTS: Attendant[] = [
-  {
-    id: "65a585d7-adce-4da7-837e-74c25516c7ad",
-    name: "Ana Flávia de Souza",
-    email: "anaflaviadesouza@outlook.com",
-    funcao: "Escrevente II",
-    setor: "escritura",
-    status: ATTENDANT_STATUS.ACTIVE,
-    avatarUrl: "",
-    telefone: "77998050854",
-    portaria: "116º",
-    situacao: "Nomeação",
-    dataAdmissao: parseDate("23/02/2023"),
-    dataNascimento: parseDate("12/10/2002"),
-    rg: "2235185304 SSP/BA",
-    cpf: "08727591565",
-  },
-  {
-    id: "c1a09a74-7662-4fc5-be5f-c0c7288ad03b",
-    name: "Ana Nery Conceição dos Santos",
-    email: "ananeryconceicao030@gmail.com",
-    funcao: "Auxiliar de cartório",
-    setor: "protesto",
-    status: ATTENDANT_STATUS.ACTIVE,
-    avatarUrl: "",
-    telefone: "77999795192",
-    portaria: "160º",
-    situacao: "Nomeação",
-    dataAdmissao: parseDate("14/05/2024"),
-    dataNascimento: parseDate("14/10/1983"),
-    rg: "1164544900 SSP/BA",
-    cpf: "02356995510",
-  },
-   // ... all other attendants from the original file
-];
-
-export function useAttendantsData() {
+export function useAttendantsData(isAuthenticated: boolean) {
     const [attendants, setAttendants] = useState<Attendant[]>([]);
+    const [loading, setLoading] = useState(true);
     const [attendantImports, setAttendantImports] = useState<AttendantImport[]>([]);
     const { toast } = useToast();
 
-    const getAttendantsFromStorage = useCallback((): Attendant[] => {
-        if (typeof window === "undefined") return [];
-        try {
-            const attendantsJson = localStorage.getItem(ATTENDANTS_STORAGE_KEY);
-            if (attendantsJson) {
-                const parsed = JSON.parse(attendantsJson);
-                if (parsed && parsed.length > 0) return parsed;
-            }
-            localStorage.setItem(ATTENDANTS_STORAGE_KEY, JSON.stringify(INITIAL_ATTENDANTS));
-            return INITIAL_ATTENDANTS;
-        } catch (error) {
-            console.error("Failed to parse attendants from localStorage", error);
-            localStorage.setItem(ATTENDANTS_STORAGE_KEY, JSON.stringify(INITIAL_ATTENDANTS));
-            return INITIAL_ATTENDANTS;
+    const fetchAttendants = useCallback(async () => {
+        if (!isAuthenticated) {
+            setAttendants([]);
+            setLoading(false);
+            return;
         }
-    }, []);
+        setLoading(true);
+        try {
+            const attendantsCollection = collection(db, "attendants");
+            const attendantsSnapshot = await getDocs(attendantsCollection);
+            const attendantsList = attendantsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Attendant));
+            setAttendants(attendantsList);
+        } catch (error) {
+            console.error("Error fetching attendants from Firestore: ", error);
+            toast({ variant: "destructive", title: "Erro ao carregar atendentes", description: "Não foi possível buscar os dados do Firestore." });
+        } finally {
+            setLoading(false);
+        }
+    }, [isAuthenticated, toast]);
+
 
      const getAttendantImportsFromStorage = useCallback((): AttendantImport[] => {
         if (typeof window === "undefined") return [];
@@ -91,14 +50,10 @@ export function useAttendantsData() {
 
 
     useEffect(() => {
-        setAttendants(getAttendantsFromStorage());
+        fetchAttendants();
         setAttendantImports(getAttendantImportsFromStorage());
-    }, [getAttendantsFromStorage, getAttendantImportsFromStorage]);
+    }, [fetchAttendants, getAttendantImportsFromStorage]);
 
-    const saveAttendantsToStorage = (attendantsToSave: Attendant[]) => {
-        localStorage.setItem(ATTENDANTS_STORAGE_KEY, JSON.stringify(attendantsToSave));
-        setAttendants(attendantsToSave);
-    }
 
      const saveAttendantImportsToStorage = (importsToSave: AttendantImport[]) => {
         localStorage.setItem(ATTENDANT_IMPORTS_STORAGE_KEY, JSON.stringify(importsToSave));
@@ -106,66 +61,53 @@ export function useAttendantsData() {
     }
 
     const addAttendant = async (attendantData: Attendant): Promise<Attendant> => {
-        const currentAttendants = getAttendantsFromStorage();
-        if (currentAttendants.some(a => a.id === attendantData.id)) {
-            toast({ variant: "destructive", title: "Erro ao adicionar atendente", description: "Um atendente com este ID já existe." });
-            throw new Error("Atendente com este ID já existe");
+        try {
+            const attendantDocRef = doc(db, "attendants", attendantData.id);
+            await setDoc(attendantDocRef, attendantData);
+            await fetchAttendants(); // Refresh the list
+            return attendantData;
+        } catch(error) {
+            console.error("Error adding attendant: ", error);
+            toast({ variant: "destructive", title: "Erro ao adicionar atendente" });
+            throw error;
         }
-        if (currentAttendants.some(a => a.email.toLowerCase() === attendantData.email.toLowerCase())) {
-            toast({ variant: "destructive", title: "Erro ao adicionar atendente", description: "Um atendente com este email já existe." });
-            throw new Error("Atendente já existe");
-        }
-        if (currentAttendants.some(a => a.cpf === attendantData.cpf && a.cpf !== '')) {
-            toast({ variant: "destructive", title: "Erro ao adicionar atendente", description: "Um atendente com este CPF já existe." });
-            throw new Error("CPF já existe");
-        }
-
-        const newAttendant: Attendant = {
-            ...attendantData,
-            id: attendantData.id || crypto.randomUUID(), // Use provided ID or generate a new one
-        }
-
-        const newAttendants = [...currentAttendants, newAttendant];
-        saveAttendantsToStorage(newAttendants);
-        return newAttendant;
     };
 
     const updateAttendant = async (attendantId: string, attendantData: Partial<Omit<Attendant, 'id'>>) => {
-        const currentAttendants = getAttendantsFromStorage();
-
-        if (attendantData.email && currentAttendants.some(a => a.id !== attendantId && a.email.toLowerCase() === attendantData.email?.toLowerCase())) {
-            toast({ variant: "destructive", title: "Erro", description: "Email já cadastrado." });
-            throw new Error("Email já existe");
+         try {
+            const attendantDocRef = doc(db, "attendants", attendantId);
+            await updateDoc(attendantDocRef, attendantData);
+            await fetchAttendants(); // Refresh the list
+            toast({
+                title: "Atendente Atualizado!",
+                description: "Os dados do atendente foram atualizados."
+            });
+        } catch (error) {
+             console.error("Error updating attendant: ", error);
+            toast({ variant: "destructive", title: "Erro ao atualizar atendente" });
+            throw error;
         }
-        if (attendantData.cpf && attendantData.cpf !== '' && currentAttendants.some(a => a.id !== attendantId && a.cpf === attendantData.cpf)) {
-            toast({ variant: "destructive", title: "Erro", description: "CPF já cadastrado." });
-            throw new Error("CPF já existe");
-        }
-
-        const newAttendants = currentAttendants.map(a =>
-            a.id === attendantId ? { ...a, ...attendantData } : a
-        );
-        saveAttendantsToStorage(newAttendants);
-        toast({
-            title: "Atendente Atualizado!",
-            description: "Os dados do atendente foram atualizados."
-        });
     };
 
     const deleteAttendants = async (attendantIds: string[]) => {
-        const currentAttendants = getAttendantsFromStorage();
-        const newAttendants = currentAttendants.filter(a => !attendantIds.includes(a.id));
-        saveAttendantsToStorage(newAttendants);
-        
-        const evaluationsJson = localStorage.getItem(EVALUATIONS_STORAGE_KEY);
-        const currentEvaluations = evaluationsJson ? JSON.parse(evaluationsJson) : [];
-        const newEvaluations = currentEvaluations.filter((e: any) => !attendantIds.includes(e.attendantId));
-        localStorage.setItem(EVALUATIONS_STORAGE_KEY, JSON.stringify(newEvaluations));
-
-        toast({
-            title: "Atendentes Removidos!",
-            description: `${attendantIds.length} atendente(s) e suas avaliações foram removidos.`
-        });
+        if(attendantIds.length === 0) return;
+        try {
+            const batch = writeBatch(db);
+            attendantIds.forEach(id => {
+                const docRef = doc(db, "attendants", id);
+                batch.delete(docRef);
+            });
+            await batch.commit();
+            await fetchAttendants(); // Refresh the list
+            toast({
+                title: "Atendentes Removidos!",
+                description: `${attendantIds.length} atendente(s) foram removidos.`
+            });
+        } catch (error) {
+            console.error("Error deleting attendants: ", error);
+            toast({ variant: "destructive", title: "Erro ao remover atendentes" });
+            throw error;
+        }
     };
 
     const addAttendantImportRecord = (importData: Omit<AttendantImport, 'id' | 'importedAt'>, userId: string): AttendantImport => {
@@ -180,14 +122,14 @@ export function useAttendantsData() {
         return newImport;
     };
 
-    const revertAttendantImport = (importId: string) => {
+    const revertAttendantImport = async (importId: string) => {
         const importToRevert = getAttendantImportsFromStorage().find(i => i.id === importId);
         if (!importToRevert) {
             toast({ variant: 'destructive', title: 'Erro', description: 'Importação não encontrada.' });
             return;
         }
 
-        deleteAttendants(importToRevert.attendantIds);
+        await deleteAttendants(importToRevert.attendantIds);
         
         const currentImports = getAttendantImportsFromStorage();
         const importsToKeep = currentImports.filter(imp => imp.id !== importId);
@@ -199,5 +141,5 @@ export function useAttendantsData() {
         });
     };
     
-    return { attendants, addAttendant, updateAttendant, deleteAttendants, attendantImports, addAttendantImportRecord, revertAttendantImport };
+    return { loadingAttendants: loading, attendants, addAttendant, updateAttendant, deleteAttendants, attendantImports, addAttendantImportRecord, revertAttendantImport };
 }
