@@ -7,16 +7,11 @@ import type { Attendant, AttendantImport } from '@/lib/types';
 import { db } from '@/lib/firebase';
 import { collection, doc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 
-const ATTENDANT_IMPORTS_STORAGE_KEY = "controle_acesso_attendant_imports";
-
 export function useAttendantsData() {
     const [attendants, setAttendants] = useState<Attendant[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [attendantImports, setAttendantImports] = useState<AttendantImport[]>([]);
     const { toast } = useToast();
 
     const fetchAttendants = useCallback(async () => {
-        setLoading(true);
         console.log("ATTENDANTS: Buscando atendentes do Firestore...");
         try {
             const attendantsCollection = collection(db, "attendants");
@@ -29,34 +24,22 @@ export function useAttendantsData() {
             console.error("Error fetching attendants from Firestore: ", error);
             toast({ variant: "destructive", title: "Erro ao carregar atendentes", description: "Não foi possível buscar os dados do Firestore." });
             return [];
-        } finally {
-            setLoading(false);
         }
     }, [toast]);
 
 
-     const getAttendantImportsFromStorage = useCallback((): AttendantImport[] => {
-        if (typeof window === "undefined") return [];
+     const fetchAttendantImports = useCallback(async (): Promise<AttendantImport[]> => {
+        console.log("ATTENDANTS: Buscando histórico de importações do Firestore...");
         try {
-            const importsJson = localStorage.getItem(ATTENDANT_IMPORTS_STORAGE_KEY);
-            return importsJson ? JSON.parse(importsJson) : [];
+            const snapshot = await getDocs(collection(db, "attendantImports"));
+            const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendantImport));
+            console.log(`ATTENDANTS: ${list.length} históricos de importação carregados.`);
+            return list;
         } catch (error) {
-            console.error("Failed to parse attendant imports from localStorage", error);
+            console.error("ATTENDANTS: Erro ao buscar históricos de importação:", error);
             return [];
         }
     }, []);
-
-
-    useEffect(() => {
-        // Initial fetch is now handled by AuthProvider to ensure correct loading sequence
-        setAttendantImports(getAttendantImportsFromStorage());
-    }, [getAttendantImportsFromStorage]);
-
-
-     const saveAttendantImportsToStorage = (importsToSave: AttendantImport[]) => {
-        localStorage.setItem(ATTENDANT_IMPORTS_STORAGE_KEY, JSON.stringify(importsToSave));
-        setAttendantImports(importsToSave);
-    }
 
     const addAttendant = async (attendantData: Attendant): Promise<Attendant> => {
         try {
@@ -108,30 +91,27 @@ export function useAttendantsData() {
         }
     };
 
-    const addAttendantImportRecord = (importData: Omit<AttendantImport, 'id' | 'importedAt'>, userId: string): AttendantImport => {
-        const newImport: AttendantImport = {
-            ...importData,
-            id: crypto.randomUUID(),
-            importedAt: new Date().toISOString(),
-            importedBy: userId,
-        };
-        const allImports = getAttendantImportsFromStorage();
-        saveAttendantImportsToStorage([...allImports, newImport]);
-        return newImport;
+    const addAttendantImportRecord = async (importData: Omit<AttendantImport, 'id'>, userId: string): Promise<AttendantImport> => {
+         try {
+            const docRef = doc(collection(db, "attendantImports"));
+            const newImport = { ...importData, id: docRef.id, importedBy: userId };
+            await setDoc(docRef, newImport);
+            return newImport;
+        } catch (error) {
+            console.error("ATTENDANTS: Erro ao salvar histórico de importação:", error);
+            throw error;
+        }
     };
 
     const revertAttendantImport = async (importId: string) => {
-        const importToRevert = getAttendantImportsFromStorage().find(i => i.id === importId);
-        if (!importToRevert) {
+        const importToRevertDoc = await getDoc(doc(db, "attendantImports", importId));
+        if (!importToRevertDoc.exists()) {
             toast({ variant: 'destructive', title: 'Erro', description: 'Importação não encontrada.' });
             return;
         }
-
+        const importToRevert = importToRevertDoc.data() as AttendantImport;
         await deleteAttendants(importToRevert.attendantIds);
-        
-        const currentImports = getAttendantImportsFromStorage();
-        const importsToKeep = currentImports.filter(imp => imp.id !== importId);
-        saveAttendantImportsToStorage(importsToKeep);
+        await deleteDoc(doc(db, "attendantImports", importId));
         
         toast({
             title: "Importação de Atendentes Revertida!",
@@ -139,5 +119,14 @@ export function useAttendantsData() {
         });
     };
     
-    return { loadingAttendants: loading, attendants, fetchAttendants, addAttendant, updateAttendant, deleteAttendants, attendantImports, addAttendantImportRecord, revertAttendantImport };
+    return { 
+        attendants, 
+        fetchAttendants, 
+        addAttendant, 
+        updateAttendant, 
+        deleteAttendants, 
+        addAttendantImportRecord, 
+        revertAttendantImport,
+        fetchAttendantImports,
+    };
 }

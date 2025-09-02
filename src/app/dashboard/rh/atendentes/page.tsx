@@ -3,7 +3,7 @@
 
 import { useAuth } from "@/providers/AuthProvider";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -36,6 +36,7 @@ import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import QRCode from "react-qr-code";
 import { toPng } from 'html-to-image';
+import { Skeleton } from "@/components/ui/skeleton";
 
 
 const formSchema = z.object({
@@ -96,7 +97,7 @@ const formatTelefone = (tel: string) => {
 
 
 export default function AtendentesPage() {
-  const { user, isAuthenticated, loading, attendants, addAttendant, updateAttendant, deleteAttendant, funcoes, setores } = useAuth();
+  const { user, isAuthenticated, loading: authLoading, attendants, addAttendant, updateAttendant, deleteAttendants, funcoes, setores, fetchAttendants } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const qrCodeRef = useRef<HTMLDivElement>(null);
@@ -106,17 +107,27 @@ export default function AtendentesPage() {
   const [isQrCodeDialogOpen, setIsQrCodeDialogOpen] = useState(false);
   const [selectedAttendant, setSelectedAttendant] = useState<Attendant | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [isDataLoading, setIsDataLoading] = useState(true);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: defaultFormValues,
   });
+  
+  const loadData = useCallback(async () => {
+    setIsDataLoading(true);
+    await fetchAttendants();
+    setIsDataLoading(false);
+  }, [fetchAttendants]);
 
   useEffect(() => {
-    if (!loading && !isAuthenticated) {
+    if (!authLoading && !isAuthenticated) {
       router.push("/login");
     }
-  }, [isAuthenticated, loading, router]);
+    if (!authLoading && isAuthenticated) {
+        loadData();
+    }
+  }, [authLoading, isAuthenticated, router, loadData]);
 
   useEffect(() => {
     if (isFormDialogOpen) {
@@ -167,7 +178,7 @@ export default function AtendentesPage() {
   async function onDeleteConfirm() {
     if (!selectedAttendant) return;
     try {
-        await deleteAttendant(selectedAttendant.id);
+        await deleteAttendants([selectedAttendant.id]);
         setIsDeleteDialogOpen(false);
         setSelectedAttendant(null);
     } catch(error) { /* toast handled */ }
@@ -220,7 +231,7 @@ export default function AtendentesPage() {
       })
   }
 
-  if (loading || !user) {
+  if (authLoading || !user) {
     return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
   }
   
@@ -250,7 +261,17 @@ export default function AtendentesPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {sortedAttendants.map((att) => (
+                        {isDataLoading ? (
+                           Array.from({ length: 5 }).map((_, i) => (
+                                <TableRow key={i}>
+                                    <TableCell><Skeleton className="h-10 w-48" /></TableCell>
+                                    <TableCell><Skeleton className="h-6 w-32" /></TableCell>
+                                    <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                                    <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                                    <TableCell className="text-right"><Skeleton className="h-8 w-8" /></TableCell>
+                                </TableRow>
+                           ))
+                        ) : sortedAttendants.map((att) => (
                             <TableRow key={att.id}>
                                 <TableCell className="font-medium flex items-center gap-3">
                                     <Avatar>

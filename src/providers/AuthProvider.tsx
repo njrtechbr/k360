@@ -4,7 +4,7 @@
 import type { ReactNode } from "react";
 import React, { useCallback, useEffect, useState } from "react";
 import type { User, Module, Role, Attendant, Evaluation, EvaluationAnalysis, GamificationConfig, Achievement, LevelReward, GamificationSeason, UnlockedAchievement, EvaluationImport, AttendantImport, Funcao, Setor } from "@/lib/types";
-import { ROLES, INITIAL_MODULES } from "@/lib/types";
+import { ROLES } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 
 // Firebase Imports
@@ -17,7 +17,7 @@ import {
     updateProfile as updateFirebaseProfile,
     updatePassword
 } from "firebase/auth";
-import { doc, getDoc, setDoc, collection, getDocs, getCountFromServer, writeBatch, query, where, updateDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, getDocs, writeBatch, query, where, updateDoc } from "firebase/firestore";
 
 // Hooks
 import { useUsersData } from "@/hooks/useUsersData";
@@ -26,9 +26,6 @@ import { useAttendantsData } from "@/hooks/useAttendantsData";
 import { useEvaluationsData } from "@/hooks/useEvaluationsData";
 import { useGamificationData } from "@/hooks/useGamificationData";
 import { useRhConfigData } from "@/hooks/useRhConfigData";
-import { INITIAL_ATTENDANTS } from "@/lib/initial-data";
-import { INITIAL_EVALUATIONS } from "@/lib/initial-data-evaluations";
-import { INITIAL_FUNCOES, INITIAL_SETORES } from "@/lib/types";
 
 interface AuthContextType {
   user: User | null;
@@ -39,6 +36,7 @@ interface AuthContextType {
   register: (userData: Omit<User, "id">) => Promise<void>;
   updateProfile: (userData: Partial<User>) => Promise<void>;
   allUsers: User[];
+  fetchAllUsers: () => Promise<User[]>;
   updateUser: (userId: string, userData: { name: string; role: Role; modules: string[] }) => Promise<void>;
   deleteUser: (userId: string) => Promise<void>;
   hasSuperAdmin: () => Promise<boolean>;
@@ -48,10 +46,12 @@ interface AuthContextType {
   toggleModuleStatus: (moduleId: string) => Promise<void>;
   deleteModule: (moduleId: string) => Promise<void>;
   attendants: Attendant[];
+  fetchAttendants: () => Promise<Attendant[]>;
   addAttendant: (attendantData: Omit<Attendant, 'id'>) => Promise<Attendant>;
   updateAttendant: (attendantId: string, attendantData: Partial<Omit<Attendant, 'id'>>) => Promise<void>;
   deleteAttendants: (attendantIds: string[]) => Promise<void>;
   evaluations: Evaluation[];
+  fetchEvaluations: () => Promise<Evaluation[]>;
   addEvaluation: (evaluationData: Omit<Evaluation, 'id' | 'xpGained'>) => Promise<Evaluation>;
   deleteEvaluations: (evaluationIds: string[]) => Promise<void>;
   aiAnalysisResults: EvaluationAnalysis[];
@@ -74,12 +74,16 @@ interface AuthContextType {
   activeSeason: GamificationSeason | null;
   nextSeason: GamificationSeason | null;
   unlockedAchievements: UnlockedAchievement[];
+  fetchUnlockedAchievements: () => Promise<UnlockedAchievement[]>;
   evaluationImports: EvaluationImport[];
+  fetchEvaluationImports: () => Promise<EvaluationImport[]>;
   addImportRecord: (importData: Omit<EvaluationImport, 'id'>) => Promise<EvaluationImport>;
   revertImport: (importId: string) => Promise<void>;
   recalculateAllGamificationData: () => Promise<void>;
   funcoes: Funcao[];
   setores: Setor[];
+  fetchFuncoes: () => Promise<string[]>;
+  fetchSetores: () => Promise<string[]>;
   addFuncao: (funcao: string) => Promise<void>;
   updateFuncao: (oldFuncao: string, newFuncao: string) => Promise<void>;
   deleteFuncao: (funcao: string) => Promise<void>;
@@ -99,82 +103,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   // Hooks
-  const { allUsers, setAllUsers, fetchAllUsers, updateUser, deleteUser } = useUsersData({ user, setUser });
-  const { modules, fetchModules, addModule, updateModule, toggleModuleStatus, deleteModule: deleteModuleFromHook } = useModulesData();
-  const { attendants, fetchAttendants, addAttendant, updateAttendant, deleteAttendants, attendantImports, addAttendantImportRecord, revertAttendantImport } = useAttendantsData();
-  const { gamificationConfig, fetchGamificationConfig, updateGamificationConfig, achievements, updateAchievement, levelRewards, updateLevelReward, seasons, addSeason, updateSeason, deleteSeason, activeSeason, nextSeason, unlockedAchievements, fetchUnlockedAchievements, recalculateAllGamificationData: recalcGamification } = useGamificationData();
-  const { evaluations, fetchEvaluations, addEvaluation: addEvaluationFromHook, deleteEvaluations, aiAnalysisResults, lastAiAnalysis, isAiAnalysisRunning, runAiAnalysis, analysisProgress, isProgressModalOpen, setIsProgressModalOpen, evaluationImports, fetchEvaluationImports, addImportRecord, revertImport } = useEvaluationsData({ gamificationConfig, seasons });
-  const { funcoes, setores, fetchFuncoes, fetchSetores, addFuncao, updateFuncao, deleteFuncao, addSetor, updateSetor, deleteSetor } = useRhConfigData();
+  const usersData = useUsersData({ user, setUser });
+  const modulesData = useModulesData();
+  const attendantsData = useAttendantsData();
+  const gamificationData = useGamificationData();
+  const evaluationsData = useEvaluationsData({ gamificationConfig: gamificationData.gamificationConfig, seasons: gamificationData.seasons });
+  const rhConfigData = useRhConfigData();
 
-  const seedCollection = useCallback(async (
-    collectionName: string,
-    initialData: any[],
-    idField = 'id'
-  ) => {
-    console.log(`SEEDER: Verificando coleção '${collectionName}'...`);
-    const collectionRef = collection(db, collectionName);
-    const countSnapshot = await getCountFromServer(collectionRef);
-    
-    if (countSnapshot.data().count === 0) {
-        console.log(`SEEDER: Coleção '${collectionName}' vazia. Semeando ${initialData.length} documentos...`);
-        const batch = writeBatch(db);
-        initialData.forEach(item => {
-            const docId = item[idField] || item.name; // Use name as ID for funcoes/setores if idField is not present
-            if (!docId) {
-                console.error(`SEEDER: Item inválido na coleção ${collectionName}, sem ID ou nome.`, item);
-                return;
-            }
-            const docRef = doc(db, collectionName, docId);
-            batch.set(docRef, item);
-        });
-        await batch.commit();
-        console.log(`SEEDER: Coleção '${collectionName}' semeada com sucesso.`);
-        return true;
-    }
-    console.log(`SEEDER: Coleção '${collectionName}' já contém dados. Nenhuma ação necessária.`);
-    return false;
-  }, []);
-
-  const recalculateAllData = useCallback(async () => {
-    console.log("AUTH: Iniciando recalculo geral de dados de gamificação...");
-    const allAttendants = await fetchAttendants();
-    const allEvaluations = await fetchEvaluations();
-    await recalcGamification(allAttendants, allEvaluations, aiAnalysisResults);
-     console.log("AUTH: Recalculo de gamificação concluído.");
-  }, [fetchAttendants, fetchEvaluations, recalcGamification, aiAnalysisResults]);
+  const { allUsers, fetchAllUsers, setAllUsers } = usersData;
+  const { modules, fetchModules } = modulesData;
+  const { funcoes, setores, fetchFuncoes, fetchSetores } = rhConfigData;
   
   useEffect(() => {
     const initializeApp = async () => {
         console.log("AUTH: Iniciando inicialização do App...");
         setLoading(true);
-
-        // Seed data in parallel
-        console.log("SEEDER: Iniciando verificação e semeadura de todas as coleções...");
-        await Promise.all([
-          seedCollection('attendants', INITIAL_ATTENDANTS),
-          seedCollection('evaluations', INITIAL_EVALUATIONS),
-          seedCollection('modules', INITIAL_MODULES),
-          seedCollection('funcoes', INITIAL_FUNCOES.map(name => ({name})), 'name'),
-          seedCollection('setores', INITIAL_SETORES.map(name => ({name})), 'name')
-        ]);
-        console.log("SEEDER: Verificação e semeadura concluídas.");
         
-        // Fetch all data in parallel
-        console.log("AUTH: Carregando todos os dados do Firestore...");
+        // Fetch essential data for layout and auth
         await Promise.all([
-            fetchAttendants(),
-            fetchEvaluations(),
             fetchModules(),
             fetchFuncoes(),
             fetchSetores(),
-            fetchGamificationConfig(),
-            fetchUnlockedAchievements(),
-            fetchEvaluationImports(),
-            fetchAllUsers()
+            gamificationData.fetchGamificationConfig(),
         ]);
-         console.log("AUTH: Todos os dados carregados.");
-
-        console.log("AUTH: Verificando estado de autenticação...");
+        
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
                 console.log(`AUTH: Usuário autenticado encontrado (UID: ${firebaseUser.uid}). Buscando dados...`);
@@ -183,27 +135,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 if (userDoc.exists()) {
                     const userData = { id: userDoc.id, ...userDoc.data() } as User;
                     setUser(userData);
-                    console.log(`AUTH: Dados do usuário ${userData.name} carregados.`);
                 } else {
-                    console.warn(`AUTH: Usuário autenticado (UID: ${firebaseUser.uid}) não encontrado no Firestore. Criando perfil padrão...`);
                     const newUser: Omit<User, 'id'> = {
                         name: firebaseUser.displayName || "Novo Usuário",
                         email: firebaseUser.email!,
                         role: ROLES.USER,
-                        modules: ['rh'] // Default module
+                        modules: ['rh'] 
                     };
                     await setDoc(userDocRef, newUser);
                     const createdUserData = { id: firebaseUser.uid, ...newUser };
                     setUser(createdUserData);
-                    console.log(`AUTH: Perfil padrão criado e sessão iniciada para ${createdUserData.name}.`);
                 }
             } else {
-                console.log("AUTH: Nenhum usuário autenticado.");
                 setUser(null);
-                setAllUsers([]);
             }
-             console.log("AUTH: Inicialização concluída.");
-             setLoading(false);
+            console.log("AUTH: Verificação de autenticação concluída.");
+            setLoading(false);
         });
 
         return () => {
@@ -287,14 +234,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const hasSuperAdmin = async (): Promise<boolean> => {
-      const usersCol = collection(db, 'users');
-      const q = query(usersCol, where("role", "==", ROLES.SUPERADMIN));
-      const snapshot = await getCountFromServer(q);
-      return snapshot.data().count > 0;
+      const q = query(collection(db, 'users'), where("role", "==", ROLES.SUPERADMIN));
+      const snapshot = await getDocs(q);
+      return !snapshot.empty;
   };
   
   const deleteModule = async (moduleId: string) => {
-    await deleteModuleFromHook(moduleId);
+    await modulesData.deleteModule(moduleId);
     const allCurrentUsers = await fetchAllUsers();
     const batch = writeBatch(db);
     allCurrentUsers.forEach(u => {
@@ -308,23 +254,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     console.log(`MODULES: Módulo ${moduleId} removido de todos os usuários.`);
   };
 
+  const recalculateAllGamificationData = useCallback(async () => {
+    console.log("AUTH: Iniciando recalculo geral de dados de gamificação...");
+    const allAttendants = await attendantsData.fetchAttendants();
+    const allEvaluations = await evaluationsData.fetchEvaluations();
+    await gamificationData.recalculateAllGamificationData(allAttendants, allEvaluations, evaluationsData.aiAnalysisResults);
+     console.log("AUTH: Recalculo de gamificação concluído.");
+  }, [attendantsData, evaluationsData, gamificationData]);
+
   const addEvaluation = async (evaluationData: Omit<Evaluation, 'id' | 'xpGained'>): Promise<Evaluation> => {
-    const baseScore = getScoreFromRating(evaluationData.nota, gamificationConfig.ratingScores);
-    const totalMultiplier = (gamificationConfig.globalXpMultiplier || 1) * (activeSeason?.xpMultiplier || 1);
+    const baseScore = getScoreFromRating(evaluationData.nota, gamificationData.gamificationConfig.ratingScores);
+    const totalMultiplier = (gamificationData.gamificationConfig.globalXpMultiplier || 1) * (gamificationData.activeSeason?.xpMultiplier || 1);
     const xpGained = baseScore * totalMultiplier;
 
-    const newEvaluation = await addEvaluationFromHook(evaluationData, xpGained);
-    const attendant = attendants.find(a => a.id === newEvaluation.attendantId);
-    if (attendant) {
-        // Recalculating all might be better to ensure consistency after any addition
-        await recalculateAllData();
-    }
+    const newEvaluation = await evaluationsData.addEvaluation(evaluationData, xpGained);
+    await recalculateAllGamificationData();
     return newEvaluation;
   };
 
-  const handleDeleteEvaluations = async (evaluationIds: string[]) => {
-    await deleteEvaluations(evaluationIds);
-    await recalculateAllData();
+  const deleteEvaluations = async (evaluationIds: string[]) => {
+    await evaluationsData.deleteEvaluations(evaluationIds);
+    await recalculateAllGamificationData();
     toast({ title: "Avaliações Removidas", description: `${evaluationIds.length} avaliações foram removidas e a gamificação foi recalculada.` });
   }
 
@@ -337,56 +287,50 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     register,
     updateProfile,
     allUsers,
-    updateUser,
-    deleteUser,
+    fetchAllUsers,
+    updateUser: usersData.updateUser,
+    deleteUser: usersData.deleteUser,
     hasSuperAdmin,
     modules,
-    addModule,
-    updateModule,
-    toggleModuleStatus,
+    addModule: modulesData.addModule,
+    updateModule: modulesData.updateModule,
+    toggleModuleStatus: modulesData.toggleModuleStatus,
     deleteModule,
-    attendants,
-    addAttendant,
-    updateAttendant,
-    deleteAttendants,
-    evaluations,
+    attendants: attendantsData.attendants,
+    fetchAttendants: attendantsData.fetchAttendants,
+    addAttendant: attendantsData.addAttendant,
+    updateAttendant: attendantsData.updateAttendant,
+    deleteAttendants: attendantsData.deleteAttendants,
+    evaluations: evaluationsData.evaluations,
+    fetchEvaluations: evaluationsData.fetchEvaluations,
     addEvaluation,
-    deleteEvaluations: handleDeleteEvaluations,
-    aiAnalysisResults,
-    lastAiAnalysis,
-    runAiAnalysis,
-    isAiAnalysisRunning,
-    analysisProgress,
-    isProgressModalOpen,
-    setIsProgressModalOpen,
-    gamificationConfig,
-    updateGamificationConfig,
-    achievements,
-    updateAchievement,
-    levelRewards,
-    updateLevelReward,
-    seasons,
-    addSeason,
-    updateSeason,
-    deleteSeason,
-    activeSeason,
-    nextSeason,
-    unlockedAchievements,
-    evaluationImports,
-    addImportRecord,
-    revertImport,
-    recalculateAllGamificationData: recalculateAllData,
+    deleteEvaluations,
+    aiAnalysisResults: evaluationsData.aiAnalysisResults,
+    lastAiAnalysis: evaluationsData.lastAiAnalysis,
+    runAiAnalysis: evaluationsData.runAiAnalysis,
+    isAiAnalysisRunning: evaluationsData.isAiAnalysisRunning,
+    analysisProgress: evaluationsData.analysisProgress,
+    isProgressModalOpen: evaluationsData.isProgressModalOpen,
+    setIsProgressModalOpen: evaluationsData.setIsProgressModalOpen,
+    ...gamificationData,
+    recalculateAllGamificationData,
     funcoes,
     setores,
-    addFuncao,
-    updateFuncao,
-    deleteFuncao,
-    addSetor,
-    updateSetor,
-    deleteSetor,
-    attendantImports,
-    addAttendantImportRecord,
-    revertAttendantImport,
+    fetchFuncoes,
+    fetchSetores,
+    addFuncao: rhConfigData.addFuncao,
+    updateFuncao: rhConfigData.updateFuncao,
+    deleteFuncao: rhConfigData.deleteFuncao,
+    addSetor: rhConfigData.addSetor,
+    updateSetor: rhConfigData.updateSetor,
+    deleteSetor: rhConfigData.deleteSetor,
+    evaluationImports: evaluationsData.evaluationImports,
+    fetchEvaluationImports: evaluationsData.fetchEvaluationImports,
+    addImportRecord: evaluationsData.addImportRecord,
+    revertImport: evaluationsData.revertImport,
+    attendantImports: attendantsData.attendantImports,
+    addAttendantImportRecord: attendantsData.addAttendantImportRecord,
+    revertAttendantImport: attendantsData.revertAttendantImport,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -399,5 +343,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    
