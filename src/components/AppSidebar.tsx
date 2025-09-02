@@ -42,8 +42,8 @@ export default function AppSidebar() {
         <Sidebar>
             <SidebarHeader>
                  <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-foreground">
-                    <ShieldCheck className="h-6 w-6"/>
-                    <h1 className="text-xl" style={{ opacity: state === 'expanded' ? 1 : 0, transition: 'opacity 0.3s ease-in-out' }}>
+                    <ShieldCheck className="h-6 w-6 text-white"/>
+                    <h1 className="text-xl text-white" style={{ opacity: state === 'expanded' ? 1 : 0, transition: 'opacity 0.3s ease-in-out' }}>
                         Koerner 360
                     </h1>
                 </Link>
