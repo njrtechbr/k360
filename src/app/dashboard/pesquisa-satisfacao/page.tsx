@@ -4,7 +4,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/providers/AuthProvider";
-import { Users, LayoutDashboard, ListChecks, Star, Sparkles } from "lucide-react";
+import { Users, LayoutDashboard, ListChecks, Star, Sparkles, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -74,6 +74,23 @@ export default function PesquisaSatisfacaoPage() {
                             <Link href="/dashboard/pesquisa-satisfacao/analise-sentimento">
                                 <Sparkles className="mr-2 h-4 w-4" />
                                 Analisar Comentários
+                            </Link>
+                        </Button>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Importar Avaliações</CardTitle>
+                        <CardDescription>Importe dados de avaliações de um arquivo CSV.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground mb-4">
+                           Faça o upload de dados de outras plataformas, como o WhatsApp.
+                        </p>
+                        <Button asChild>
+                            <Link href="/dashboard/pesquisa-satisfacao/importar">
+                                <Upload className="mr-2 h-4 w-4" />
+                                Importar Dados
                             </Link>
                         </Button>
                     </CardContent>

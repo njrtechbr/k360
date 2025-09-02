@@ -22,10 +22,16 @@ type AnalysisProgress = {
 };
 
 const parseEvaluationDate = (dateString: string) => {
-    const [datePart, timePart] = dateString.split(' ');
-    const [day, month, year] = datePart.split('/');
-    const [hours, minutes, seconds] = timePart.split(':');
-    return new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hours), parseInt(minutes), parseInt(seconds)).toISOString();
+    // Handles dates like "05/08/2025 11:13:58"
+    const parts = dateString.split(/[\s/:]/);
+    if (parts.length < 3) return new Date(0).toISOString();
+    const day = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const year = parseInt(parts[2], 10);
+    const hours = parts.length > 3 ? parseInt(parts[3], 10) : 0;
+    const minutes = parts.length > 4 ? parseInt(parts[4], 10) : 0;
+    const seconds = parts.length > 5 ? parseInt(parts[5], 10) : 0;
+    return new Date(year, month, day, hours, minutes, seconds).toISOString();
 }
 
 const INITIAL_EVALUATIONS_RAW = [
@@ -100,7 +106,7 @@ export function useEvaluationsData({ gamificationConfig, activeSeason }: UseEval
 
 
     const saveEvaluationsToStorage = (evaluationsToSave: Evaluation[]) => {
-        localStorage.setItem(EVALUations_STORAGE_KEY, JSON.stringify(evaluationsToSave));
+        localStorage.setItem(EVALUATIONS_STORAGE_KEY, JSON.stringify(evaluationsToSave));
         setEvaluations(evaluationsToSave);
     }
 
@@ -114,7 +120,7 @@ export function useEvaluationsData({ gamificationConfig, activeSeason }: UseEval
         setLastAiAnalysis(date);
     };
 
-    const addEvaluation = async (evaluationData: Omit<Evaluation, 'id' | 'data' | 'xpGained'>): Promise<Evaluation> => {
+    const addEvaluation = async (evaluationData: Omit<Evaluation, 'id' | 'data' | 'xpGained'> & { data?: string }): Promise<Evaluation> => {
         const { ratingScores, globalXpMultiplier } = gamificationConfig;
 
         const baseScore = getScoreFromRating(evaluationData.nota, ratingScores);
@@ -125,9 +131,11 @@ export function useEvaluationsData({ gamificationConfig, activeSeason }: UseEval
 
         const currentEvaluations = getEvaluationsFromStorage();
         const newEvaluation: Evaluation = {
-            ...evaluationData,
             id: crypto.randomUUID(),
-            data: new Date().toISOString(),
+            attendantId: evaluationData.attendantId,
+            nota: evaluationData.nota,
+            comentario: evaluationData.comentario,
+            data: evaluationData.data || new Date().toISOString(),
             xpGained: xpGained,
         };
 

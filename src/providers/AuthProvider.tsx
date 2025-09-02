@@ -33,7 +33,7 @@ interface AuthContextType {
   updateAttendant: (attendantId: string, attendantData: Partial<Omit<Attendant, 'id'>>) => Promise<void>;
   deleteAttendant: (attendantId: string) => Promise<void>;
   evaluations: Evaluation[];
-  addEvaluation: (evaluationData: Omit<Evaluation, 'id' | 'data' | 'xpGained'>) => Promise<void>;
+  addEvaluation: (evaluationData: Omit<Evaluation, 'id' | 'xpGained'>) => Promise<void>;
   aiAnalysisResults: EvaluationAnalysis[];
   lastAiAnalysis: string | null;
   runAiAnalysis: () => Promise<void>;
@@ -125,7 +125,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     activeSeason,
   });
 
-  const handleAddEvaluation = useCallback(async (evaluationData: Omit<Evaluation, 'id' | 'data' | 'xpGained'>) => {
+  const handleAddEvaluation = useCallback(async (evaluationData: Omit<Evaluation, 'id' | 'xpGained'>) => {
     const newEvaluation = await addEvaluationFromHook(evaluationData);
     const attendant = attendants.find(a => a.id === newEvaluation.attendantId);
     if (attendant) {
