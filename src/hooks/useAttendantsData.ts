@@ -17,14 +17,18 @@ export function useAttendantsData() {
 
     const fetchAttendants = useCallback(async () => {
         setLoading(true);
+        console.log("ATTENDANTS: Buscando atendentes do Firestore...");
         try {
             const attendantsCollection = collection(db, "attendants");
             const attendantsSnapshot = await getDocs(attendantsCollection);
             const attendantsList = attendantsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Attendant));
             setAttendants(attendantsList);
+            console.log(`ATTENDANTS: ${attendantsList.length} atendentes carregados.`);
+            return attendantsList;
         } catch (error) {
             console.error("Error fetching attendants from Firestore: ", error);
             toast({ variant: "destructive", title: "Erro ao carregar atendentes", description: "Não foi possível buscar os dados do Firestore." });
+            return [];
         } finally {
             setLoading(false);
         }
@@ -44,9 +48,9 @@ export function useAttendantsData() {
 
 
     useEffect(() => {
-        fetchAttendants();
+        // Initial fetch is now handled by AuthProvider to ensure correct loading sequence
         setAttendantImports(getAttendantImportsFromStorage());
-    }, [fetchAttendants, getAttendantImportsFromStorage]);
+    }, [getAttendantImportsFromStorage]);
 
 
      const saveAttendantImportsToStorage = (importsToSave: AttendantImport[]) => {
@@ -135,5 +139,5 @@ export function useAttendantsData() {
         });
     };
     
-    return { loadingAttendants: loading, attendants, setAttendants, addAttendant, updateAttendant, deleteAttendants, attendantImports, addAttendantImportRecord, revertAttendantImport };
+    return { loadingAttendants: loading, attendants, fetchAttendants, addAttendant, updateAttendant, deleteAttendants, attendantImports, addAttendantImportRecord, revertAttendantImport };
 }

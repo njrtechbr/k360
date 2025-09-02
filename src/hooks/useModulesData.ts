@@ -98,3 +98,4 @@ export function useModulesData() {
 
     return { modules, fetchModules, addModule, updateModule, toggleModuleStatus, deleteModule };
 }
+

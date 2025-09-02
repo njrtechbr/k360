@@ -200,6 +200,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             } else {
                 console.log("AUTH: Nenhum usuário autenticado.");
                 setUser(null);
+                setAllUsers([]);
             }
              console.log("AUTH: Inicialização concluída.");
              setLoading(false);
