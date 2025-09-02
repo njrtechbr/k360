@@ -144,28 +144,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (userDoc.exists()) {
         const userData = { id: userDoc.id, ...userDoc.data() } as User;
-        setUser(userData);
+        setUser(userData); // This is the key part for the app state
         toast({
           title: "Login bem-sucedido!",
           description: `Bem-vindo de volta, ${userData.name}.`,
         });
       } else {
-        // User exists in Auth, but not in Firestore. Create a default record.
-        const defaultUserData: Omit<User, 'id'> = {
+        // User exists in Auth, but not in Firestore. Create a default record and complete the login.
+        const defaultUserData: User = {
+          id: firebaseUser.uid,
           name: firebaseUser.displayName || 'Usuário',
           email: firebaseUser.email!,
           role: ROLES.USER,
           modules: [INITIAL_MODULES[0].id] // Default to first module
         };
-        await setDoc(userDocRef, defaultUserData);
-        await signOut(auth); // Log out the user
+        const { id, ...dataToSave } = defaultUserData;
+        await setDoc(userDocRef, dataToSave);
         
+        setUser(defaultUserData); // Set the user in the state
+        fetchAllUsers(); // Refresh user list
+
         toast({
-            variant: "destructive",
-            title: "Conta Incompleta",
-            description: "Seu registro estava incompleto. Criamos um perfil padrão para você. Por favor, faça login novamente.",
+            variant: "default",
+            title: "Conta Recuperada",
+            description: "Seu perfil foi recriado. Bem-vindo de volta!",
         });
-        throw new Error("Conta de usuário recriada. Por favor, tente fazer login novamente.");
       }
 
     } catch (error: any) {
@@ -182,7 +185,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const register = async (userData: Omit<User, 'id'>) => {
     try {
       // The password will not be stored in Firestore, only used for creation.
-      const userCredential = await createUserWithEmailAndPassword(auth, userData.password, userData.email);
+      const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password ? userData.password : "123456");
       const firebaseUser = userCredential.user;
 
       await updateFirebaseProfile(firebaseUser, { displayName: userData.name });
