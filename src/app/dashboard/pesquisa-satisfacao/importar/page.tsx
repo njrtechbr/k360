@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
+import { format } from "date-fns";
 
 type CsvRow = {
     Data: string;
@@ -115,7 +116,8 @@ export default function ImportarAvaliacoesPage() {
                 await addEvaluation({
                     attendantId: review.attendantId,
                     nota: review.rating,
-                    comentario: `Importado do WhatsApp em ${formatDate(review.date)}`,
+                    comentario: `Importado do WhatsApp em ${format(new Date(review.date), 'dd/MM/yyyy')}`,
+                    data: review.date
                 });
             } catch (error) {
                 console.error(`Erro ao importar avaliação para ${review.agentName}`, error);
@@ -138,7 +140,11 @@ export default function ImportarAvaliacoesPage() {
 
     const formatDate = (dateStr: string) => {
         try {
-            return new Date(dateStr).toLocaleDateString('pt-BR');
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) {
+                return 'Data inválida';
+            }
+            return format(date, 'dd/MM/yyyy');
         } catch {
             return 'Data inválida';
         }
@@ -239,4 +245,3 @@ export default function ImportarAvaliacoesPage() {
         </div>
     );
 }
-
