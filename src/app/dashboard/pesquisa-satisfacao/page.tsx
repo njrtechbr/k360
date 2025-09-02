@@ -80,17 +80,34 @@ export default function PesquisaSatisfacaoPage() {
                 </Card>
                  <Card>
                     <CardHeader>
-                        <CardTitle>Importar Avaliações</CardTitle>
-                        <CardDescription>Importe dados de avaliações de um arquivo CSV.</CardDescription>
+                        <CardTitle>Importar (WhatsApp)</CardTitle>
+                        <CardDescription>Importe avaliações de um arquivo CSV do WhatsApp.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <p className="text-sm text-muted-foreground mb-4">
-                           Faça o upload de dados de outras plataformas, como o WhatsApp.
+                           Faça o upload de dados e mapeie os agentes manualmente.
                         </p>
                         <Button asChild>
                             <Link href="/dashboard/pesquisa-satisfacao/importar">
                                 <Upload className="mr-2 h-4 w-4" />
-                                Importar Dados
+                                Importar do WhatsApp
+                            </Link>
+                        </Button>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Importar (Sistema Antigo)</CardTitle>
+                        <CardDescription>Importe o histórico de avaliações do sistema legado.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground mb-4">
+                           Faça o upload de dados que já contêm o ID do atendente.
+                        </p>
+                        <Button asChild>
+                            <Link href="/dashboard/pesquisa-satisfacao/importar-antigo">
+                                <Upload className="mr-2 h-4 w-4" />
+                                Importar do Sistema Antigo
                             </Link>
                         </Button>
                     </CardContent>

@@ -139,7 +139,16 @@ export function useEvaluationsData({ gamificationConfig, activeSeason }: UseEval
         setLastAiAnalysis(date);
     };
 
-    const addEvaluation = async (evaluationData: Omit<Evaluation, 'id' | 'data' | 'xpGained'> & { data?: string, importId?: string }): Promise<Evaluation> => {
+    const addEvaluation = async (evaluationData: Omit<Evaluation, 'xpGained'> & { data?: string, xpGained?: number }): Promise<Evaluation> => {
+        const currentEvaluations = getEvaluationsFromStorage();
+        if(currentEvaluations.find(e => e.id === evaluationData.id)){
+            // This is likely from the legacy import which can have duplicate IDs.
+            // A more robust solution would be to check the source, but for now we can allow it
+            // and assume the user knows what they're doing when importing legacy data.
+             console.warn(`Evaluation with ID ${evaluationData.id} already exists. Allowing import.`);
+        }
+
+
         const { ratingScores, globalXpMultiplier } = gamificationConfig;
 
         const baseScore = getScoreFromRating(evaluationData.nota, ratingScores);
@@ -148,9 +157,8 @@ export function useEvaluationsData({ gamificationConfig, activeSeason }: UseEval
 
         const xpGained = baseScore * totalMultiplier;
 
-        const currentEvaluations = getEvaluationsFromStorage();
         const newEvaluation: Evaluation = {
-            id: crypto.randomUUID(),
+            id: evaluationData.id || crypto.randomUUID(),
             attendantId: evaluationData.attendantId,
             nota: evaluationData.nota,
             comentario: evaluationData.comentario,
