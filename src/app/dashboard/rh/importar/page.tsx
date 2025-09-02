@@ -275,8 +275,8 @@ export default function ImportarAtendentesPage() {
                                         ))}
                                     </TableBody>
                                 </Table>
-                            </CardContent>
-                        </CardHeader>
+                            </div>
+                        </CardContent>
                         <CardFooter className="flex-col items-stretch gap-4 pt-6">
                             {isProcessing && <Progress value={importProgress} />}
                             <Button onClick={handleImport} disabled={!isReadyToImport || isProcessing} size="lg" className="w-full">
@@ -293,5 +293,3 @@ export default function ImportarAtendentesPage() {
         </div>
     );
 }
-
-    
