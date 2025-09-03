@@ -132,7 +132,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     setUser(userData);
                     console.log(`AUTH: Usuário autenticado e encontrado no Firestore (UID: ${firebaseUser.uid}).`);
                 } else {
-                     console.log(`AUTH: Usuário autenticado (UID: ${firebaseUser.uid}) não encontrado no Firestore. Criando novo perfil...`);
+                    console.log(`AUTH: Usuário autenticado (UID: ${firebaseUser.uid}) não encontrado no Firestore. Criando novo perfil...`);
                     const newUser: Omit<User, 'id'> = {
                         name: firebaseUser.displayName || "Novo Usuário",
                         email: firebaseUser.email!,
@@ -159,8 +159,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     initializeApp();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [setAllUsers]);
 
   const login = async (email: string, password: string) => {
     try {
@@ -177,13 +176,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const register = async (userData: Omit<User, 'id'>) => {
     try {
       console.log(`AUTH: Tentativa de registro para ${userData.email}`);
-      const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password || "123456");
+      const userCredential = await createUserWithEmailAndPassword(auth, userData.password ? userData.password : "123456");
       const firebaseUser = userCredential.user;
 
       await updateFirebaseProfile(firebaseUser, { displayName: userData.name });
 
       const { password, ...userDataForDb } = userData;
-      const newUserDoc = { ...userDataForDb };
+      let finalModules = userDataForDb.modules;
+
+      // If user is superadmin, grant all modules
+      if (userData.role === ROLES.SUPERADMIN) {
+        const allModules = await modulesData.fetchModules();
+        finalModules = allModules.map(m => m.id);
+      }
+      
+      const newUserDoc = { ...userDataForDb, modules: finalModules };
 
       await setDoc(doc(db, "users", firebaseUser.uid), newUserDoc);
       console.log(`AUTH: Documento do usuário criado no Firestore para ${firebaseUser.uid}`);
