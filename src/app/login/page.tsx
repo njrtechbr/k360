@@ -51,12 +51,10 @@ export default function LoginPage() {
     }
   }
 
+  // The AppLayout now handles the global loading state, so we can remove it from here.
+  // We just need to prevent rendering the form while loading or if already authenticated.
   if (authLoading || isAuthenticated) {
-     return (
-        <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-800">
-            <p>Carregando aplicação...</p>
-        </div>
-    )
+     return null; // Render nothing, AppLayout will show the loader or redirect.
   }
 
   return (

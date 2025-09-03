@@ -7,19 +7,28 @@ import SiteHeader from '@/components/SiteHeader';
 import { cn } from '@/lib/utils';
 import type { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
-import PerformanceStatusBar from './PerformanceStatusBar';
+import { useAuth } from '@/providers/AuthProvider';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
     const { state } = useSidebar();
     const pathname = usePathname();
+    const { authLoading } = useAuth();
 
     const noLayoutPages = ['/survey', '/login', '/registrar', '/criar-superadmin', '/'];
     const isAuthOrSurveyPage = noLayoutPages.includes(pathname);
     
-    // Special case for root, if it's exactly the root, treat as no layout.
-    // The previous check handles `/` already, but this is for clarity.
     if (isAuthOrSurveyPage) {
         return <>{children}</>;
+    }
+    
+    // While the initial authentication check is running, show a loading state
+    // to prevent the "flash of unauthenticated content" (flickering to the login page).
+    if (authLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen w-full">
+                <p>Carregando aplicação...</p>
+            </div>
+        );
     }
     
     return (
@@ -31,7 +40,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                     {children}
                 </main>
             </div>
-            <PerformanceStatusBar />
         </div>
     );
 }
