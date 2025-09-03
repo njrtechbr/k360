@@ -494,9 +494,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const batch = writeBatch(db);
       attendantIds.forEach(id => batch.delete(doc(db, "attendants", id)));
       await batch.commit();
-      setAttendants(prev => prev.filter(a => !attendantIds.includes(a.id)));
+      await fetchAllData(); // Force a full refresh to ensure consistency
       toast({ title: "Atendentes Removidos!" });
-  }, [toast]);
+  }, [toast, fetchAllData]);
 
   // --- Evaluation Actions ---
   const addEvaluation = useCallback(async (evaluationData: Omit<Evaluation, 'id' | 'xpGained' | 'importId'>): Promise<Evaluation> => {
@@ -548,54 +548,56 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         setIsProcessing(true);
         setImportStatus({ isOpen: true, logs: [], progress: 0, title: title, status: 'processing' });
-
-        let totalDeleted = 0;
-        const CHUNK_SIZE = 30;
-
-        for (let i = 0; i < evaluationIds.length; i += CHUNK_SIZE) {
-            const chunk = evaluationIds.slice(i, i + CHUNK_SIZE);
-            
-            try {
-                // Find and delete related xp_events in chunks
-                const xpQuery = query(collection(db, "xp_events"), where("relatedId", "in", chunk), where("type", "==", "evaluation"));
-                const xpSnapshot = await getDocs(xpQuery);
-                
-                const batch = writeBatch(db);
-                
-                if (!xpSnapshot.empty) {
-                    xpSnapshot.forEach(xpDoc => {
-                         batch.delete(xpDoc.ref);
-                         setImportStatus(prev => ({...prev, logs: [...prev.logs, `-> Evento de XP ${xpDoc.id} marcado para exclusão.`]}));
-                    });
-                }
-
-                // Delete the evaluations themselves
-                chunk.forEach(evalId => {
-                    const evalDocRef = doc(db, "evaluations", evalId);
-                    batch.delete(evalDocRef);
-                    setImportStatus(prev => ({...prev, logs: [...prev.logs, `-> Avaliação ${evalId} marcada para exclusão.`]}));
-                });
-
-                await batch.commit();
-                totalDeleted += chunk.length;
-
-                // Update local state after each successful chunk
-                setEvaluations(prev => prev.filter(e => !chunk.includes(e.id)));
-                setXpEvents(prev => prev.filter(xp => !chunk.includes(xp.relatedId)));
-                 setImportStatus(prev => ({ ...prev, progress: ((i + chunk.length) / evaluationIds.length) * 100 }));
-
-
-            } catch (error: any) {
-                console.error(`Erro ao excluir lote de avaliações:`, error);
-                setImportStatus(prev => ({...prev, logs: [...prev.logs, `-> ERRO ao excluir lote: ${error.message}`]}));
-            }
-        }
         
-        setImportStatus(prev => ({ ...prev, status: 'done', title: 'Exclusão Concluída', logs: [...prev.logs, `Processo finalizado. ${totalDeleted} avaliações removidas.`] }));
-        toast({ title: "Exclusão Concluída", description: `${totalDeleted} avaliações foram removidas com sucesso.` });
-        setTimeout(() => setImportStatus(INITIAL_IMPORT_STATUS), 5000);
-        setIsProcessing(false);
-    }, [toast]);
+        try {
+            const CHUNK_SIZE = 30; // Firestore `in` query limit
+            
+            // Step 1: Delete all related xp_events
+            setImportStatus(prev => ({...prev, progress: 10, logs: [`Preparando para remover eventos de XP...`]}));
+            const xpEventsToDelete: string[] = [];
+            for (let i = 0; i < evaluationIds.length; i += CHUNK_SIZE) {
+                const chunk = evaluationIds.slice(i, i + CHUNK_SIZE);
+                const q = query(collection(db, "xp_events"), where("type", "==", "evaluation"), where("relatedId", "in", chunk));
+                const snapshot = await getDocs(q);
+                snapshot.forEach(doc => xpEventsToDelete.push(doc.id));
+            }
+            
+            const xpDeleteBatch = writeBatch(db);
+            if (xpEventsToDelete.length > 0) {
+                 setImportStatus(prev => ({...prev, logs: [...prev.logs, `Encontrados ${xpEventsToDelete.length} eventos de XP para remover.`]}));
+                 xpEventsToDelete.forEach(id => xpDeleteBatch.delete(doc(db, "xp_events", id)));
+                 await xpDeleteBatch.commit();
+                 setImportStatus(prev => ({...prev, progress: 40, logs: [...prev.logs, `Eventos de XP removidos.`]}));
+            } else {
+                 setImportStatus(prev => ({...prev, progress: 40, logs: [...prev.logs, `Nenhum evento de XP correspondente encontrado.`]}));
+            }
+            
+            // Step 2: Delete the evaluations themselves
+            setImportStatus(prev => ({...prev, progress: 60, logs: [...prev.logs, `Preparando para remover ${evaluationIds.length} avaliações...`]}));
+            const evalDeleteBatch = writeBatch(db);
+            evaluationIds.forEach(id => {
+                evalDeleteBatch.delete(doc(db, "evaluations", id));
+            });
+            await evalDeleteBatch.commit();
+            setImportStatus(prev => ({...prev, progress: 90, logs: [...prev.logs, `Avaliações removidas.`]}));
+
+            // Step 3: Refresh all data to ensure consistency
+            await fetchAllData();
+            setImportStatus(prev => ({...prev, progress: 100, logs: [...prev.logs, `Dados atualizados com sucesso.`]}));
+
+
+            setImportStatus(prev => ({ ...prev, status: 'done', title: 'Exclusão Concluída' }));
+            toast({ title: "Exclusão Concluída", description: `${evaluationIds.length} avaliações e seus dados associados foram removidos.` });
+        } catch (error: any) {
+            console.error(error);
+            setImportStatus(prev => ({ ...prev, status: 'error', title: 'Erro na Exclusão', logs: [...prev.logs, `Falha: ${error.message}`]}));
+            toast({ variant: 'destructive', title: "Erro na Exclusão", description: "Ocorreu um erro. Verifique os logs para mais detalhes." });
+        } finally {
+            setIsProcessing(false);
+            setTimeout(() => setImportStatus(INITIAL_IMPORT_STATUS), 5000);
+        }
+
+    }, [toast, fetchAllData]);
   
   // --- Gamification Actions ---
   const resetXpEvents = useCallback(async () => {

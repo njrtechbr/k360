@@ -39,7 +39,7 @@ const RatingStars = ({ rating }: { rating: number }) => {
 };
 
 export default function GerenciarAvaliacoesPage() {
-    const { user, isAuthenticated, loading, evaluations, attendants, deleteEvaluations, isProcessing } = useAuth();
+    const { user, isAuthenticated, appLoading, evaluations, attendants, deleteEvaluations, isProcessing } = useAuth();
     const router = useRouter();
 
     const [isDeleteSelectedOpen, setIsDeleteSelectedOpen] = useState(false);
@@ -47,10 +47,10 @@ export default function GerenciarAvaliacoesPage() {
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     
     useEffect(() => {
-        if (!loading && !isAuthenticated) {
+        if (!appLoading && !isAuthenticated) {
             router.push("/login");
         }
-    }, [isAuthenticated, loading, router]);
+    }, [isAuthenticated, appLoading, router]);
     
     const attendantMap = useMemo(() => {
         return attendants.reduce((acc, attendant) => {
@@ -58,14 +58,21 @@ export default function GerenciarAvaliacoesPage() {
             return acc;
         }, {} as Record<string, string>);
     }, [attendants]);
-
-    if (loading || !user) {
-        return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
-    }
     
-    const sortedEvaluations = [...evaluations].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+    const sortedEvaluations = useMemo(() => {
+        return [...evaluations].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+    }, [evaluations]);
+
     const deletableEvaluationIds = useMemo(() => sortedEvaluations.filter(e => e.importId !== 'native').map(e => e.id), [sortedEvaluations]);
 
+    useEffect(() => {
+        // Clear selection if the underlying data changes
+        setSelectedIds(new Set());
+    }, [evaluations]);
+
+    if (appLoading || !user) {
+        return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
+    }
 
     const handleSelectAll = (checked: boolean) => {
         if (checked) {
