@@ -4,7 +4,7 @@
 import { useAuth } from "@/providers/AuthProvider";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ShieldAlert, ShieldCheck, ShieldHalf, UserIcon, Wrench, Users, PlusCircle, Gift, Building2, Cake, CalendarDays } from "lucide-react";
 import { ROLES, type Attendant } from "@/lib/types";
@@ -15,6 +15,9 @@ import { differenceInDays, format, getYear, setYear, isFuture, addYears, differe
 import { ptBR } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePerformance } from "@/providers/PerformanceProvider";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
 
 const RoleIcon = ({ role }: { role: string }) => {
     switch (role) {
@@ -69,7 +72,7 @@ const getUpcomingAnniversaries = (attendants: Attendant[], type: 'birthday' | 'a
             let nextAnniversaryDate = setYear(originalDate, currentYear);
             
              // If the anniversary has already passed this year, check for next year's
-            if (differenceInDays(nextAnniversaryDate, today) < 0 ) {
+            if (differenceInDays(nextAnniversaryDate, today) < -1 ) { // Allow for today
                  nextAnniversaryDate = addYears(nextAnniversaryDate, 1);
             }
 
@@ -84,7 +87,6 @@ const getUpcomingAnniversaries = (attendants: Attendant[], type: 'birthday' | 'a
         })
         .filter((item): item is Anniversary => item !== null && item.daysUntil >= 0)
         .sort((a, b) => a.daysUntil - b.daysUntil)
-        .slice(0, 5); // Take the next 5
 };
 
 const groupAnniversariesByMonth = (anniversaries: Anniversary[]) => {
@@ -104,6 +106,9 @@ export default function DashboardPage() {
   const { user, isAuthenticated, authLoading, appLoading, modules, attendants } = useAuth();
   const router = useRouter();
   
+  const [isAnniversaryModalOpen, setIsAnniversaryModalOpen] = useState(false);
+  const [modalContent, setModalContent] = useState<{ type: 'birthday' | 'admission', title: string, data: Anniversary[] } | null>(null);
+  
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       router.push("/login");
@@ -120,10 +125,16 @@ export default function DashboardPage() {
   }, [modules]);
   
   const upcomingBirthdays = useMemo(() => getUpcomingAnniversaries(attendants, 'birthday'), [attendants]);
-  const groupedBirthdays = useMemo(() => groupAnniversariesByMonth(upcomingBirthdays), [upcomingBirthdays]);
-
   const upcomingWorkAnniversaries = useMemo(() => getUpcomingAnniversaries(attendants, 'admission'), [attendants]);
-  const groupedWorkAnniversaries = useMemo(() => groupAnniversariesByMonth(upcomingWorkAnniversaries), [upcomingWorkAnniversaries]);
+
+  const handleOpenModal = (type: 'birthday' | 'admission') => {
+      if (type === 'birthday') {
+          setModalContent({ type, title: 'Todos os Próximos Aniversariantes', data: upcomingBirthdays });
+      } else {
+          setModalContent({ type, title: 'Todos os Próximos Aniversários de Admissão', data: upcomingWorkAnniversaries });
+      }
+      setIsAnniversaryModalOpen(true);
+  };
 
 
   if (authLoading || appLoading || !user) {
@@ -137,7 +148,8 @@ export default function DashboardPage() {
   const canManageSystem = user.role === ROLES.ADMIN || user.role === ROLES.SUPERADMIN;
   const userModules = user.modules?.map(moduleId => moduleMap[moduleId]).filter(Boolean) || [];
 
-  const renderAnniversaryGroup = (groupedData: Record<string, Anniversary[]>, type: 'birthday' | 'admission') => {
+  const renderAnniversaryGroup = (anniversaries: Anniversary[], type: 'birthday' | 'admission') => {
+    const groupedData = groupAnniversariesByMonth(anniversaries);
     const sortedMonths = Object.keys(groupedData).sort((a, b) => {
         const monthA = groupedData[a][0].date.getMonth();
         const monthB = groupedData[b][0].date.getMonth();
@@ -154,24 +166,26 @@ export default function DashboardPage() {
     return sortedMonths.map(month => (
         <div key={month} className="space-y-3">
             <h4 className="font-semibold text-sm text-muted-foreground px-6">{month}</h4>
-            {groupedData[month].map(({ attendant, daysUntil, years, date }) => (
-              <div key={attendant.id} className="flex items-center justify-between p-2 mx-4 rounded-md border">
-                  <Link href={`/dashboard/rh/atendentes/${attendant.id}`} className="flex items-center gap-3 group">
-                      <Avatar className="h-10 w-10">
-                          <AvatarImage src={attendant.avatarUrl} alt={attendant.name} />
-                          <AvatarFallback>{getInitials(attendant.name)}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                          <p className="font-medium group-hover:underline">{attendant.name}</p>
-                          <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                              {type === 'birthday' ? <Cake size={14}/> : <CalendarDays size={14}/>}
-                              {format(date, 'dd/MM')} ({years} anos)
-                          </p>
-                      </div>
-                  </Link>
-                  <Badge variant="outline">{daysUntil === 0 ? 'Hoje!' : `em ${daysUntil}d`}</Badge>
-              </div>
-          ))}
+            <div className="space-y-2">
+                {groupedData[month].map(({ attendant, daysUntil, years, date }) => (
+                <div key={attendant.id} className="flex items-center justify-between p-2 mx-4 rounded-md border">
+                    <Link href={`/dashboard/rh/atendentes/${attendant.id}`} className="flex items-center gap-3 group">
+                        <Avatar className="h-10 w-10">
+                            <AvatarImage src={attendant.avatarUrl} alt={attendant.name} />
+                            <AvatarFallback>{getInitials(attendant.name)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                            <p className="font-medium group-hover:underline">{attendant.name}</p>
+                            <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                                {type === 'birthday' ? <Cake size={14}/> : <CalendarDays size={14}/>}
+                                {format(date, 'dd/MM')} ({years} anos)
+                            </p>
+                        </div>
+                    </Link>
+                    <Badge variant="outline">{daysUntil === 0 ? 'Hoje!' : `em ${daysUntil}d`}</Badge>
+                </div>
+            ))}
+            </div>
         </div>
     ));
   }
@@ -209,8 +223,11 @@ export default function DashboardPage() {
                                   <Skeleton className="h-6 w-16 rounded-full" />
                               </div>
                           ))
-                      ) : renderAnniversaryGroup(groupedBirthdays, 'birthday')}
+                      ) : renderAnniversaryGroup(upcomingBirthdays.slice(0, 5), 'birthday')}
                   </CardContent>
+                  <CardFooter>
+                       <Button variant="secondary" className="w-full" onClick={() => handleOpenModal('birthday')}>Ver todos</Button>
+                  </CardFooter>
               </Card>
               <Card>
                   <CardHeader>
@@ -230,8 +247,11 @@ export default function DashboardPage() {
                                   <Skeleton className="h-6 w-16 rounded-full" />
                               </div>
                           ))
-                      ) : renderAnniversaryGroup(groupedWorkAnniversaries, 'admission')}
+                      ) : renderAnniversaryGroup(upcomingWorkAnniversaries.slice(0, 5), 'admission')}
                   </CardContent>
+                   <CardFooter>
+                       <Button variant="secondary" className="w-full" onClick={() => handleOpenModal('admission')}>Ver todos</Button>
+                  </CardFooter>
               </Card>
           </div>
 
@@ -316,6 +336,19 @@ export default function DashboardPage() {
           </Card>
         )}
       </div>
+
+       <Dialog open={isAnniversaryModalOpen} onOpenChange={setIsAnniversaryModalOpen}>
+            <DialogContent className="max-w-xl">
+                <DialogHeader>
+                    <DialogTitle>{modalContent?.title}</DialogTitle>
+                </DialogHeader>
+                <ScrollArea className="h-96 pr-6">
+                    {modalContent && renderAnniversaryGroup(modalContent.data, modalContent.type)}
+                </ScrollArea>
+            </DialogContent>
+        </Dialog>
     </>
   );
 }
+
+    
