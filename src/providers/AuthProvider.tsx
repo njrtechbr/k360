@@ -180,6 +180,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  const { fetchModules } = modulesData;
+  const { fetchFuncoes, fetchSetores } = rhConfigData;
+  const { fetchAllUsers } = usersData;
+
   useEffect(() => {
     const initializeApp = async () => {
         setLoading(true);
@@ -190,9 +194,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Fetch essential data for UI (menus, etc.)
         console.log("AUTH: Carregando dados essenciais da UI...");
         await Promise.all([
-          modulesData.fetchModules(),
-          rhConfigData.fetchFuncoes(),
-          rhConfigData.fetchSetores()
+          fetchModules(),
+          fetchFuncoes(),
+          fetchSetores()
         ]);
         console.log("AUTH: Dados essenciais carregados.");
 
@@ -231,9 +235,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     initializeApp();
-  }, [seedInitialData, modulesData.fetchModules, rhConfigData.fetchFuncoes, rhConfigData.fetchSetores]);
+  }, [seedInitialData, fetchModules, fetchFuncoes, fetchSetores, fetchAllUsers]);
 
-  const login = async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string) => {
     try {
       console.log(`AUTH: Tentativa de login para ${email}`);
       await signInWithEmailAndPassword(auth, email, password);
@@ -243,9 +247,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({ variant: "destructive", title: "Erro de autenticação", description: "Email ou senha incorretos." });
       throw error;
     }
-  };
+  }, [toast]);
 
-  const register = async (userData: Omit<User, 'id'>) => {
+  const register = useCallback(async (userData: Omit<User, 'id'>) => {
     try {
       console.log(`AUTH: Tentativa de registro para ${userData.email}`);
       const userCredential = await createUserWithEmailAndPassword(auth, userData.password ? userData.password : "123456");
@@ -258,8 +262,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       // If user is superadmin, grant all modules
       if (userData.role === ROLES.SUPERADMIN) {
-        const allModules = await modulesData.fetchModules();
-        finalModules = allModules.map(m => m.id);
+        finalModules = modulesData.modules.map(m => m.id);
       }
       
       const newUserDoc = { ...userDataForDb, modules: finalModules };
@@ -278,9 +281,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({ variant: "destructive", title: "Erro no Registro", description });
       throw error;
     }
-  };
+  }, [toast, usersData, modulesData.modules]);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await signOut(auth);
       console.log("AUTH: Logout realizado com sucesso.");
@@ -288,9 +291,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
        console.error("AUTH: Erro no Logout:", error);
        toast({ variant: "destructive", title: "Erro no Logout", description: error.message });
     }
-  };
+  }, [toast]);
 
-  const updateProfile = async (userData: Partial<User>) => {
+  const updateProfile = useCallback(async (userData: Partial<User>) => {
     if (!auth.currentUser) throw new Error("Usuário não autenticado");
     const userDocRef = doc(db, "users", auth.currentUser.uid);
     const dataToUpdate: Partial<Omit<User, 'id' | 'password'>> = {};
@@ -305,15 +308,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const updatedDoc = await getDoc(userDocRef);
     if(updatedDoc.exists()) setUser({ id: updatedDoc.id, ...updatedDoc.data() } as User);
     toast({ title: "Perfil Atualizado!", description: "Suas informações foram atualizadas." });
-  };
+  }, [toast]);
 
-  const hasSuperAdmin = async (): Promise<boolean> => {
+  const hasSuperAdmin = useCallback(async (): Promise<boolean> => {
       const q = query(collection(db, 'users'), where("role", "==", ROLES.SUPERADMIN));
       const snapshot = await getDocs(q);
       return !snapshot.empty;
-  };
+  }, []);
   
-  const deleteModule = async (moduleId: string) => {
+  const deleteModule = useCallback(async (moduleId: string) => {
     await modulesData.deleteModule(moduleId);
     const allCurrentUsers = await usersData.fetchAllUsers();
     const batch = writeBatch(db);
@@ -326,7 +329,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await batch.commit();
     await usersData.fetchAllUsers();
     console.log(`MODULES: Módulo ${moduleId} removido de todos os usuários.`);
-  };
+  }, [modulesData, usersData]);
 
   const recalculateAllGamificationData = useCallback(async () => {
     console.log("AUTH: Iniciando recalculo geral de dados de gamificação...");
@@ -336,7 +339,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
      console.log("AUTH: Recalculo de gamificação concluído.");
   }, [attendantsData, evaluationsData, gamificationData]);
 
-  const addEvaluation = async (evaluationData: Omit<Evaluation, 'id' | 'xpGained'>): Promise<Evaluation> => {
+  const addEvaluation = useCallback(async (evaluationData: Omit<Evaluation, 'id' | 'xpGained'>): Promise<Evaluation> => {
     const baseScore = getScoreFromRating(evaluationData.nota, gamificationData.gamificationConfig.ratingScores);
     const totalMultiplier = (gamificationData.gamificationConfig.globalXpMultiplier || 1) * (gamificationData.activeSeason?.xpMultiplier || 1);
     const xpGained = baseScore * totalMultiplier;
@@ -344,25 +347,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const newEvaluation = await evaluationsData.addEvaluation(evaluationData, xpGained);
     await recalculateAllGamificationData();
     return newEvaluation;
-  };
+  }, [gamificationData.gamificationConfig, gamificationData.activeSeason, evaluationsData, recalculateAllGamificationData]);
 
-  const deleteEvaluations = async (evaluationIds: string[]) => {
+  const deleteEvaluations = useCallback(async (evaluationIds: string[]) => {
     await evaluationsData.deleteEvaluations(evaluationIds);
     await recalculateAllGamificationData();
     toast({ title: "Avaliações Removidas", description: `${evaluationIds.length} avaliações foram removidas e a gamificação foi recalculada.` });
-  }
+  }, [evaluationsData, recalculateAllGamificationData, toast]);
 
-  const addImportRecord = async (importData: Omit<EvaluationImport, 'id' | 'importedBy'>): Promise<EvaluationImport> => {
+  const addImportRecord = useCallback(async (importData: Omit<EvaluationImport, 'id' | 'importedBy'>): Promise<EvaluationImport> => {
       if(!user) throw new Error("Usuário não autenticado");
       const record = await evaluationsData.addImportRecord(importData);
       return { ...record, importedBy: user.id };
-  }
+  }, [user, evaluationsData]);
 
-  const addAttendantImportRecord = async (importData: Omit<AttendantImport, 'id' | 'importedBy'>): Promise<AttendantImport> => {
+  const addAttendantImportRecord = useCallback(async (importData: Omit<AttendantImport, 'id' | 'importedBy'>): Promise<AttendantImport> => {
        if(!user) throw new Error("Usuário não autenticado");
        const record = await attendantsData.addAttendantImportRecord(importData);
        return { ...record, importedBy: user.id };
-  }
+  }, [user, attendantsData]);
 
   const value: AuthContextType = {
     user,
