@@ -272,12 +272,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    if (!authLoading && isAuthenticated && user) {
+    if (!authLoading && !!user) {
         initializeApp();
-    } else if (!authLoading && !isAuthenticated) {
+    } else if (!authLoading && !user) {
         setAppLoading(false);
     }
-  }, [user, isAuthenticated, authLoading, initializeApp]);
+  }, [user, authLoading, initializeApp]);
   
   useEffect(() => {
     const now = new Date();
