@@ -10,7 +10,7 @@ import { ROLES } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export default function AppSidebar() {
-    const { isAuthenticated, user, modules } = useAuth();
+    const { isAuthenticated, user, modules, appLoading } = useAuth();
     const pathname = usePathname();
     const { state } = useSidebar();
 
@@ -18,9 +18,15 @@ export default function AppSidebar() {
         return null;
     }
 
+    // Don't render module list until app data is loaded.
+    if (appLoading) {
+        // You can return a loading state here if you want, 
+        // but for now, we'll just render the static links.
+    }
+
     const userModules = user.role === ROLES.SUPERADMIN 
         ? modules 
-        : modules.filter(m => user.modules.includes(m.id) && m.active);
+        : (modules || []).filter(m => user.modules.includes(m.id) && m.active);
 
     const canManageSystem = user.role === ROLES.ADMIN || user.role === ROLES.SUPERADMIN;
 
@@ -59,7 +65,7 @@ export default function AppSidebar() {
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 
-                    {userModules.map(mod => (
+                    {userModules && userModules.map(mod => (
                          <SidebarMenuItem key={mod.id}>
                             <SidebarMenuButton asChild isActive={pathname.startsWith(mod.path)} tooltip={{children: mod.name}}>
                                 <Link href={mod.path}>
