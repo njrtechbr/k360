@@ -524,28 +524,66 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setXpEvents(prev => [...prev, newXpEvent]);
       
       return newEvaluation;
-  }, [gamificationConfig.ratingScores, gamificationConfig.globalXpMultiplier, seasons]);
+  }, [gamificationConfig, seasons]);
 
-  const deleteEvaluations = useCallback(async (evaluationIds: string[]) => {
-     const batch = writeBatch(db);
-     evaluationIds.forEach(id => batch.delete(doc(db, "evaluations", id)));
-     
-     const xpEventsToDeleteQuery = query(collection(db, "xp_events"), where("relatedId", "in", evaluationIds), where("type", "==", "evaluation"));
-     const xpEventsToDeleteSnapshot = await getDocs(xpEventsToDeleteQuery);
-     xpEventsToDeleteSnapshot.forEach(doc => batch.delete(doc.ref));
+ const deleteEvaluations = useCallback(async (evaluationIds: string[]) => {
+    setIsProcessing(true);
+    try {
+        const evalsToDelete = evaluations.filter(ev => evaluationIds.includes(ev.id));
+        const attendantIdsAffected = [...new Set(evalsToDelete.map(ev => ev.attendantId))];
 
-     await batch.commit();
-     
-     setEvaluations(prev => prev.filter(e => !evaluationIds.includes(e.id)));
-     setXpEvents(prev => prev.filter(e => !(e.type === 'evaluation' && evaluationIds.includes(e.relatedId))));
+        const batch = writeBatch(db);
+        evaluationIds.forEach(id => batch.delete(doc(db, "evaluations", id)));
+        await batch.commit();
 
-     if (typeof window !== 'undefined') {
-        const currentAiAnalysis = JSON.parse(localStorage.getItem(AI_ANALYSIS_STORAGE_KEY) || '[]') as EvaluationAnalysis[];
-        const aiAnalysisToKeep = currentAiAnalysis.filter(ar => !evaluationIds.includes(ar.evaluationId));
-        localStorage.setItem(AI_ANALYSIS_STORAGE_KEY, JSON.stringify(aiAnalysisToKeep));
-        setAiAnalysisResults(aiAnalysisToKeep);
-     }
-  }, []);
+        const remainingEvaluations = evaluations.filter(ev => !evaluationIds.includes(ev.id));
+        setEvaluations(remainingEvaluations);
+        
+        // Remove all XP events for the affected attendants and recalculate them.
+        const xpDeleteBatch = writeBatch(db);
+        const xpEventsToKeep: XpEvent[] = [];
+        xpEvents.forEach(xp => {
+            if (attendantIdsAffected.includes(xp.attendantId)) {
+                xpDeleteBatch.delete(doc(db, "xp_events", xp.id));
+            } else {
+                xpEventsToKeep.push(xp);
+            }
+        });
+        await xpDeleteBatch.commit();
+
+        // Now, recalculate from the remaining data for the affected attendants
+        const xpAddBatch = writeBatch(db);
+        for (const attendantId of attendantIdsAffected) {
+            const attendantEvals = remainingEvaluations.filter(ev => ev.attendantId === attendantId);
+            
+            // Recalculate from evaluations
+            for (const ev of attendantEvals) {
+                 const eventRef = doc(collection(db, "xp_events"));
+                 const baseScore = getScoreFromRating(ev.nota, gamificationConfig.ratingScores);
+                 const season = seasons.find(s => s.active && new Date(ev.data) >= new Date(s.startDate) && new Date(ev.data) <= new Date(s.endDate));
+                 const totalMultiplier = gamificationConfig.globalXpMultiplier * (season?.xpMultiplier || 1);
+                 
+                 const newXpEvent: XpEvent = {
+                    id: eventRef.id, attendantId: ev.attendantId, points: baseScore * totalMultiplier,
+                    basePoints: baseScore, multiplier: totalMultiplier, reason: `Avaliação de ${ev.nota} estrela(s)`,
+                    date: ev.data, type: 'evaluation', relatedId: ev.id,
+                 };
+                 xpAddBatch.set(eventRef, newXpEvent);
+                 xpEventsToKeep.push(newXpEvent);
+            }
+        }
+        await xpAddBatch.commit();
+        setXpEvents(xpEventsToKeep);
+
+        toast({ title: "Exclusão Concluída", description: `${evaluationIds.length} avaliações removidas e XP recalculado.` });
+
+    } catch (error) {
+        console.error("Error deleting evaluations:", error);
+        toast({ variant: 'destructive', title: "Erro ao Excluir", description: "Não foi possível remover as avaliações." });
+    } finally {
+        setIsProcessing(false);
+    }
+}, [evaluations, xpEvents, gamificationConfig, seasons, toast]);
   
   // --- Gamification Actions ---
   const recalculateAllGamificationData = useCallback(async () => {
