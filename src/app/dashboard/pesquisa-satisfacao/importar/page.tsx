@@ -136,7 +136,7 @@ export default function ImportarAvaliacoesPage() {
                     rating: parseInt(row.Nota, 10),
                 }
             })
-            .filter((row): row is MappedReview => row !== null && !isNaN(row.rating));
+            .filter((row): row is MappedReview => row !== null && !isNaN(row.rating) && !!row.date);
     }, [parsedData, agentMap]);
     
     const handleImport = useCallback(async () => {

@@ -41,7 +41,7 @@ const RatingStars = ({ rating }: { rating: number }) => {
 
 
 export default function HistoricoImportacoesPage() {
-    const { user, isAuthenticated, loading, evaluationImports, allUsers, revertImport, evaluations, attendants } = useAuth();
+    const { user, isAuthenticated, loading, evaluationImports, allUsers, revertEvaluationImport, evaluations, attendants } = useAuth();
     const router = useRouter();
 
     const [isRevertDialogOpen, setIsRevertDialogOpen] = useState(false);
@@ -86,9 +86,21 @@ export default function HistoricoImportacoesPage() {
 
     const handleRevertConfirm = async () => {
         if (!selectedImport) return;
-        revertImport(selectedImport.id);
+        revertEvaluationImport(selectedImport.id);
         setIsRevertDialogOpen(false);
         setSelectedImport(null);
+    };
+    
+    const formatDateSafe = (dateStr: string) => {
+        try {
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) {
+                return "Data inválida";
+            }
+            return format(date, "dd/MM/yy HH:mm", { locale: ptBR });
+        } catch (error) {
+            return "Data inválida";
+        }
     };
 
     if (loading || !user) {
@@ -130,7 +142,7 @@ export default function HistoricoImportacoesPage() {
                                             <TableCell>
                                                 <div className="flex items-center gap-2">
                                                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                                                    {format(new Date(importRecord.importedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                                    {formatDateSafe(importRecord.importedAt)}
                                                 </div>
                                             </TableCell>
                                             <TableCell>
@@ -175,7 +187,7 @@ export default function HistoricoImportacoesPage() {
                         <DialogTitle>Detalhes da Importação</DialogTitle>
                         <DialogDescription>
                            Arquivo: <span className="font-semibold">{selectedImport?.fileName}</span> <br/>
-                           Data: <span className="font-semibold">{selectedImport ? format(new Date(selectedImport.importedAt), "dd/MM/yyyy 'às' HH:mm") : ''}</span>
+                           Data: <span className="font-semibold">{selectedImport ? formatDateSafe(selectedImport.importedAt) : ''}</span>
                         </DialogDescription>
                     </DialogHeader>
                     <ScrollArea className="h-96">
@@ -196,7 +208,7 @@ export default function HistoricoImportacoesPage() {
                                         </TableCell>
                                         <TableCell><RatingStars rating={ev.nota} /></TableCell>
                                         <TableCell className="text-muted-foreground">{ev.comentario}</TableCell>
-                                        <TableCell>{format(new Date(ev.data), 'dd/MM/yy HH:mm')}</TableCell>
+                                        <TableCell>{formatDateSafe(ev.data)}</TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
