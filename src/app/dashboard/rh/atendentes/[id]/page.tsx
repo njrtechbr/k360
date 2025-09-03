@@ -50,17 +50,28 @@ export default function AttendantProfilePage() {
     const attendant = useMemo(() => attendants.find(a => a.id === id), [attendants, id]);
     
     const { seasonEvaluations, attendantXpEvents, currentScore } = useMemo(() => {
-        const seasonXpEvents = activeSeason 
-            ? xpEvents.filter(e => e.attendantId === id && new Date(e.date) >= new Date(activeSeason.startDate) && new Date(e.date) <= new Date(activeSeason.endDate))
-            : [];
+        if (!activeSeason) {
+            return { seasonEvaluations: [], attendantXpEvents: [], currentScore: 0 };
+        }
+
+        const seasonStartDate = new Date(activeSeason.startDate);
+        const seasonEndDate = new Date(activeSeason.endDate);
+
+        const seasonXpEvents = xpEvents.filter(e => 
+            e.attendantId === id && 
+            new Date(e.date) >= seasonStartDate && 
+            new Date(e.date) <= seasonEndDate
+        );
         
         const currentScore = seasonXpEvents.reduce((acc, event) => acc + event.points, 0);
 
-        const seasonEvaluations = activeSeason
-            ? evaluations.filter(e => e.attendantId === id && new Date(e.data) >= new Date(activeSeason.startDate) && new Date(e.data) <= new Date(activeSeason.endDate))
-            : [];
+        const seasonEvaluations = evaluations.filter(e => 
+            e.attendantId === id && 
+            new Date(e.data) >= seasonStartDate && 
+            new Date(e.data) <= seasonEndDate
+        );
 
-        return { seasonEvaluations, attendantXpEvents, currentScore };
+        return { seasonEvaluations, attendantXpEvents: seasonXpEvents, currentScore };
     }, [evaluations, xpEvents, id, activeSeason]);
     
     const xpHistorySorted = useMemo(() => {
