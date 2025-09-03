@@ -34,7 +34,7 @@ type AchievementStat = Achievement & {
 };
 
 export default function GamificacaoPage() {
-    const { user, isAuthenticated, loading, evaluations, attendants, seasonXpEvents, gamificationConfig, achievements, activeSeason } = useAuth();
+    const { user, isAuthenticated, loading, attendants, seasonXpEvents, gamificationConfig, achievements, activeSeason } = useAuth();
     const router = useRouter();
     const [isAchievementDialogOpen, setIsAchievementDialogOpen] = useState(false);
     const [selectedAchievement, setSelectedAchievement] = useState<AchievementStat | null>(null);
@@ -50,33 +50,35 @@ export default function GamificacaoPage() {
     const totalMultiplier = globalMultiplier * seasonMultiplier;
 
     const leaderboard = useMemo(() => {
-        const xpByAttendant = new Map<string, number>();
-        seasonXpEvents.forEach(event => {
-            const currentXp = xpByAttendant.get(event.attendantId) || 0;
-            xpByAttendant.set(event.attendantId, currentXp + event.points);
-        });
+        const statsByAttendant = new Map<string, { score: number; evaluationCount: number }>();
 
-        const evalsInSeason = activeSeason
-            ? evaluations.filter(e => {
-                const eventDate = new Date(e.data);
-                return eventDate >= new Date(activeSeason!.startDate) && eventDate <= new Date(activeSeason!.endDate);
-            })
-            : [];
+        seasonXpEvents.forEach(event => {
+            let currentStats = statsByAttendant.get(event.attendantId);
+            if (!currentStats) {
+                currentStats = { score: 0, evaluationCount: 0 };
+            }
+            
+            currentStats.score += event.points;
+            if (event.type === 'evaluation') {
+                currentStats.evaluationCount++;
+            }
+            
+            statsByAttendant.set(event.attendantId, currentStats);
+        });
 
         return attendants
             .map(attendant => {
-                const totalScore = xpByAttendant.get(attendant.id) || 0;
-                const evaluationCount = evalsInSeason.filter(e => e.attendantId === attendant.id).length;
+                const stats = statsByAttendant.get(attendant.id);
                 return {
                     ...attendant,
-                    score: Math.round(totalScore),
-                    evaluationCount,
+                    score: Math.round(stats?.score || 0),
+                    evaluationCount: stats?.evaluationCount || 0,
                 }
             })
             .filter(att => att.score > 0 || att.evaluationCount > 0)
             .sort((a, b) => b.score - a.score);
 
-    }, [attendants, seasonXpEvents, activeSeason, evaluations]);
+    }, [attendants, seasonXpEvents]);
 
      const achievementStats: AchievementStat[] = useMemo(() => {
         return achievements
