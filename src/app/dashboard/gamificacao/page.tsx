@@ -64,10 +64,17 @@ export default function GamificacaoPage() {
             xpByAttendant.set(event.attendantId, currentXp + event.points);
         });
 
+        const evalsInSeason = activeSeason
+            ? evaluations.filter(e => {
+                const eventDate = new Date(e.data);
+                return eventDate >= new Date(activeSeason!.startDate) && eventDate <= new Date(activeSeason!.endDate);
+            })
+            : [];
+
         return attendants
             .map(attendant => {
                 const totalScore = xpByAttendant.get(attendant.id) || 0;
-                const evaluationCount = evaluations.filter(e => e.attendantId === attendant.id).length;
+                const evaluationCount = evalsInSeason.filter(e => e.attendantId === attendant.id).length;
                 return {
                     ...attendant,
                     score: Math.round(totalScore),

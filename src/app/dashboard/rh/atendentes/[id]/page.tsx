@@ -49,29 +49,20 @@ export default function AttendantProfilePage() {
 
     const attendant = useMemo(() => attendants.find(a => a.id === id), [attendants, id]);
     
-    const attendantEvaluations = useMemo(() => {
-        return evaluations
-            .filter(e => e.attendantId === id)
-            .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
-    }, [evaluations, id]);
+    const { seasonEvaluations, attendantXpEvents, currentScore } = useMemo(() => {
+        const seasonXpEvents = activeSeason 
+            ? xpEvents.filter(e => e.attendantId === id && new Date(e.date) >= new Date(activeSeason.startDate) && new Date(e.date) <= new Date(activeSeason.endDate))
+            : [];
+        
+        const currentScore = seasonXpEvents.reduce((acc, event) => acc + event.points, 0);
+
+        const seasonEvaluations = activeSeason
+            ? evaluations.filter(e => e.attendantId === id && new Date(e.data) >= new Date(activeSeason.startDate) && new Date(e.data) <= new Date(activeSeason.endDate))
+            : [];
+
+        return { seasonEvaluations, attendantXpEvents, currentScore };
+    }, [evaluations, xpEvents, id, activeSeason]);
     
-    const attendantXpEvents = useMemo(() => {
-        const events = xpEvents.filter(e => e.attendantId === id);
-        if (activeSeason) {
-            const startDate = new Date(activeSeason.startDate);
-            const endDate = new Date(activeSeason.endDate);
-            return events.filter(e => {
-                const eventDate = new Date(e.date);
-                return eventDate >= startDate && eventDate <= endDate;
-            });
-        }
-        return []; // No active season, no points.
-    }, [xpEvents, id, activeSeason]);
-
-    const currentScore = useMemo(() => {
-        return attendantXpEvents.reduce((acc, event) => acc + event.points, 0);
-    }, [attendantXpEvents]);
-
     const xpHistorySorted = useMemo(() => {
         return [...attendantXpEvents]
             .map(e => ({...e, icon: e.type === 'evaluation' ? Star : Trophy}))
@@ -80,15 +71,15 @@ export default function AttendantProfilePage() {
 
 
     const stats = useMemo(() => {
-        if (attendantEvaluations.length === 0) {
+        if (seasonEvaluations.length === 0) {
             return { averageRating: 0, totalEvaluations: 0 };
         }
-        const totalRating = attendantEvaluations.reduce((sum, ev) => sum + ev.nota, 0);
+        const totalRating = seasonEvaluations.reduce((sum, ev) => sum + ev.nota, 0);
         return {
-            averageRating: totalRating / attendantEvaluations.length,
-            totalEvaluations: attendantEvaluations.length
+            averageRating: totalRating / seasonEvaluations.length,
+            totalEvaluations: seasonEvaluations.length
         };
-    }, [attendantEvaluations]);
+    }, [seasonEvaluations]);
     
     useEffect(() => {
         if (!loading && !user) {
