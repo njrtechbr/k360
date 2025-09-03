@@ -125,6 +125,7 @@ interface AuthContextType {
   addSeason: (seasonData: Omit<GamificationSeason, 'id'>) => void;
   updateSeason: (id: string, seasonData: Partial<Omit<GamificationSeason, 'id'>>) => void;
   deleteSeason: (id: string) => void;
+  resetXpEvents: () => Promise<void>;
 
   // AI Analysis
   aiAnalysisResults: EvaluationAnalysis[];
@@ -600,6 +601,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }, [evaluations, toast]);
   
   // --- Gamification Actions ---
+  const resetXpEvents = useCallback(async () => {
+    try {
+        setIsProcessing(true);
+        const xpEventsSnapshot = await getDocs(collection(db, "xp_events"));
+        const batch = writeBatch(db);
+        xpEventsSnapshot.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+        await batch.commit();
+        setXpEvents([]);
+        toast({ title: "Dados Resetados!", description: "Todos os eventos de XP foram removidos com sucesso." });
+    } catch (error) {
+        console.error("Error resetting XP events:", error);
+        toast({ variant: "destructive", title: "Erro ao Resetar", description: "Não foi possível apagar os dados de XP." });
+    } finally {
+        setIsProcessing(false);
+    }
+}, [toast]);
+
   const recalculateAllGamificationData = useCallback(async () => {
     const currentAttendants = await getDocs(collection(db, "attendants")).then(snap => snap.docs.map(d => ({id: d.id, ...d.data()}) as Attendant));
     const currentEvaluations = await getDocs(collection(db, "evaluations")).then(snap => snap.docs.map(d => ({id: d.id, ...d.data()}) as Evaluation));
@@ -980,6 +1000,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     addSeason,
     updateSeason,
     deleteSeason,
+    resetXpEvents,
     aiAnalysisResults,
     lastAiAnalysis,
     isAiAnalysisRunning,
