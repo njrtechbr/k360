@@ -132,6 +132,26 @@ export default function ConfigurarSessoesPage() {
 
     const sortedSeasons = [...seasons].sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
     
+    const getSeasonStatus = (season: GamificationSeason): { text: string; variant: "secondary" | "destructive" | "outline" | "default" } => {
+        const now = new Date();
+        const startDate = new Date(season.startDate);
+        const endDate = new Date(season.endDate);
+
+        if (endDate < now) {
+            return { text: "Finalizada", variant: "outline" };
+        }
+        if (!season.active) {
+            return { text: "Inativa", variant: "destructive" };
+        }
+        if (startDate <= now && endDate >= now) {
+            return { text: "Em Andamento", variant: "secondary" };
+        }
+        if (startDate > now) {
+            return { text: "Agendada", variant: "default" };
+        }
+        return { text: "Indefinido", variant: "outline" }; // Fallback
+    };
+    
     return (
         <div className="space-y-8">
             <div className="flex items-center justify-between">
@@ -161,7 +181,9 @@ export default function ConfigurarSessoesPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {sortedSeasons.map((season) => (
+                            {sortedSeasons.map((season) => {
+                                const status = getSeasonStatus(season);
+                                return (
                                 <TableRow key={season.id}>
                                     <TableCell className="font-medium">{season.name}</TableCell>
                                     <TableCell>{format(new Date(season.startDate), 'dd/MM/yy')} - {format(new Date(season.endDate), 'dd/MM/yy')}</TableCell>
@@ -173,8 +195,8 @@ export default function ConfigurarSessoesPage() {
                                         )}
                                     </TableCell>
                                     <TableCell>
-                                         <Badge variant={season.active ? "secondary" : "destructive"}>
-                                            {season.active ? "Ativo" : "Inativo"}
+                                        <Badge variant={status.variant}>
+                                            {status.text}
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
@@ -195,7 +217,8 @@ export default function ConfigurarSessoesPage() {
                                         </DropdownMenu>
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                                )
+                            })}
                         </TableBody>
                     </Table>
                 </CardContent>
