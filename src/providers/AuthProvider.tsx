@@ -546,24 +546,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (evaluationIds.length === 0) return;
         setIsProcessing(true);
         try {
-            // Step 1: Identify which evaluations are imported vs. native
-            const evaluationsToDelete = evaluations.filter(ev => evaluationIds.includes(ev.id));
-            const importedEvaluationIds = evaluationsToDelete
-                .filter(ev => ev.importId && ev.importId !== 'native')
-                .map(ev => ev.id);
-
-            if (importedEvaluationIds.length === 0) {
-                toast({ title: "Nenhuma avaliação importada selecionada", description: "Avaliações nativas não podem ser excluídas em massa." });
-                setIsProcessing(false);
-                return;
-            }
-
-            // Step 2: Process deletion in chunks of 30
-            for (let i = 0; i < importedEvaluationIds.length; i += 30) {
-                const chunk = importedEvaluationIds.slice(i, i + 30);
+            for (let i = 0; i < evaluationIds.length; i += 30) {
+                const chunk = evaluationIds.slice(i, i + 30);
                 if (chunk.length === 0) continue;
 
                 const batch = writeBatch(db);
+                
+                const evaluationsToDelete = evaluations.filter(ev => chunk.includes(ev.id));
+                const nativeEvaluations = evaluationsToDelete.filter(ev => ev.importId === 'native');
+                if (nativeEvaluations.length > 0) {
+                    toast({ variant: 'destructive', title: 'Ação Interrompida', description: 'A exclusão em massa só é permitida para avaliações importadas.' });
+                    continue; // Skip this chunk if it contains native evaluations
+                }
                 
                 // Query for related xp_events to delete them as well
                 const xpEventsQuery = query(collection(db, "xp_events"), where("type", "==", "evaluation"), where("relatedId", "in", chunk));
@@ -576,11 +570,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 await batch.commit();
             }
 
-            // Step 3: Update local state for immediate feedback
-            setEvaluations(prev => prev.filter(ev => !importedEvaluationIds.includes(ev.id)));
-            setXpEvents(prev => prev.filter(xp => !(xp.type === 'evaluation' && importedEvaluationIds.includes(xp.relatedId))));
+            // Update local state for immediate feedback
+            setEvaluations(prev => prev.filter(ev => !evaluationIds.includes(ev.id)));
+            setXpEvents(prev => prev.filter(xp => !(xp.type === 'evaluation' && evaluationIds.includes(xp.relatedId))));
 
-            toast({ title: "Exclusão Concluída", description: `${importedEvaluationIds.length} avaliações importadas e seus XPs foram removidos.` });
+            toast({ title: "Exclusão Concluída", description: `${evaluationIds.length} avaliações e seus XPs foram removidos.` });
 
         } catch (error: any) {
             console.error("Error deleting evaluations:", error);
@@ -634,11 +628,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setImportStatus(prev => ({...prev, progress: 75, logs: [...prev.logs, 'Verificando troféus e conquistas...'] }));
 
     for (const attendant of currentAttendants) {
-        const attendantEvaluations = currentEvaluations.filter(e => e.attendantId === attendant.id);
+        const attendantEvaluations = currentEvaluations.filter(e => e.attendantId === attendant.id).sort((a,b) => new Date(a.data).getTime() - new Date(b.data).getTime());
+        
         for (const achievement of currentConfig.achievements) {
-            const seasonForAchievement = currentConfig.seasons.find(s => s.active);
-            if (achievement.active && seasonForAchievement) {
-                if (achievement.isUnlocked(attendant, attendantEvaluations, currentEvaluations, currentAttendants, allAiAnalysis)) {
+            if (!achievement.active) continue;
+
+            const existingUnlock = await getDocs(query(collection(db, 'xp_events'), where('attendantId', '==', attendant.id), where('relatedId', '==', achievement.id), where('type', '==', 'achievement'))).then(snap => !snap.empty);
+
+            if (existingUnlock) continue;
+
+            let unlockDate: string | null = null;
+            
+            // Check condition iteratively to find unlock date
+            for (let i = 0; i < attendantEvaluations.length; i++) {
+                const subEvaluations = attendantEvaluations.slice(0, i + 1);
+                if (achievement.isUnlocked(attendant, subEvaluations, currentEvaluations, currentAttendants, allAiAnalysis)) {
+                    unlockDate = subEvaluations[i].data; // Date of the evaluation that triggered the achievement
+                    break;
+                }
+            }
+
+            if (unlockDate) {
+                 const seasonForAchievement = currentConfig.seasons.find(s => s.active && new Date(unlockDate!) >= new Date(s.startDate) && new Date(unlockDate!) <= new Date(s.endDate));
+                if (seasonForAchievement) {
                     const totalMultiplier = currentConfig.globalXpMultiplier * (seasonForAchievement.xpMultiplier || 1);
                     const xpEventRef = doc(collection(db, "xp_events"));
                     xpEventsBatch.set(xpEventRef, {
@@ -648,7 +660,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                         basePoints: achievement.xp,
                         multiplier: totalMultiplier,
                         reason: `Troféu: ${achievement.title}`,
-                        date: new Date().toISOString(),
+                        date: unlockDate,
                         type: 'achievement',
                         relatedId: achievement.id,
                     });
@@ -972,3 +984,4 @@ export const useAuth = () => {
   }
   return context;
 };
+
