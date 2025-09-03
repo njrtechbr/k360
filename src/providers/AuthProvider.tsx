@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { ReactNode } from "react";
@@ -20,7 +21,8 @@ import {
 import { collection, doc, getDoc, getDocs, setDoc, updateDoc, writeBatch, deleteDoc, query, where } from 'firebase/firestore';
 import { INITIAL_ACHIEVEMENTS, INITIAL_LEVEL_REWARDS } from "@/lib/achievements";
 import { getScoreFromRating } from "@/lib/gamification";
-import { analyzeEvaluation, type EvaluationAnalysis } from '@/ai/flows/analyze-evaluation-flow';
+import { analyzeEvaluation } from '@/ai/flows/analyze-evaluation-flow';
+import type { EvaluationAnalysis } from '@/lib/types';
 
 
 const AI_ANALYSIS_STORAGE_KEY = "controle_acesso_ai_analysis";
@@ -93,14 +95,14 @@ interface AuthContextType {
 
   // Evaluations
   evaluations: Evaluation[];
-  addEvaluation: (evaluationData: Omit<Evaluation, 'id'|'relatedId'>) => Promise<Evaluation>;
+  addEvaluation: (evaluationData: Omit<Evaluation, 'id' | 'xpGained'>) => Promise<Evaluation>;
   deleteEvaluations: (evaluationIds: string[]) => Promise<void>;
   
   // Imports
   evaluationImports: EvaluationImport[];
   attendantImports: AttendantImport[];
-  importLegacyEvaluations: (evaluationsData: Omit<Evaluation, 'xpGained' | 'relatedId'>[], fileName: string, userId: string) => Promise<void>;
-  importWhatsAppEvaluations: (evaluationsData: Omit<Evaluation, 'id' | 'xpGained' | 'relatedId'>[], agentMap: Record<string, string>, fileName: string, userId: string) => Promise<void>;
+  importLegacyEvaluations: (evaluationsData: Omit<Evaluation, 'xpGained'>[], fileName: string, userId: string) => Promise<void>;
+  importWhatsAppEvaluations: (evaluationsData: Omit<Evaluation, 'id' | 'xpGained'>[], agentMap: Record<string, string>, fileName: string, userId: string) => Promise<void>;
   importAttendants: (attendantsData: Omit<Attendant, 'importId'>[], fileName: string, userId: string) => Promise<void>;
   revertEvaluationImport: (importId: string) => Promise<void>;
   revertAttendantImport: (importId: string) => Promise<void>;
@@ -473,39 +475,60 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [toast]);
 
   // --- Evaluation Actions ---
-  const addEvaluation = useCallback(async (evaluationData: Omit<Evaluation, 'id' | 'relatedId'>): Promise<Evaluation> => {
-    const docRef = doc(collection(db, "evaluations"));
-    const finalEvaluation = { ...evaluationData, id: docRef.id, relatedId: docRef.id };
-    await setDoc(docRef, finalEvaluation);
-    setEvaluations(prev => [...prev, finalEvaluation]);
-    
-    // Also create the XP event
-    const baseScore = getScoreFromRating(finalEvaluation.nota, gamificationConfig.ratingScores);
-    const seasonMultiplier = activeSeason?.xpMultiplier ?? 1;
-    const totalMultiplier = gamificationConfig.globalXpMultiplier * seasonMultiplier;
-    const finalXp = baseScore * totalMultiplier;
-    
-    const xpEventRef = doc(collection(db, "xp_events"));
-    const newXpEvent: XpEvent = {
-        id: xpEventRef.id,
-        attendantId: finalEvaluation.attendantId,
-        points: finalXp,
-        reason: `Avaliação de ${finalEvaluation.nota} estrela(s)`,
-        date: finalEvaluation.data,
-        type: 'evaluation',
-        relatedId: finalEvaluation.id,
-    }
-    await setDoc(xpEventRef, newXpEvent);
-    setXpEvents(prev => [...prev, newXpEvent]);
-    
-    return finalEvaluation;
-  }, [activeSeason, gamificationConfig]);
+  const addEvaluation = useCallback(async (evaluationData: Omit<Evaluation, 'id' | 'xpGained'>): Promise<Evaluation> => {
+      const evaluationDate = new Date();
+      const baseScore = getScoreFromRating(evaluationData.nota, gamificationConfig.ratingScores);
+      
+      const seasonForEvaluation = seasons.find(s => s.active && evaluationDate >= new Date(s.startDate) && evaluationDate <= new Date(s.endDate));
+      const seasonMultiplier = seasonForEvaluation?.xpMultiplier ?? 1;
+      const totalMultiplier = gamificationConfig.globalXpMultiplier * seasonMultiplier;
+      const finalXp = baseScore * totalMultiplier;
+      
+      const newEvaluation: Evaluation = {
+          ...evaluationData,
+          id: '', // Will be set by Firestore
+          data: evaluationDate.toISOString(),
+          xpGained: finalXp,
+      };
+
+      const docRef = doc(collection(db, "evaluations"));
+      newEvaluation.id = docRef.id;
+
+      const xpEventRef = doc(collection(db, "xp_events"));
+      const newXpEvent: XpEvent = {
+          id: xpEventRef.id,
+          attendantId: newEvaluation.attendantId,
+          points: finalXp,
+          reason: `Avaliação de ${newEvaluation.nota} estrela(s)`,
+          date: newEvaluation.data,
+          type: 'evaluation',
+          relatedId: newEvaluation.id,
+      };
+
+      const batch = writeBatch(db);
+      batch.set(docRef, newEvaluation);
+      batch.set(xpEventRef, newXpEvent);
+      await batch.commit();
+
+      setEvaluations(prev => [...prev, newEvaluation]);
+      setXpEvents(prev => [...prev, newXpEvent]);
+      
+      return newEvaluation;
+  }, [gamificationConfig.ratingScores, gamificationConfig.globalXpMultiplier, seasons]);
 
   const deleteEvaluations = useCallback(async (evaluationIds: string[]) => {
      const batch = writeBatch(db);
      evaluationIds.forEach(id => batch.delete(doc(db, "evaluations", id)));
+     
+     const xpEventsToDeleteQuery = query(collection(db, "xp_events"), where("relatedId", "in", evaluationIds), where("type", "==", "evaluation"));
+     const xpEventsToDeleteSnapshot = await getDocs(xpEventsToDeleteQuery);
+     xpEventsToDeleteSnapshot.forEach(doc => batch.delete(doc.ref));
+
      await batch.commit();
+     
      setEvaluations(prev => prev.filter(e => !evaluationIds.includes(e.id)));
+     setXpEvents(prev => prev.filter(e => !(e.type === 'evaluation' && evaluationIds.includes(e.relatedId))));
+
      if (typeof window !== 'undefined') {
         const currentAiAnalysis = JSON.parse(localStorage.getItem(AI_ANALYSIS_STORAGE_KEY) || '[]') as EvaluationAnalysis[];
         const aiAnalysisToKeep = currentAiAnalysis.filter(ar => !evaluationIds.includes(ar.evaluationId));
@@ -543,6 +566,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         const xpEventRef = doc(collection(db, "xp_events"));
         xpEventsBatch.set(xpEventRef, {
+            id: xpEventRef.id,
             attendantId: ev.attendantId,
             points: finalXp,
             reason: `Avaliação de ${ev.nota} estrela(s)`,
@@ -563,6 +587,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     const totalMultiplier = currentConfig.globalXpMultiplier * (seasonForAchievement.xpMultiplier || 1);
                     const xpEventRef = doc(collection(db, "xp_events"));
                     xpEventsBatch.set(xpEventRef, {
+                        id: xpEventRef.id,
                         attendantId: attendant.id,
                         points: achievement.xp * totalMultiplier,
                         reason: `Troféu: ${achievement.title}`,
@@ -581,7 +606,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [fetchAllData]);
 
   // --- Import Actions ---
-  const importLegacyEvaluations = useCallback(async (evaluationsData: Omit<Evaluation, 'xpGained' | 'relatedId'>[], fileName: string, userId: string) => {
+  const importLegacyEvaluations = useCallback(async (evaluationsData: Omit<Evaluation, 'xpGained'>[], fileName: string, userId: string) => {
     setIsProcessing(true);
     setImportStatus({ isOpen: true, logs: [], progress: 0, title: 'Importando Avaliações (Legado)', status: 'processing' });
     
@@ -615,7 +640,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [recalculateAllGamificationData, toast]);
 
-  const importWhatsAppEvaluations = useCallback(async (evaluationsData: Omit<Evaluation, 'id' | 'xpGained' | 'relatedId'>[], agentMap: Record<string, string>, fileName: string, userId: string) => {
+  const importWhatsAppEvaluations = useCallback(async (evaluationsData: Omit<Evaluation, 'id' | 'xpGained'>[], agentMap: Record<string, string>, fileName: string, userId: string) => {
       setIsProcessing(true);
       setImportStatus({ isOpen: true, logs: [], progress: 0, title: 'Importando Avaliações (WhatsApp)', status: 'processing' });
 
