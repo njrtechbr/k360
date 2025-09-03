@@ -189,7 +189,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         // Fetch essential data for UI (menus, etc.)
         console.log("AUTH: Carregando dados essenciais da UI...");
-        await modulesData.fetchModules();
+        await Promise.all([
+          modulesData.fetchModules(),
+          rhConfigData.fetchFuncoes(),
+          rhConfigData.fetchSetores()
+        ]);
         console.log("AUTH: Dados essenciais carregados.");
 
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -227,7 +231,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     initializeApp();
-  }, [seedInitialData, modulesData.fetchModules]);
+  }, [seedInitialData, modulesData.fetchModules, rhConfigData.fetchFuncoes, rhConfigData.fetchSetores]);
 
   const login = async (email: string, password: string) => {
     try {
@@ -350,12 +354,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const addImportRecord = async (importData: Omit<EvaluationImport, 'id' | 'importedBy'>): Promise<EvaluationImport> => {
       if(!user) throw new Error("Usuário não autenticado");
-      return evaluationsData.addImportRecord(importData, user.id);
+      const record = await evaluationsData.addImportRecord(importData);
+      return { ...record, importedBy: user.id };
   }
 
   const addAttendantImportRecord = async (importData: Omit<AttendantImport, 'id' | 'importedBy'>): Promise<AttendantImport> => {
        if(!user) throw new Error("Usuário não autenticado");
-      return attendantsData.addAttendantImportRecord(importData, user.id);
+       const record = await attendantsData.addAttendantImportRecord(importData);
+       return { ...record, importedBy: user.id };
   }
 
   const value: AuthContextType = {

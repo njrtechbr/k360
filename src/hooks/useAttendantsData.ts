@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import type { Attendant, AttendantImport } from '@/lib/types';
 import { db } from '@/lib/firebase';
-import { collection, doc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch, getDoc } from 'firebase/firestore';
+import { collection, doc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 
 export function useAttendantsData() {
     const [attendants, setAttendants] = useState<Attendant[]>([]);
@@ -93,10 +93,10 @@ export function useAttendantsData() {
         }
     };
 
-    const addAttendantImportRecord = async (importData: Omit<AttendantImport, 'id'>, userId: string): Promise<AttendantImport> => {
+    const addAttendantImportRecord = async (importData: Omit<AttendantImport, 'id'>): Promise<AttendantImport> => {
          try {
             const docRef = doc(collection(db, "attendantImports"));
-            const newImport = { ...importData, id: docRef.id, importedBy: userId };
+            const newImport = { ...importData, id: docRef.id };
             await setDoc(docRef, newImport);
             return newImport;
         } catch (error) {
@@ -106,12 +106,11 @@ export function useAttendantsData() {
     };
 
     const revertAttendantImport = async (importId: string) => {
-        const importToRevertDoc = await getDoc(doc(db, "attendantImports", importId));
-        if (!importToRevertDoc.exists()) {
+        const importToRevert = (await fetchAttendantImports()).find(i => i.id === importId);
+        if (!importToRevert) {
             toast({ variant: 'destructive', title: 'Erro', description: 'Importação não encontrada.' });
             return;
         }
-        const importToRevert = importToRevertDoc.data() as AttendantImport;
         await deleteAttendants(importToRevert.attendantIds);
         await deleteDoc(doc(db, "attendantImports", importId));
         
