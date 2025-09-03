@@ -526,56 +526,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return newEvaluation;
   }, [gamificationConfig, seasons]);
 
- const deleteEvaluations = useCallback(async (evaluationIds: string[]) => {
+  const deleteEvaluations = useCallback(async (evaluationIds: string[]) => {
     setIsProcessing(true);
     try {
-        const evalsToDelete = evaluations.filter(ev => evaluationIds.includes(ev.id));
-        const attendantIdsAffected = [...new Set(evalsToDelete.map(ev => ev.attendantId))];
-
         const batch = writeBatch(db);
-        evaluationIds.forEach(id => batch.delete(doc(db, "evaluations", id)));
+        
+        // Find related xp_events
+        const q = query(collection(db, "xp_events"), where("type", "==", "evaluation"), where("relatedId", "in", evaluationIds));
+        const xpEventsSnapshot = await getDocs(q);
+        
+        // Delete evaluations
+        evaluationIds.forEach(id => {
+            batch.delete(doc(db, "evaluations", id));
+        });
+        
+        // Delete related xp_events
+        xpEventsSnapshot.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+
         await batch.commit();
 
-        const remainingEvaluations = evaluations.filter(ev => !evaluationIds.includes(ev.id));
-        setEvaluations(remainingEvaluations);
-        
-        // Remove all XP events for the affected attendants and recalculate them.
-        const xpDeleteBatch = writeBatch(db);
-        const xpEventsToKeep: XpEvent[] = [];
-        xpEvents.forEach(xp => {
-            if (attendantIdsAffected.includes(xp.attendantId)) {
-                xpDeleteBatch.delete(doc(db, "xp_events", xp.id));
-            } else {
-                xpEventsToKeep.push(xp);
-            }
-        });
-        await xpDeleteBatch.commit();
+        // Update local state
+        setEvaluations(prev => prev.filter(ev => !evaluationIds.includes(ev.id)));
+        setXpEvents(prev => prev.filter(xp => !xpEventsSnapshot.docs.some(doc => doc.id === xp.id)));
 
-        // Now, recalculate from the remaining data for the affected attendants
-        const xpAddBatch = writeBatch(db);
-        for (const attendantId of attendantIdsAffected) {
-            const attendantEvals = remainingEvaluations.filter(ev => ev.attendantId === attendantId);
-            
-            // Recalculate from evaluations
-            for (const ev of attendantEvals) {
-                 const eventRef = doc(collection(db, "xp_events"));
-                 const baseScore = getScoreFromRating(ev.nota, gamificationConfig.ratingScores);
-                 const season = seasons.find(s => s.active && new Date(ev.data) >= new Date(s.startDate) && new Date(ev.data) <= new Date(s.endDate));
-                 const totalMultiplier = gamificationConfig.globalXpMultiplier * (season?.xpMultiplier || 1);
-                 
-                 const newXpEvent: XpEvent = {
-                    id: eventRef.id, attendantId: ev.attendantId, points: baseScore * totalMultiplier,
-                    basePoints: baseScore, multiplier: totalMultiplier, reason: `Avaliação de ${ev.nota} estrela(s)`,
-                    date: ev.data, type: 'evaluation', relatedId: ev.id,
-                 };
-                 xpAddBatch.set(eventRef, newXpEvent);
-                 xpEventsToKeep.push(newXpEvent);
-            }
-        }
-        await xpAddBatch.commit();
-        setXpEvents(xpEventsToKeep);
-
-        toast({ title: "Exclusão Concluída", description: `${evaluationIds.length} avaliações removidas e XP recalculado.` });
+        toast({ title: "Exclusão Concluída", description: `${evaluationIds.length} avaliações e seus respectivos XPs foram removidos.` });
 
     } catch (error) {
         console.error("Error deleting evaluations:", error);
@@ -583,7 +559,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } finally {
         setIsProcessing(false);
     }
-}, [evaluations, xpEvents, gamificationConfig, seasons, toast]);
+  }, [toast]);
   
   // --- Gamification Actions ---
   const recalculateAllGamificationData = useCallback(async () => {
@@ -957,3 +933,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    
