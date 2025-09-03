@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import type { Attendant, AttendantImport } from '@/lib/types';
 import { db } from '@/lib/firebase';
-import { collection, doc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, doc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch, getDoc } from 'firebase/firestore';
 
 export function useAttendantsData() {
     const [attendants, setAttendants] = useState<Attendant[]>([]);
@@ -41,12 +41,14 @@ export function useAttendantsData() {
         }
     }, []);
 
-    const addAttendant = async (attendantData: Attendant): Promise<Attendant> => {
+    const addAttendant = async (attendantData: Omit<Attendant, 'id'>): Promise<Attendant> => {
         try {
-            const attendantDocRef = doc(db, "attendants", attendantData.id);
-            await setDoc(attendantDocRef, attendantData);
+            const newId = attendantData.id || doc(collection(db, "attendants")).id;
+            const finalAttendantData = { ...attendantData, id: newId };
+            const attendantDocRef = doc(db, "attendants", newId);
+            await setDoc(attendantDocRef, finalAttendantData);
             await fetchAttendants(); // Refresh the list
-            return attendantData;
+            return finalAttendantData;
         } catch(error) {
             console.error("Error adding attendant: ", error);
             toast({ variant: "destructive", title: "Erro ao adicionar atendente" });

@@ -41,6 +41,7 @@ interface AuthContextType {
   updateProfile: (userData: Partial<User>) => Promise<void>;
   allUsers: User[];
   fetchAllUsers: () => Promise<User[]>;
+  setAllUsers: React.Dispatch<React.SetStateAction<User[]>>;
   updateUser: (userId: string, userData: { name: string; role: Role; modules: string[] }) => Promise<void>;
   deleteUser: (userId: string) => Promise<void>;
   hasSuperAdmin: () => Promise<boolean>;
@@ -349,7 +350,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const addImportRecord = async (importData: Omit<EvaluationImport, 'id' | 'importedBy'>): Promise<EvaluationImport> => {
       if(!user) throw new Error("Usuário não autenticado");
-      return evaluationsData.addImportRecord(importData);
+      return evaluationsData.addImportRecord(importData, user.id);
   }
 
   const addAttendantImportRecord = async (importData: Omit<AttendantImport, 'id' | 'importedBy'>): Promise<AttendantImport> => {
@@ -367,6 +368,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     updateProfile,
     allUsers: usersData.allUsers,
     fetchAllUsers: usersData.fetchAllUsers,
+    setAllUsers: usersData.setAllUsers,
     updateUser: usersData.updateUser,
     deleteUser: usersData.deleteUser,
     hasSuperAdmin,
