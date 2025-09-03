@@ -114,17 +114,17 @@ export default function PesquisaSatisfacaoPage() {
                 </Card>
                 <Card>
                     <CardHeader>
-                        <CardTitle>Gerenciar Importações</CardTitle>
-                        <CardDescription>Veja e reverta importações ou exclua avaliações específicas.</CardDescription>
+                        <CardTitle>Gerenciar Avaliações</CardTitle>
+                        <CardDescription>Exclua avaliações específicas ou todas de uma vez.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <p className="text-sm text-muted-foreground mb-4">
-                           Gerencie todos os lotes de avaliações importados para o sistema.
+                           Ferramenta para limpeza de dados e gerenciamento de registros.
                         </p>
-                        <Button asChild>
-                            <Link href="/dashboard/pesquisa-satisfacao/historico-importacoes">
-                                <History className="mr-2 h-4 w-4" />
-                                Gerenciar Importações
+                        <Button asChild variant="destructive">
+                            <Link href="/dashboard/pesquisa-satisfacao/gerenciar">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Gerenciar Dados
                             </Link>
                         </Button>
                     </CardContent>
