@@ -43,7 +43,7 @@ const RatingStars = ({ rating }: { rating: number }) => {
 
 
 export default function HistoricoImportacoesPage() {
-    const { user, isAuthenticated, loading, evaluationImports, revertEvaluationImport, evaluations, attendants, deleteEvaluations } = useAuth();
+    const { user, isAuthenticated, loading, evaluationImports, revertEvaluationImport, evaluations, attendants, deleteEvaluations, allUsers } = useAuth();
     const router = useRouter();
 
     const [isRevertDialogOpen, setIsRevertDialogOpen] = useState(false);
@@ -110,10 +110,18 @@ export default function HistoricoImportacoesPage() {
     };
     
     const handleDeleteSelectedConfirm = async () => {
-        await deleteEvaluations(selectedEvaluationIds);
+        const evaluationsToDelete = evaluationsForSelectedImport
+            .filter(ev => selectedEvaluationIds.includes(ev.id))
+            .filter(ev => ev.importId !== 'native'); // Double check to not delete native ones
+
+        if (evaluationsToDelete.length !== selectedEvaluationIds.length) {
+            // This case shouldn't happen with the current UI, but it's a good safeguard
+        }
+
+        await deleteEvaluations(evaluationsToDelete.map(e => e.id));
         setIsDeleteSelectedOpen(false);
-        setSelectedEvaluationIds([]);
-        // Optimistically update the view
+        
+        // Optimistically update the view in the modal
         if (selectedImport) {
             const updatedImport = {
                 ...selectedImport,
@@ -121,6 +129,7 @@ export default function HistoricoImportacoesPage() {
             };
             setSelectedImport(updatedImport);
         }
+        setSelectedEvaluationIds([]);
     };
     
     const formatDateSafe = (dateStr: string | null) => {
@@ -138,7 +147,11 @@ export default function HistoricoImportacoesPage() {
     
     const handleSelectAll = (checked: boolean) => {
         if (checked) {
-            setSelectedEvaluationIds(evaluationsForSelectedImport.map(e => e.id));
+            // Only select non-native evaluations
+            const selectableIds = evaluationsForSelectedImport
+                .filter(e => e.importId !== 'native')
+                .map(e => e.id);
+            setSelectedEvaluationIds(selectableIds);
         } else {
             setSelectedEvaluationIds([]);
         }
@@ -156,8 +169,6 @@ export default function HistoricoImportacoesPage() {
         return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
     }
     
-    const { allUsers } = useAuth(); // Fetch allUsers for the userMap
-
     const sortedImports = [...evaluationImports].sort((a, b) => new Date(b.importedAt).getTime() - new Date(a.importedAt).getTime());
 
     return (
@@ -246,7 +257,7 @@ export default function HistoricoImportacoesPage() {
                                 <TableRow>
                                     <TableHead className="w-[50px]">
                                         <Checkbox
-                                            checked={selectedEvaluationIds.length > 0 && selectedEvaluationIds.length === evaluationsForSelectedImport.length}
+                                            checked={selectedEvaluationIds.length > 0 && selectedEvaluationIds.length === evaluationsForSelectedImport.filter(e => e.importId !== 'native').length}
                                             onCheckedChange={handleSelectAll}
                                         />
                                     </TableHead>
@@ -263,6 +274,7 @@ export default function HistoricoImportacoesPage() {
                                             <Checkbox
                                                 checked={selectedEvaluationIds.includes(ev.id)}
                                                 onCheckedChange={(checked) => handleSelectRow(ev.id, !!checked)}
+                                                disabled={ev.importId === 'native'}
                                             />
                                         </TableCell>
                                         <TableCell>
@@ -324,3 +336,4 @@ export default function HistoricoImportacoesPage() {
         </>
     );
 }
+
