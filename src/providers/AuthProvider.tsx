@@ -543,71 +543,63 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return newEvaluation;
   }, [gamificationConfig, seasons]);
 
-const deleteEvaluations = useCallback(async (evaluationIds: string[]) => {
-    if (!evaluationIds || evaluationIds.length === 0) return;
-    setIsProcessing(true);
-    let totalDeleted = 0;
-    let totalSkipped = 0;
+    const deleteEvaluations = useCallback(async (evaluationIds: string[]) => {
+        if (!evaluationIds || evaluationIds.length === 0) return;
+        setIsProcessing(true);
+        let totalDeleted = 0;
+        let totalSkipped = 0;
 
-    const allDeletedEvaluationIds = new Set<string>();
-    const allDeletedXpEventIds = new Set<string>();
+        try {
+            for (let i = 0; i < evaluationIds.length; i += 30) {
+                const chunk = evaluationIds.slice(i, i + 30);
+                if (chunk.length === 0) continue;
 
-    try {
-        const fullEvaluations = await getDocs(query(collection(db, "evaluations"), where(documentId(), "in", evaluationIds.slice(0, 30))))
-            .then(snap => snap.docs.map(d => ({id: d.id, ...d.data()} as Evaluation)));
+                const batch = writeBatch(db);
 
-        const deletableEvaluations = fullEvaluations.filter(ev => {
-            if (ev.importId === 'native') {
-                totalSkipped++;
-                return false;
+                // Get evaluations to check if they are native
+                const evaluationsQuery = query(collection(db, "evaluations"), where(documentId(), "in", chunk));
+                const evaluationsSnapshot = await getDocs(evaluationsQuery);
+                
+                const deletableEvaluationIds: string[] = [];
+                evaluationsSnapshot.forEach(docSnap => {
+                    if (docSnap.data().importId !== 'native') {
+                        deletableEvaluationIds.push(docSnap.id);
+                    } else {
+                        totalSkipped++;
+                    }
+                });
+
+                if (deletableEvaluationIds.length > 0) {
+                    // Find corresponding xp_events
+                    const xpEventsQuery = query(collection(db, "xp_events"), where("relatedId", "in", deletableEvaluationIds), where("type", "==", "evaluation"));
+                    const xpEventsSnapshot = await getDocs(xpEventsQuery);
+                    
+                    // Delete evaluations and their xp_events
+                    deletableEvaluationIds.forEach(id => batch.delete(doc(db, "evaluations", id)));
+                    xpEventsSnapshot.forEach(docSnap => batch.delete(docSnap.ref));
+
+                    await batch.commit();
+                    totalDeleted += deletableEvaluationIds.length;
+                }
             }
-            return true;
-        });
 
-        const deletableEvaluationIds = deletableEvaluations.map(ev => ev.id);
-        
-        for (let i = 0; i < deletableEvaluationIds.length; i += 30) {
-            const batch = writeBatch(db);
-            const chunk = deletableEvaluationIds.slice(i, i + 30);
+            if (totalDeleted > 0) {
+                setEvaluations(prev => prev.filter(ev => !evaluationIds.includes(ev.id)));
+                setXpEvents(prev => prev.filter(xp => xp.type !== 'evaluation' || !evaluationIds.includes(xp.relatedId)));
+                toast({ title: "Exclusão Concluída", description: `${totalDeleted} avaliações e seus XPs foram removidos.` });
+            }
+
+            if (totalSkipped > 0) {
+                toast({ variant: 'default', title: 'Aviso', description: `${totalSkipped} avaliações nativas foram ignoradas e não podem ser excluídas.` });
+            }
             
-            if (chunk.length === 0) continue;
-            
-            const xpEventsQuery = query(collection(db, "xp_events"), where("relatedId", "in", chunk), where("type", "==", "evaluation"));
-            const xpEventsSnapshot = await getDocs(xpEventsQuery);
-            
-            const xpEventIdsToDelete = xpEventsSnapshot.docs.map(doc => doc.id);
-            
-            chunk.forEach(id => {
-                batch.delete(doc(db, "evaluations", id));
-                allDeletedEvaluationIds.add(id);
-            });
-            xpEventIdsToDelete.forEach(id => {
-                batch.delete(doc(db, "xp_events", id));
-                allDeletedXpEventIds.add(id);
-            });
-            
-            await batch.commit();
-            totalDeleted += chunk.length;
+        } catch (error: any) {
+            console.error("Error deleting evaluations:", error);
+            toast({ variant: 'destructive', title: "Erro ao Excluir", description: error.message });
+        } finally {
+            setIsProcessing(false);
         }
-
-        if (totalDeleted > 0) {
-            setEvaluations(prev => prev.filter(ev => !allDeletedEvaluationIds.has(ev.id)));
-            setXpEvents(prev => prev.filter(xp => !allDeletedXpEventIds.has(xp.id)));
-            toast({ title: "Exclusão Concluída", description: `${totalDeleted} avaliações e seus XPs foram removidos.` });
-        }
-
-        if (totalSkipped > 0) {
-            toast({ variant: 'default', title: 'Aviso', description: `${totalSkipped} avaliações nativas foram ignoradas.` });
-        }
-        
-    } catch (error: any) {
-        console.error("Error deleting evaluations:", error);
-        toast({ variant: 'destructive', title: "Erro ao Excluir", description: error.message });
-    } finally {
-        setIsProcessing(false);
-    }
-}, [toast]);
-
+    }, [toast]);
   
   // --- Gamification Actions ---
   const resetXpEvents = useCallback(async () => {
