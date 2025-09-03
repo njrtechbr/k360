@@ -26,7 +26,7 @@ const formSchema = z.object({
 });
 
 export default function LoginPage() {
-  const { login, isAuthenticated, loading } = useAuth();
+  const { login, isAuthenticated, authLoading } = useAuth();
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -38,10 +38,10 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
-    if (!loading && isAuthenticated) {
+    if (!authLoading && isAuthenticated) {
       router.push("/dashboard");
     }
-  }, [isAuthenticated, loading, router]);
+  }, [isAuthenticated, authLoading, router]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
@@ -51,7 +51,7 @@ export default function LoginPage() {
     }
   }
 
-  if (loading) {
+  if (authLoading || isAuthenticated) {
      return (
         <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-800">
             <p>Carregando aplicação...</p>

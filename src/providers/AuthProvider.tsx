@@ -527,35 +527,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [gamificationConfig, seasons]);
 
   const deleteEvaluations = useCallback(async (evaluationIds: string[]) => {
+    if (evaluationIds.length === 0) return;
     setIsProcessing(true);
     try {
-        const batch = writeBatch(db);
-        
-        // Find related xp_events
-        const q = query(collection(db, "xp_events"), where("type", "==", "evaluation"), where("relatedId", "in", evaluationIds));
-        const xpEventsSnapshot = await getDocs(q);
-        
-        // Delete evaluations
-        evaluationIds.forEach(id => {
-            batch.delete(doc(db, "evaluations", id));
-        });
-        
-        // Delete related xp_events
-        xpEventsSnapshot.forEach(doc => {
-            batch.delete(doc.ref);
-        });
-
-        await batch.commit();
+        const chunkSize = 30;
+        for (let i = 0; i < evaluationIds.length; i += chunkSize) {
+            const chunk = evaluationIds.slice(i, i + chunkSize);
+            const batch = writeBatch(db);
+            
+            // Query for related xp_events in chunks
+            const xpEventsQuery = query(collection(db, "xp_events"), where("type", "==", "evaluation"), where("relatedId", "in", chunk));
+            const xpEventsSnapshot = await getDocs(xpEventsQuery);
+            
+            // Delete evaluations
+            chunk.forEach(id => {
+                batch.delete(doc(db, "evaluations", id));
+            });
+            
+            // Delete related xp_events
+            xpEventsSnapshot.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+            
+            await batch.commit();
+        }
 
         // Update local state
         setEvaluations(prev => prev.filter(ev => !evaluationIds.includes(ev.id)));
-        setXpEvents(prev => prev.filter(xp => !xpEventsSnapshot.docs.some(doc => doc.id === xp.id)));
+        setXpEvents(prev => prev.filter(xp => !(xp.type === 'evaluation' && evaluationIds.includes(xp.relatedId))));
 
-        toast({ title: "Exclusão Concluída", description: `${evaluationIds.length} avaliações e seus respectivos XPs foram removidos.` });
+        toast({ title: "Exclusão Concluída", description: `${evaluationIds.length} avaliações e seus XPs foram removidos.` });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error deleting evaluations:", error);
-        toast({ variant: 'destructive', title: "Erro ao Excluir", description: "Não foi possível remover as avaliações." });
+        toast({ variant: 'destructive', title: "Erro ao Excluir", description: error.message });
     } finally {
         setIsProcessing(false);
     }
@@ -743,22 +748,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   const revertEvaluationImport = useCallback(async (importId: string) => {
-    const importToRevert = evaluationImports.find(i => i.id === importId);
+    const importToRevert = (await getDocs(collection(db, 'evaluationImports'))).docs
+        .map(d => ({ id: d.id, ...d.data() } as EvaluationImport))
+        .find(i => i.id === importId);
+        
     if (!importToRevert) return;
+    
     await deleteEvaluations(importToRevert.evaluationIds);
     await deleteDoc(doc(db, "evaluationImports", importId));
     setEvaluationImports(prev => prev.filter(i => i.id !== importId));
     toast({ title: "Importação Revertida!" });
-  }, [evaluationImports, deleteEvaluations, toast]);
+  }, [deleteEvaluations, toast]);
   
   const revertAttendantImport = useCallback(async (importId: string) => {
-    const importToRevert = attendantImports.find(i => i.id === importId);
+    const importToRevert = (await getDocs(collection(db, 'attendantImports'))).docs
+        .map(d => ({ id: d.id, ...d.data() } as AttendantImport))
+        .find(i => i.id === importId);
+
     if (!importToRevert) return;
+
     await deleteAttendants(importToRevert.attendantIds);
     await deleteDoc(doc(db, "attendantImports", importId));
     setAttendantImports(prev => prev.filter(i => i.id !== importId));
     toast({ title: "Importação Revertida!" });
-  }, [attendantImports, deleteAttendants, toast]);
+  }, [deleteAttendants, toast]);
   
   const updateFullGamificationConfig = useCallback(async (config: GamificationConfig) => {
         const configToSave = {
@@ -933,5 +946,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    
