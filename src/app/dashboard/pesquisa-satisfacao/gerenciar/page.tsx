@@ -44,7 +44,7 @@ export default function GerenciarAvaliacoesPage() {
 
     const [isDeleteSelectedOpen, setIsDeleteSelectedOpen] = useState(false);
     const [isDeleteAllOpen, setIsDeleteAllOpen] = useState(false);
-    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     
     useEffect(() => {
         if (!loading && !isAuthenticated) {
@@ -64,35 +64,43 @@ export default function GerenciarAvaliacoesPage() {
     }
     
     const sortedEvaluations = [...evaluations].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+    const deletableEvaluationIds = useMemo(() => sortedEvaluations.filter(e => e.importId !== 'native').map(e => e.id), [sortedEvaluations]);
+
 
     const handleSelectAll = (checked: boolean) => {
         if (checked) {
-            setSelectedIds(sortedEvaluations.map(e => e.id));
+            setSelectedIds(new Set(deletableEvaluationIds));
         } else {
-            setSelectedIds([]);
+            setSelectedIds(new Set());
         }
     };
     
     const handleSelectRow = (id: string, checked: boolean) => {
-        if (checked) {
-            setSelectedIds(prev => [...prev, id]);
-        } else {
-            setSelectedIds(prev => prev.filter(rowId => rowId !== id));
-        }
+        setSelectedIds(prev => {
+            const newSet = new Set(prev);
+            if (checked) {
+                newSet.add(id);
+            } else {
+                newSet.delete(id);
+            }
+            return newSet;
+        });
     };
 
     const handleDeleteSelected = async () => {
-        await deleteEvaluations(selectedIds, 'Excluindo Avaliações Selecionadas');
-        setSelectedIds([]);
+        const idsToDelete = Array.from(selectedIds);
+        await deleteEvaluations(idsToDelete, 'Excluindo Avaliações Selecionadas');
+        setSelectedIds(new Set());
         setIsDeleteSelectedOpen(false);
     };
 
     const handleDeleteAll = async () => {
-        const allIds = sortedEvaluations.map(e => e.id);
-        await deleteEvaluations(allIds, 'Excluindo TODAS as Avaliações');
-        setSelectedIds([]);
+        await deleteEvaluations(deletableEvaluationIds, 'Excluindo TODAS as Avaliações Importadas');
+        setSelectedIds(new Set());
         setIsDeleteAllOpen(false);
     };
+
+    const selectedCount = selectedIds.size;
 
     return (
         <>
@@ -109,15 +117,15 @@ export default function GerenciarAvaliacoesPage() {
                         <Button
                             variant="outline"
                             onClick={() => setIsDeleteSelectedOpen(true)}
-                            disabled={selectedIds.length === 0 || isProcessing}
+                            disabled={selectedCount === 0 || isProcessing}
                         >
                             <Trash2 className="mr-2 h-4 w-4"/>
-                            Excluir {selectedIds.length} Selecionadas
+                            Excluir {selectedCount} Selecionadas
                         </Button>
                         <Button
                             variant="destructive"
                             onClick={() => setIsDeleteAllOpen(true)}
-                            disabled={sortedEvaluations.length === 0 || isProcessing}
+                            disabled={deletableEvaluationIds.length === 0 || isProcessing}
                         >
                             <AlertCircle className="mr-2 h-4 w-4"/>
                             Excluir Todas
@@ -129,7 +137,7 @@ export default function GerenciarAvaliacoesPage() {
                     <CardHeader>
                         <CardTitle>Tabela de Avaliações</CardTitle>
                         <CardDescription>
-                            Selecione as avaliações que deseja excluir. As avaliações nativas (criadas diretamente pelo sistema) não podem ser excluídas por aqui.
+                            Selecione as avaliações que deseja excluir. Avaliações criadas diretamente pelo sistema (nativas) não podem ser excluídas por aqui.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -138,14 +146,8 @@ export default function GerenciarAvaliacoesPage() {
                                 <TableRow>
                                     <TableHead className="w-[50px]">
                                         <Checkbox
-                                            checked={selectedIds.length > 0 && selectedIds.length === sortedEvaluations.filter(e => e.importId !== 'native').length}
-                                            onCheckedChange={(checked) => {
-                                                if (checked) {
-                                                    setSelectedIds(sortedEvaluations.filter(e => e.importId !== 'native').map(e => e.id));
-                                                } else {
-                                                    setSelectedIds([]);
-                                                }
-                                            }}
+                                            checked={selectedIds.size > 0 && selectedIds.size === deletableEvaluationIds.length}
+                                            onCheckedChange={(checked) => handleSelectAll(!!checked)}
                                             aria-label="Selecionar tudo"
                                         />
                                     </TableHead>
@@ -158,10 +160,10 @@ export default function GerenciarAvaliacoesPage() {
                             <TableBody>
                                 {sortedEvaluations.length > 0 ? (
                                     sortedEvaluations.map((evaluation) => (
-                                        <TableRow key={evaluation.id} data-state={selectedIds.includes(evaluation.id) && "selected"}>
+                                        <TableRow key={evaluation.id} data-state={selectedIds.has(evaluation.id) && "selected"}>
                                              <TableCell>
                                                 <Checkbox
-                                                    checked={selectedIds.includes(evaluation.id)}
+                                                    checked={selectedIds.has(evaluation.id)}
                                                     onCheckedChange={(checked) => handleSelectRow(evaluation.id, !!checked)}
                                                     aria-label={`Selecionar avaliação ${evaluation.id}`}
                                                     disabled={evaluation.importId === 'native'}
@@ -200,7 +202,7 @@ export default function GerenciarAvaliacoesPage() {
                     <AlertDialogHeader>
                         <AlertDialogTitle className="flex items-center gap-2"><AlertCircle className="text-destructive"/>Excluir Avaliações Selecionadas?</AlertDialogTitle>
                         <AlertDialogDescription>
-                           Você tem certeza que deseja excluir permanentemente as <strong>{selectedIds.length}</strong> avaliações selecionadas?
+                           Você tem certeza que deseja excluir permanentemente as <strong>{selectedCount}</strong> avaliações selecionadas?
                            Esta ação não pode ser desfeita e os dados de gamificação serão recalculados.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
@@ -219,8 +221,8 @@ export default function GerenciarAvaliacoesPage() {
                     <AlertDialogHeader>
                         <AlertDialogTitle className="flex items-center gap-2"><AlertCircle className="text-destructive"/>Excluir TODAS as Avaliações?</AlertDialogTitle>
                         <AlertDialogDescription>
-                           Você tem certeza absoluta? Esta ação excluirá permanentemente <strong>TODAS as {sortedEvaluations.length}</strong> avaliações do sistema.
-                           Esta ação não pode ser desfeita e os dados de gamificação de todos os atendentes serão zerados.
+                           Você tem certeza absoluta? Esta ação excluirá permanentemente <strong>TODAS as {deletableEvaluationIds.length}</strong> avaliações importadas do sistema.
+                           As avaliações nativas (criadas pelo sistema) não serão afetadas. Esta ação não pode ser desfeita.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

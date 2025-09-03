@@ -545,73 +545,54 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const deleteEvaluations = useCallback(async (evaluationIds: string[], title: string = 'Excluindo Avaliações') => {
         if (!evaluationIds || evaluationIds.length === 0) return;
-        
+
         setIsProcessing(true);
         setImportStatus({ isOpen: true, logs: [], progress: 0, title: title, status: 'processing' });
-        
+
         let totalDeleted = 0;
-        let totalSkipped = 0;
+        const CHUNK_SIZE = 30;
 
-        for (const [index, evalId] of evaluationIds.entries()) {
-            const progress = ((index + 1) / evaluationIds.length) * 100;
-            setImportStatus(prev => ({...prev, progress, logs: [...prev.logs, `Processando avaliação ${index + 1}/${evaluationIds.length}...`]}));
-
+        for (let i = 0; i < evaluationIds.length; i += CHUNK_SIZE) {
+            const chunk = evaluationIds.slice(i, i + CHUNK_SIZE);
+            
             try {
-                const evalDocRef = doc(db, "evaluations", evalId);
-                const evalDoc = await getDoc(evalDocRef);
-
-                if (!evalDoc.exists()) {
-                    setImportStatus(prev => ({...prev, logs: [...prev.logs, `Avaliação ${evalId} não encontrada. Pulando.`]}));
-                    continue;
-                }
-
-                if (evalDoc.data().importId === 'native') {
-                    totalSkipped++;
-                    setImportStatus(prev => ({...prev, logs: [...prev.logs, `Avaliação ${evalId} é nativa e não pode ser excluída. Pulando.`]}));
-                    continue;
-                }
-                
-                // Find and delete related xp_event
-                const xpQuery = query(collection(db, "xp_events"), where("relatedId", "==", evalId), where("type", "==", "evaluation"));
+                // Find and delete related xp_events in chunks
+                const xpQuery = query(collection(db, "xp_events"), where("relatedId", "in", chunk), where("type", "==", "evaluation"));
                 const xpSnapshot = await getDocs(xpQuery);
-
+                
                 const batch = writeBatch(db);
                 
                 if (!xpSnapshot.empty) {
                     xpSnapshot.forEach(xpDoc => {
-                        batch.delete(xpDoc.ref);
+                         batch.delete(xpDoc.ref);
+                         setImportStatus(prev => ({...prev, logs: [...prev.logs, `-> Evento de XP ${xpDoc.id} marcado para exclusão.`]}));
                     });
-                    setImportStatus(prev => ({...prev, logs: [...prev.logs, `Evento de XP vinculado à avaliação ${evalId} encontrado e marcado para exclusão.`]}));
-                } else {
-                    setImportStatus(prev => ({...prev, logs: [...prev.logs, `Nenhum evento de XP vinculado à avaliação ${evalId} foi encontrado.`]}));
                 }
-                
-                // Delete the evaluation itself
-                batch.delete(evalDocRef);
-                
+
+                // Delete the evaluations themselves
+                chunk.forEach(evalId => {
+                    const evalDocRef = doc(db, "evaluations", evalId);
+                    batch.delete(evalDocRef);
+                    setImportStatus(prev => ({...prev, logs: [...prev.logs, `-> Avaliação ${evalId} marcada para exclusão.`]}));
+                });
+
                 await batch.commit();
-                totalDeleted++;
-                
-                // Update local state immediately for responsiveness
-                setEvaluations(prev => prev.filter(e => e.id !== evalId));
-                setXpEvents(prev => prev.filter(xp => xp.relatedId !== evalId || xp.type !== 'evaluation'));
+                totalDeleted += chunk.length;
+
+                // Update local state after each successful chunk
+                setEvaluations(prev => prev.filter(e => !chunk.includes(e.id)));
+                setXpEvents(prev => prev.filter(xp => !chunk.includes(xp.relatedId)));
+                 setImportStatus(prev => ({ ...prev, progress: ((i + chunk.length) / evaluationIds.length) * 100 }));
+
 
             } catch (error: any) {
-                console.error(`Erro ao excluir avaliação ${evalId}:`, error);
-                setImportStatus(prev => ({...prev, logs: [...prev.logs, `ERRO ao excluir avaliação ${evalId}: ${error.message}`]}));
+                console.error(`Erro ao excluir lote de avaliações:`, error);
+                setImportStatus(prev => ({...prev, logs: [...prev.logs, `-> ERRO ao excluir lote: ${error.message}`]}));
             }
         }
         
-        const finalLogs = [...importStatus.logs];
-        if (totalDeleted > 0) {
-            finalLogs.push(`Concluído! ${totalDeleted} avaliações e seus XPs foram removidos.`);
-        }
-        if (totalSkipped > 0) {
-            finalLogs.push(`${totalSkipped} avaliações nativas foram ignoradas.`);
-        }
-        
-        setImportStatus(prev => ({ ...prev, status: 'done', title: 'Exclusão Concluída', logs: finalLogs, progress: 100 }));
-        toast({ title: "Exclusão Concluída", description: `${totalDeleted} avaliações removidas.` });
+        setImportStatus(prev => ({ ...prev, status: 'done', title: 'Exclusão Concluída', logs: [...prev.logs, `Processo finalizado. ${totalDeleted} avaliações removidas.`] }));
+        toast({ title: "Exclusão Concluída", description: `${totalDeleted} avaliações foram removidas com sucesso.` });
         setTimeout(() => setImportStatus(INITIAL_IMPORT_STATUS), 5000);
         setIsProcessing(false);
     }, [toast]);
