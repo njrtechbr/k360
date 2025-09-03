@@ -4,7 +4,7 @@
 import type { ReactNode } from "react";
 import React, { useCallback, useEffect, useState } from "react";
 import type { User, Module, Role, Attendant, Evaluation, EvaluationAnalysis, GamificationConfig, Achievement, LevelReward, GamificationSeason, UnlockedAchievement, EvaluationImport, AttendantImport, Funcao, Setor } from "@/lib/types";
-import { ROLES } from "@/lib/types";
+import { ROLES, INITIAL_MODULES } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 
 // Firebase Imports
@@ -27,6 +27,9 @@ import { useEvaluationsData } from "@/hooks/useEvaluationsData";
 import { useGamificationData } from "@/hooks/useGamificationData";
 import { useRhConfigData } from "@/hooks/useRhConfigData";
 import { getScoreFromRating } from "@/hooks/useGamificationData";
+import { INITIAL_ATTENDANTS } from "@/lib/initial-data";
+import { INITIAL_EVALUATIONS } from "@/lib/initial-data-evaluations";
+import { INITIAL_FUNCOES, INITIAL_SETORES } from "@/lib/types";
 
 interface AuthContextType {
   user: User | null;
@@ -112,16 +115,81 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const evaluationsData = useEvaluationsData({ gamificationConfig: gamificationData.gamificationConfig, seasons: gamificationData.seasons });
   const rhConfigData = useRhConfigData();
 
-  const { fetchAllUsers, setAllUsers } = usersData;
-  const { fetchModules } = modulesData;
-  const { fetchAttendants } = attendantsData;
-  const { fetchEvaluations } = evaluationsData;
-  const { fetchFuncoes, fetchSetores } = rhConfigData;
+  const seedInitialData = useCallback(async () => {
+    console.log("SEED: Verificando se os dados iniciais são necessários...");
+    const batch = writeBatch(db);
+    let operations = 0;
+
+    // Seed Modules
+    const modulesSnap = await getDocs(collection(db, "modules"));
+    if (modulesSnap.empty) {
+        console.log("SEED: Coleção 'modules' vazia. Semeando dados...");
+        INITIAL_MODULES.forEach(module => {
+            batch.set(doc(db, "modules", module.id), module);
+            operations++;
+        });
+    }
+
+    // Seed Funcoes
+    const funcoesSnap = await getDocs(collection(db, "funcoes"));
+    if (funcoesSnap.empty) {
+        console.log("SEED: Coleção 'funcoes' vazia. Semeando dados...");
+        INITIAL_FUNCOES.forEach(funcao => {
+            batch.set(doc(db, "funcoes", funcao), { name: funcao });
+            operations++;
+        });
+    }
+    
+    // Seed Setores
+    const setoresSnap = await getDocs(collection(db, "setores"));
+    if (setoresSnap.empty) {
+        console.log("SEED: Coleção 'setores' vazia. Semeando dados...");
+        INITIAL_SETORES.forEach(setor => {
+            batch.set(doc(db, "setores", setor), { name: setor });
+            operations++;
+        });
+    }
+
+    // Seed Attendants
+    const attendantsSnap = await getDocs(collection(db, "attendants"));
+    if (attendantsSnap.empty) {
+        console.log("SEED: Coleção 'attendants' vazia. Semeando dados...");
+        INITIAL_ATTENDANTS.forEach(attendant => {
+            batch.set(doc(db, "attendants", attendant.id), attendant);
+            operations++;
+        });
+    }
+
+    // Seed Evaluations
+    const evaluationsSnap = await getDocs(collection(db, "evaluations"));
+    if (evaluationsSnap.empty) {
+        console.log("SEED: Coleção 'evaluations' vazia. Semeando dados...");
+        INITIAL_EVALUATIONS.forEach(evaluation => {
+            batch.set(doc(db, "evaluations", evaluation.id), evaluation);
+            operations++;
+        });
+    }
+
+    if (operations > 0) {
+        console.log(`SEED: Executando ${operations} operações de escrita em lote...`);
+        await batch.commit();
+        console.log("SEED: Dados iniciais semeados com sucesso.");
+    } else {
+        console.log("SEED: O banco de dados já está populado. Nenhuma ação necessária.");
+    }
+  }, []);
 
   useEffect(() => {
     const initializeApp = async () => {
-        console.log("AUTH: Iniciando inicialização do App...");
         setLoading(true);
+        console.log("AUTH: Iniciando inicialização do App...");
+        
+        await seedInitialData();
+
+        // Fetch essential data for UI (menus, etc.)
+        console.log("AUTH: Carregando dados essenciais da UI...");
+        await modulesData.fetchModules();
+        console.log("AUTH: Dados essenciais carregados.");
 
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
@@ -132,7 +200,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     setUser(userData);
                     console.log(`AUTH: Usuário autenticado e encontrado no Firestore (UID: ${firebaseUser.uid}).`);
                 } else {
-                    console.log(`AUTH: Usuário autenticado (UID: ${firebaseUser.uid}) não encontrado no Firestore. Criando novo perfil...`);
+                     console.log(`AUTH: Usuário autenticado (UID: ${firebaseUser.uid}) não encontrado no Firestore. Criando novo perfil...`);
                     const newUser: Omit<User, 'id'> = {
                         name: firebaseUser.displayName || "Novo Usuário",
                         email: firebaseUser.email!,
@@ -146,9 +214,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             } else {
                  console.log("AUTH: Nenhum usuário autenticado.");
                  setUser(null);
-                 setAllUsers([]);
             }
-             console.log("AUTH: Inicialização concluída.");
+             console.log("AUTH: Inicialização de autenticação concluída.");
              setLoading(false);
         });
         
@@ -159,7 +226,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     initializeApp();
-  }, [setAllUsers]);
+  }, [seedInitialData, modulesData.fetchModules]);
 
   const login = async (email: string, password: string) => {
     try {
@@ -194,7 +261,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       await setDoc(doc(db, "users", firebaseUser.uid), newUserDoc);
       console.log(`AUTH: Documento do usuário criado no Firestore para ${firebaseUser.uid}`);
-      await fetchAllUsers();
+      await usersData.fetchAllUsers();
 
       toast({ title: "Conta Criada!", description: "Sua conta foi criada com sucesso." });
       
@@ -243,7 +310,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   const deleteModule = async (moduleId: string) => {
     await modulesData.deleteModule(moduleId);
-    const allCurrentUsers = await fetchAllUsers();
+    const allCurrentUsers = await usersData.fetchAllUsers();
     const batch = writeBatch(db);
     allCurrentUsers.forEach(u => {
         if (u.modules?.includes(moduleId)) {
@@ -252,7 +319,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     });
     await batch.commit();
-    await fetchAllUsers();
+    await usersData.fetchAllUsers();
     console.log(`MODULES: Módulo ${moduleId} removido de todos os usuários.`);
   };
 
@@ -282,7 +349,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const addImportRecord = async (importData: Omit<EvaluationImport, 'id' | 'importedBy'>): Promise<EvaluationImport> => {
       if(!user) throw new Error("Usuário não autenticado");
-      return evaluationsData.addImportRecord(importData, user.id);
+      return evaluationsData.addImportRecord(importData);
   }
 
   const addAttendantImportRecord = async (importData: Omit<AttendantImport, 'id' | 'importedBy'>): Promise<AttendantImport> => {

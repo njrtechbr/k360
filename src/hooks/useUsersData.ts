@@ -22,7 +22,7 @@ export function useUsersData({ user, setUser }: UseUsersDataProps) {
     const [allUsers, setAllUsers] = useState<User[]>([]);
     const { toast } = useToast();
     
-    const fetchAllUsers = useCallback(async () => {
+    const fetchAllUsers = useCallback(async (): Promise<User[]> => {
         console.log("AUTH: Buscando todos os usuários do Firestore...");
         try {
             const usersCollection = collection(db, "users");

@@ -3,7 +3,7 @@
 
 import { useAuth } from "@/providers/AuthProvider";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -28,6 +28,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const editFormSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
@@ -49,13 +50,15 @@ const addFormSchema = z.object({
 
 
 export default function UsuariosPage() {
-  const { user, isAuthenticated, loading, allUsers, modules, updateUser, deleteUser, register } = useAuth();
+  const { user, isAuthenticated, loading: authLoading, allUsers, modules, updateUser, deleteUser, register, fetchAllUsers } = useAuth();
   const router = useRouter();
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isDataLoading, setIsDataLoading] = useState(true);
+
 
   const editForm = useForm<z.infer<typeof editFormSchema>>({
     resolver: zodResolver(editFormSchema),
@@ -73,11 +76,20 @@ export default function UsuariosPage() {
     },
   });
 
+  const loadData = useCallback(async () => {
+    setIsDataLoading(true);
+    await fetchAllUsers();
+    setIsDataLoading(false);
+  }, [fetchAllUsers]);
+
   useEffect(() => {
-    if (!loading && (!isAuthenticated || (user?.role !== ROLES.ADMIN && user?.role !== ROLES.SUPERADMIN))) {
-      router.push("/dashboard");
+    if (!authLoading && !isAuthenticated) {
+      router.push("/login");
     }
-  }, [isAuthenticated, loading, router, user]);
+     if (!authLoading && isAuthenticated) {
+        loadData();
+    }
+  }, [authLoading, isAuthenticated, router, loadData]);
 
   useEffect(() => {
     if (selectedUser) {
@@ -134,7 +146,7 @@ export default function UsuariosPage() {
     setIsDeleteDialogOpen(true);
   };
 
-  if (loading || !user) {
+  if (authLoading || !user) {
     return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
   }
   
@@ -306,7 +318,17 @@ export default function UsuariosPage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {sortedUsers.map((u) => (
+                         {isDataLoading ? (
+                           Array.from({ length: 3 }).map((_, i) => (
+                                <TableRow key={i}>
+                                    <TableCell><Skeleton className="h-6 w-32" /></TableCell>
+                                    <TableCell><Skeleton className="h-6 w-48" /></TableCell>
+                                    <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                                    <TableCell><Skeleton className="h-6 w-40" /></TableCell>
+                                    <TableCell className="text-right"><Skeleton className="h-8 w-8" /></TableCell>
+                                </TableRow>
+                           ))
+                        ) : sortedUsers.map((u) => (
                             <TableRow key={u.id}>
                                 <TableCell className="font-medium">{u.name}</TableCell>
                                 <TableCell className="text-muted-foreground">{u.email}</TableCell>
@@ -470,5 +492,3 @@ export default function UsuariosPage() {
     </div>
   );
 }
-
-    
