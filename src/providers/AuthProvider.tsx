@@ -112,6 +112,7 @@ interface AuthContextType {
 
   // Gamification
   xpEvents: XpEvent[];
+  seasonXpEvents: XpEvent[]; // <-- XP Events filtered by active season
   gamificationConfig: GamificationConfig;
   achievements: Achievement[];
   levelRewards: LevelReward[];
@@ -191,6 +192,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [activeSeason, setActiveSeason] = useState<GamificationSeason | null>(null);
   const [nextSeason, setNextSeason] = useState<GamificationSeason | null>(null);
   const [xpEvents, setXpEvents] = useState<XpEvent[]>([]);
+  const [seasonXpEvents, setSeasonXpEvents] = useState<XpEvent[]>([]);
 
   // AI Analysis State
   const [aiAnalysisResults, setAiAnalysisResults] = useState<EvaluationAnalysis[]>([]);
@@ -301,16 +303,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user, authLoading, fetchAllData]);
   
-  useEffect(() => {
-    const now = new Date();
-    const currentActiveSeason = seasons.find(s => s.active && new Date(s.startDate) <= now && new Date(s.endDate) >= now) || null;
-    setActiveSeason(currentActiveSeason);
-    
-    const nextUpcomingSeason = seasons
-        .filter(s => s.active && new Date(s.startDate) > now)
-        .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())[0] || null;
-    setNextSeason(nextUpcomingSeason);
-  }, [seasons]);
+    useEffect(() => {
+        const now = new Date();
+        const currentActiveSeason = seasons.find(s => s.active && new Date(s.startDate) <= now && new Date(s.endDate) >= now) || null;
+        setActiveSeason(currentActiveSeason);
+        
+        const nextUpcomingSeason = seasons
+            .filter(s => s.active && new Date(s.startDate) > now)
+            .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())[0] || null;
+        setNextSeason(nextUpcomingSeason);
+
+        if (currentActiveSeason) {
+            const seasonStart = new Date(currentActiveSeason.startDate);
+            const seasonEnd = new Date(currentActiveSeason.endDate);
+            const filteredEvents = xpEvents.filter(e => {
+                const eventDate = new Date(e.date);
+                return eventDate >= seasonStart && eventDate <= seasonEnd;
+            });
+            setSeasonXpEvents(filteredEvents);
+        } else {
+            setSeasonXpEvents([]);
+        }
+    }, [seasons, xpEvents]);
 
   // --- Auth Actions ---
   const login = useCallback(async (email: string, password: string) => {
@@ -498,7 +512,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           id: '', // Will be set by Firestore
           data: evaluationDate.toISOString(),
           xpGained: finalXp,
-          importId: "native" // Mark as a native evaluation
+          importId: "native"
       };
 
       const docRef = doc(collection(db, "evaluations"));
@@ -528,57 +542,53 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return newEvaluation;
   }, [gamificationConfig, seasons]);
 
-  const deleteEvaluations = useCallback(async (evaluationIds: string[]) => {
-    if (evaluationIds.length === 0) return;
-    setIsProcessing(true);
-    try {
-        const evaluationsToDelete = evaluations.filter(ev => evaluationIds.includes(ev.id));
-        const importedEvaluationsToDelete = evaluationsToDelete.filter(ev => ev.importId !== 'native');
+    const deleteEvaluations = useCallback(async (evaluationIds: string[]) => {
+        if (evaluationIds.length === 0) return;
+        setIsProcessing(true);
+        try {
+            // Step 1: Identify which evaluations are imported vs. native
+            const evaluationsToDelete = evaluations.filter(ev => evaluationIds.includes(ev.id));
+            const importedEvaluationIds = evaluationsToDelete
+                .filter(ev => ev.importId && ev.importId !== 'native')
+                .map(ev => ev.id);
 
-        if (importedEvaluationsToDelete.length === 0) {
-            toast({ title: "Nenhuma avaliação importada para excluir", description: "Avaliações nativas não podem ser excluídas." });
+            if (importedEvaluationIds.length === 0) {
+                toast({ title: "Nenhuma avaliação importada selecionada", description: "Avaliações nativas não podem ser excluídas em massa." });
+                setIsProcessing(false);
+                return;
+            }
+
+            // Step 2: Process deletion in chunks of 30
+            for (let i = 0; i < importedEvaluationIds.length; i += 30) {
+                const chunk = importedEvaluationIds.slice(i, i + 30);
+                if (chunk.length === 0) continue;
+
+                const batch = writeBatch(db);
+                
+                // Query for related xp_events to delete them as well
+                const xpEventsQuery = query(collection(db, "xp_events"), where("type", "==", "evaluation"), where("relatedId", "in", chunk));
+                const xpEventsSnapshot = await getDocs(xpEventsQuery);
+                
+                // Add evaluations and their related xp_events to the batch
+                chunk.forEach(id => batch.delete(doc(db, "evaluations", id)));
+                xpEventsSnapshot.forEach(doc => batch.delete(doc.ref));
+                
+                await batch.commit();
+            }
+
+            // Step 3: Update local state for immediate feedback
+            setEvaluations(prev => prev.filter(ev => !importedEvaluationIds.includes(ev.id)));
+            setXpEvents(prev => prev.filter(xp => !(xp.type === 'evaluation' && importedEvaluationIds.includes(xp.relatedId))));
+
+            toast({ title: "Exclusão Concluída", description: `${importedEvaluationIds.length} avaliações importadas e seus XPs foram removidos.` });
+
+        } catch (error: any) {
+            console.error("Error deleting evaluations:", error);
+            toast({ variant: 'destructive', title: "Erro ao Excluir", description: error.message });
+        } finally {
             setIsProcessing(false);
-            return;
         }
-
-        const idsToDelete = importedEvaluationsToDelete.map(ev => ev.id);
-        
-        for (let i = 0; i < idsToDelete.length; i += 30) {
-            const chunk = idsToDelete.slice(i, i + 30);
-            if (chunk.length === 0) continue;
-
-            const batch = writeBatch(db);
-            
-            // Query for related xp_events in chunks
-            const xpEventsQuery = query(collection(db, "xp_events"), where("type", "==", "evaluation"), where("relatedId", "in", chunk));
-            const xpEventsSnapshot = await getDocs(xpEventsQuery);
-            
-            // Delete evaluations
-            chunk.forEach(id => {
-                batch.delete(doc(db, "evaluations", id));
-            });
-            
-            // Delete related xp_events
-            xpEventsSnapshot.forEach(doc => {
-                batch.delete(doc.ref);
-            });
-            
-            await batch.commit();
-        }
-
-        // Update local state
-        setEvaluations(prev => prev.filter(ev => !idsToDelete.includes(ev.id)));
-        setXpEvents(prev => prev.filter(xp => !(xp.type === 'evaluation' && idsToDelete.includes(xp.relatedId))));
-
-        toast({ title: "Exclusão Concluída", description: `${idsToDelete.length} avaliações e seus XPs foram removidos.` });
-
-    } catch (error: any) {
-        console.error("Error deleting evaluations:", error);
-        toast({ variant: 'destructive', title: "Erro ao Excluir", description: error.message });
-    } finally {
-        setIsProcessing(false);
-    }
-  }, [evaluations, toast]);
+    }, [evaluations, toast]);
   
   // --- Gamification Actions ---
   const recalculateAllGamificationData = useCallback(async () => {
@@ -930,6 +940,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     importStatus,
     setImportStatus,
     xpEvents,
+    seasonXpEvents,
     gamificationConfig,
     achievements,
     levelRewards,

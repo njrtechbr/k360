@@ -45,7 +45,7 @@ const DetailItem = ({ icon, label, value }: { icon: React.ReactNode, label: stri
 export default function AttendantProfilePage() {
     const { id } = useParams();
     const router = useRouter();
-    const { attendants, evaluations, loading, user, xpEvents, activeSeason } = useAuth();
+    const { attendants, evaluations, loading, user, seasonXpEvents, activeSeason } = useAuth();
 
     const attendant = useMemo(() => attendants.find(a => a.id === id), [attendants, id]);
     
@@ -53,26 +53,19 @@ export default function AttendantProfilePage() {
         if (!activeSeason) {
             return { seasonEvaluations: [], attendantXpEvents: [], currentScore: 0 };
         }
+        const attendantEvents = seasonXpEvents.filter(e => e.attendantId === id);
+        const score = attendantEvents.reduce((acc, event) => acc + event.points, 0);
 
         const seasonStartDate = new Date(activeSeason.startDate);
         const seasonEndDate = new Date(activeSeason.endDate);
-
-        const seasonXpEvents = xpEvents.filter(e => 
-            e.attendantId === id && 
-            new Date(e.date) >= seasonStartDate && 
-            new Date(e.date) <= seasonEndDate
-        );
-        
-        const currentScore = seasonXpEvents.reduce((acc, event) => acc + event.points, 0);
-
-        const seasonEvaluations = evaluations.filter(e => 
+        const evals = evaluations.filter(e => 
             e.attendantId === id && 
             new Date(e.data) >= seasonStartDate && 
             new Date(e.data) <= seasonEndDate
         );
 
-        return { seasonEvaluations, attendantXpEvents: seasonXpEvents, currentScore };
-    }, [evaluations, xpEvents, id, activeSeason]);
+        return { seasonEvaluations: evals, attendantXpEvents: attendantEvents, currentScore: score };
+    }, [evaluations, seasonXpEvents, id, activeSeason]);
     
     const xpHistorySorted = useMemo(() => {
         return [...attendantXpEvents]

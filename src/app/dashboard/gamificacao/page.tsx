@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useAuth } from "@/providers/AuthProvider";
@@ -33,7 +34,7 @@ type AchievementStat = Achievement & {
 };
 
 export default function GamificacaoPage() {
-    const { user, isAuthenticated, loading, evaluations, attendants, xpEvents, gamificationConfig, achievements, activeSeason } = useAuth();
+    const { user, isAuthenticated, loading, evaluations, attendants, seasonXpEvents, gamificationConfig, achievements, activeSeason } = useAuth();
     const router = useRouter();
     const [isAchievementDialogOpen, setIsAchievementDialogOpen] = useState(false);
     const [selectedAchievement, setSelectedAchievement] = useState<AchievementStat | null>(null);
@@ -50,22 +51,11 @@ export default function GamificacaoPage() {
 
     const leaderboard = useMemo(() => {
         const xpByAttendant = new Map<string, number>();
-
-        // 1. Filter XP events for the active season
-        const seasonXpEvents = activeSeason 
-            ? xpEvents.filter(e => {
-                const eventDate = new Date(e.date);
-                return eventDate >= new Date(activeSeason.startDate) && eventDate <= new Date(activeSeason.endDate);
-            })
-            : [];
-        
-        // 2. Sum points from those events
         seasonXpEvents.forEach(event => {
             const currentXp = xpByAttendant.get(event.attendantId) || 0;
             xpByAttendant.set(event.attendantId, currentXp + event.points);
         });
 
-        // 3. Filter evaluations for the active season to get the count
         const evalsInSeason = activeSeason
             ? evaluations.filter(e => {
                 const eventDate = new Date(e.data);
@@ -73,7 +63,6 @@ export default function GamificacaoPage() {
             })
             : [];
 
-        // 4. Map attendants to their calculated score and evaluation count
         return attendants
             .map(attendant => {
                 const totalScore = xpByAttendant.get(attendant.id) || 0;
@@ -87,13 +76,13 @@ export default function GamificacaoPage() {
             .filter(att => att.score > 0 || att.evaluationCount > 0)
             .sort((a, b) => b.score - a.score);
 
-    }, [attendants, xpEvents, activeSeason, evaluations]);
+    }, [attendants, seasonXpEvents, activeSeason, evaluations]);
 
      const achievementStats: AchievementStat[] = useMemo(() => {
         return achievements
             .filter(ach => ach.active)
             .map(achievement => {
-                const unlockedByAttendantIds = new Set(xpEvents
+                const unlockedByAttendantIds = new Set(seasonXpEvents
                     .filter(e => e.type === 'achievement' && e.relatedId === achievement.id)
                     .map(e => e.attendantId)
                 );
@@ -108,7 +97,7 @@ export default function GamificacaoPage() {
                     unlockedBy,
                 };
             });
-    }, [attendants, xpEvents, achievements]);
+    }, [attendants, seasonXpEvents, achievements]);
 
     const handleAchievementClick = (achievement: AchievementStat) => {
         setSelectedAchievement(achievement);

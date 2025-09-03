@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useAuth } from "@/providers/AuthProvider";
@@ -23,7 +24,7 @@ const getMedal = (rank: number) => {
 };
 
 export default function NiveisPage() {
-    const { user, isAuthenticated, loading, attendants, xpEvents, activeSeason } = useAuth();
+    const { user, isAuthenticated, loading, attendants, seasonXpEvents } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
@@ -35,21 +36,11 @@ export default function NiveisPage() {
     const leaderboard = useMemo(() => {
         const xpByAttendant = new Map<string, number>();
 
-        // 1. Filter XP events for the active season
-        const seasonXpEvents = activeSeason 
-            ? xpEvents.filter(e => {
-                const eventDate = new Date(e.date);
-                return eventDate >= new Date(activeSeason.startDate) && eventDate <= new Date(activeSeason.endDate);
-            })
-            : [];
-        
-        // 2. Sum points from those events
         seasonXpEvents.forEach(event => {
             const currentXp = xpByAttendant.get(event.attendantId) || 0;
             xpByAttendant.set(event.attendantId, currentXp + event.points);
         });
 
-        // 3. Map attendants to their calculated score
         return attendants
             .map(attendant => {
                 const totalScore = xpByAttendant.get(attendant.id) || 0;
@@ -65,7 +56,7 @@ export default function NiveisPage() {
             })
             .sort((a, b) => b.score - a.score);
 
-    }, [attendants, xpEvents, activeSeason]);
+    }, [attendants, seasonXpEvents]);
 
 
     if (loading || !user) {
