@@ -37,26 +37,26 @@ export default function RootLayout({
       </head>
       <body className={cn('font-sans antialiased')}>
         <PerformanceProvider>
-          <ModulesProvider>
+          <AuthProvider>
             <UsersProvider>
-              <RhConfigProvider>
-                 <GamificationProvider>
-                    <AttendantsProvider>
-                      <EvaluationsProvider>
-                          <AuthProvider>
-                              <SidebarProvider>
-                                <AppLayout>
-                                  {children}
-                                </AppLayout>
-                                <Toaster />
-                              </SidebarProvider>
-                          </AuthProvider>
-                      </EvaluationsProvider>
-                    </AttendantsProvider>
-                </GamificationProvider>
-              </RhConfigProvider>
+              <ModulesProvider>
+                <RhConfigProvider>
+                  <GamificationProvider>
+                      <AttendantsProvider>
+                        <EvaluationsProvider>
+                                <SidebarProvider>
+                                  <AppLayout>
+                                    {children}
+                                  </AppLayout>
+                                  <Toaster />
+                                </SidebarProvider>
+                        </EvaluationsProvider>
+                      </AttendantsProvider>
+                  </GamificationProvider>
+                </RhConfigProvider>
+              </ModulesProvider>
             </UsersProvider>
-          </ModulesProvider>
+          </AuthProvider>
         </PerformanceProvider>
       </body>
     </html>

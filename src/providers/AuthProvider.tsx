@@ -6,8 +6,6 @@ import React, { useCallback, useEffect, useState } from "react";
 import type { User, Role } from "@/lib/types";
 import { ROLES, INITIAL_MODULES } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import { useModules } from "./ModulesProvider";
-import { useUsers } from "./UsersProvider";
 
 
 // Firebase Imports
@@ -39,15 +37,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const { modules, fetchModules } = useModules();
-  const { fetchAllUsers } = useUsers();
 
   useEffect(() => {
     const initializeAuth = async () => {
         setLoading(true);
         console.log("AUTH: Iniciando inicialização de autenticação...");
-
-        await fetchModules(); // Fetch modules early for registration logic
 
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
@@ -84,7 +78,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     initializeAuth();
-  }, [fetchModules]);
+  }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     try {
@@ -101,6 +95,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const register = useCallback(async (userData: Omit<User, 'id'>) => {
     try {
       console.log(`AUTH: Tentativa de registro para ${userData.email}`);
+      
+      const modulesSnapshot = await getDocs(collection(db, "modules"));
+      const allModuleIds = modulesSnapshot.docs.map(doc => doc.id);
+
       const userCredential = await createUserWithEmailAndPassword(auth, userData.password ? userData.password : "123456");
       const firebaseUser = userCredential.user;
 
@@ -110,15 +108,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       let finalModules = userDataForDb.modules;
       
       if (userData.role === ROLES.SUPERADMIN) {
-        finalModules = modules.map(m => m.id);
+        finalModules = allModuleIds;
       }
       
       const newUserDoc = { ...userDataForDb, modules: finalModules };
 
       await setDoc(doc(db, "users", firebaseUser.uid), newUserDoc);
       console.log(`AUTH: Documento do usuário criado no Firestore para ${firebaseUser.uid}`);
-      await fetchAllUsers();
-
+      
       toast({ title: "Conta Criada!", description: "Sua conta foi criada com sucesso." });
       
     } catch (error: any) {
@@ -129,7 +126,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({ variant: "destructive", title: "Erro no Registro", description });
       throw error;
     }
-  }, [toast, fetchAllUsers, modules]);
+  }, [toast]);
 
   const logout = useCallback(async () => {
     try {
