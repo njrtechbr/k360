@@ -14,8 +14,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { differenceInDays, format, getYear, setYear, isFuture, addYears, differenceInYears } from 'date-fns';
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePerformance } from "@/providers/PerformanceProvider";
-import { useModules } from "@/providers/ModulesProvider";
-import { useAttendants } from "@/providers/AttendantsProvider";
 
 const RoleIcon = ({ role }: { role: string }) => {
     switch (role) {
@@ -78,49 +76,9 @@ const getUpcomingAnniversaries = (attendants: Attendant[], type: 'birthday' | 'a
 
 
 export default function DashboardPage() {
-  const { user, isAuthenticated, loading: authLoading } = useAuth();
-  const { modules, fetchModules } = useModules();
-  const { attendants, fetchAttendants } = useAttendants();
+  const { user, isAuthenticated, authLoading, appLoading, modules, attendants } = useAuth();
   const router = useRouter();
-  const [isDataLoading, setIsDataLoading] = useState(true);
   
-  const { setPerformanceData } = usePerformance();
-  const renderTimeRef = useRef(performance.now());
-
-  const loadData = useCallback(async () => {
-    setIsDataLoading(true);
-    const startTime = performance.now();
-    await Promise.all([
-        fetchAttendants(),
-        fetchModules()
-    ]);
-    const endTime = performance.now();
-    
-    setPerformanceData({
-        dataLoadingTime: endTime - startTime,
-        renderTime: null,
-        itemCount: attendants.length,
-        collectionName: "atendentes/modulos"
-    });
-
-    setIsDataLoading(false);
-  }, [fetchAttendants, fetchModules, setPerformanceData, attendants.length]);
-
-  useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-        loadData();
-    }
-  }, [authLoading, isAuthenticated, loadData]);
-
-  useEffect(() => {
-     if (!isDataLoading) {
-        const endRenderTime = performance.now();
-        setPerformanceData(prev => ({ ...prev, renderTime: endRenderTime - renderTimeRef.current }));
-    } else {
-        renderTimeRef.current = performance.now();
-    }
-  }, [isDataLoading, setPerformanceData]);
-
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       router.push("/login");
@@ -170,7 +128,7 @@ export default function DashboardPage() {
                       <CardTitle className="flex items-center gap-2"><Gift className="text-pink-500"/> Aniversários</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                      {isDataLoading ? (
+                      {appLoading ? (
                           Array.from({ length: 2 }).map((_, i) => (
                               <div key={i} className="flex items-center justify-between p-2">
                                   <div className="flex items-center gap-3">
@@ -205,7 +163,7 @@ export default function DashboardPage() {
                       <CardTitle className="flex items-center gap-2"><Building2 className="text-blue-500" /> Aniversários de Admissão</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                      {isDataLoading ? (
+                      {appLoading ? (
                           Array.from({ length: 2 }).map((_, i) => (
                               <div key={i} className="flex items-center justify-between p-2">
                                   <div className="flex items-center gap-3">

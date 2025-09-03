@@ -7,12 +7,6 @@ import { cn } from '@/lib/utils';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppLayout from '@/components/AppLayout';
 import { PerformanceProvider } from '@/providers/PerformanceProvider';
-import { ModulesProvider } from '@/providers/ModulesProvider';
-import { UsersProvider } from '@/providers/UsersProvider';
-import { AttendantsProvider } from '@/providers/AttendantsProvider';
-import { EvaluationsProvider } from '@/providers/EvaluationsProvider';
-import { GamificationProvider } from '@/providers/GamificationProvider';
-import { RhConfigProvider } from '@/providers/RhConfigProvider';
 
 
 export const metadata: Metadata = {
@@ -37,26 +31,14 @@ export default function RootLayout({
       </head>
       <body className={cn('font-sans antialiased')}>
         <PerformanceProvider>
-          <AuthProvider>
-            <UsersProvider>
-              <ModulesProvider>
-                <RhConfigProvider>
-                  <GamificationProvider>
-                      <AttendantsProvider>
-                        <EvaluationsProvider>
-                                <SidebarProvider>
-                                  <AppLayout>
-                                    {children}
-                                  </AppLayout>
-                                  <Toaster />
-                                </SidebarProvider>
-                        </EvaluationsProvider>
-                      </AttendantsProvider>
-                  </GamificationProvider>
-                </RhConfigProvider>
-              </ModulesProvider>
-            </UsersProvider>
-          </AuthProvider>
+            <AuthProvider>
+                <SidebarProvider>
+                  <AppLayout>
+                    {children}
+                  </AppLayout>
+                  <Toaster />
+                </SidebarProvider>
+            </AuthProvider>
         </PerformanceProvider>
       </body>
     </html>

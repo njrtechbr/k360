@@ -3,7 +3,7 @@
 
 import { useAuth } from "@/providers/AuthProvider";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -37,7 +37,6 @@ import { useToast } from "@/hooks/use-toast";
 import QRCode from "react-qr-code";
 import { toPng } from 'html-to-image';
 import { Skeleton } from "@/components/ui/skeleton";
-import { usePerformance } from "@/providers/PerformanceProvider";
 
 
 const formSchema = z.object({
@@ -98,7 +97,7 @@ const formatTelefone = (tel: string) => {
 
 
 export default function AtendentesPage() {
-  const { user, isAuthenticated, loading: authLoading, attendants, addAttendant, updateAttendant, deleteAttendants, funcoes, setores, fetchAttendants } = useAuth();
+  const { user, isAuthenticated, appLoading, authLoading, attendants, addAttendant, updateAttendant, deleteAttendants, funcoes, setores } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const qrCodeRef = useRef<HTMLDivElement>(null);
@@ -108,44 +107,11 @@ export default function AtendentesPage() {
   const [isQrCodeDialogOpen, setIsQrCodeDialogOpen] = useState(false);
   const [selectedAttendant, setSelectedAttendant] = useState<Attendant | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [isDataLoading, setIsDataLoading] = useState(true);
-
-  const { setPerformanceData } = usePerformance();
-  const renderTimeRef = useRef(performance.now());
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: defaultFormValues,
   });
-
-  const loadData = useCallback(async () => {
-    setIsDataLoading(true);
-    const startTime = performance.now();
-    const fetchedData = await fetchAttendants();
-    const endTime = performance.now();
-    setPerformanceData({
-        dataLoadingTime: endTime - startTime,
-        renderTime: null,
-        itemCount: fetchedData.length,
-        collectionName: "atendentes"
-    });
-    setIsDataLoading(false);
-  }, [fetchAttendants, setPerformanceData]);
-
-  useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-        loadData();
-    }
-  }, [authLoading, isAuthenticated, loadData]);
-
-  useEffect(() => {
-     if (!isDataLoading) {
-        const endRenderTime = performance.now();
-        setPerformanceData(prev => ({ ...prev, renderTime: endRenderTime - renderTimeRef.current }));
-    } else {
-        renderTimeRef.current = performance.now();
-    }
-  }, [isDataLoading, setPerformanceData]);
   
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -286,7 +252,7 @@ export default function AtendentesPage() {
                           </TableRow>
                       </TableHeader>
                       <TableBody>
-                          {isDataLoading ? (
+                          {appLoading ? (
                             Array.from({ length: 5 }).map((_, i) => (
                                   <TableRow key={i}>
                                       <TableCell><Skeleton className="h-10 w-48" /></TableCell>

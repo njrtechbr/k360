@@ -8,11 +8,9 @@ import Link from "next/link";
 import { LayoutDashboard, Wrench, CircleUser, Settings, ShieldCheck, Users, Trophy, Star, Briefcase } from "lucide-react";
 import { ROLES } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { useModules } from "@/providers/ModulesProvider";
 
 export default function AppSidebar() {
-    const { isAuthenticated, user } = useAuth();
-    const { modules } = useModules();
+    const { isAuthenticated, user, modules } = useAuth();
     const pathname = usePathname();
     const { state } = useSidebar();
 

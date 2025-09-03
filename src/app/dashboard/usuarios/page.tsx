@@ -3,7 +3,7 @@
 
 import { useAuth } from "@/providers/AuthProvider";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -29,7 +29,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
-import { usePerformance } from "@/providers/PerformanceProvider";
 
 const editFormSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
@@ -51,18 +50,13 @@ const addFormSchema = z.object({
 
 
 export default function UsuariosPage() {
-  const { user, isAuthenticated, loading: authLoading, allUsers, modules, updateUser, deleteUser, register, fetchAllUsers } = useAuth();
+  const { user, isAuthenticated, authLoading, appLoading, allUsers, modules, updateUser, deleteUser, register } = useAuth();
   const router = useRouter();
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [isDataLoading, setIsDataLoading] = useState(true);
-
-  const { setPerformanceData } = usePerformance();
-  const renderTimeRef = useRef(performance.now());
-
 
   const editForm = useForm<z.infer<typeof editFormSchema>>({
     resolver: zodResolver(editFormSchema),
@@ -80,34 +74,12 @@ export default function UsuariosPage() {
     },
   });
 
-  const loadData = useCallback(async () => {
-    setIsDataLoading(true);
-    const startTime = performance.now();
-    const fetchedData = await fetchAllUsers();
-    const endTime = performance.now();
-    setPerformanceData({
-      dataLoadingTime: endTime - startTime,
-      renderTime: null,
-      itemCount: fetchedData.length,
-      collectionName: "usuarios"
-    });
-    setIsDataLoading(false);
-  }, [fetchAllUsers, setPerformanceData]);
-  
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-        loadData();
+    if (!authLoading && !isAuthenticated) {
+      router.push("/login");
     }
-  }, [authLoading, isAuthenticated, loadData]);
-  
-  useEffect(() => {
-     if (!isDataLoading) {
-        const endRenderTime = performance.now();
-        setPerformanceData(prev => ({ ...prev, renderTime: endRenderTime - renderTimeRef.current }));
-    } else {
-        renderTimeRef.current = performance.now();
-    }
-  }, [isDataLoading, setPerformanceData]);
+  }, [authLoading, isAuthenticated, router]);
+
 
   useEffect(() => {
     if (selectedUser) {
@@ -337,7 +309,7 @@ export default function UsuariosPage() {
                           </TableRow>
                       </TableHeader>
                       <TableBody>
-                          {isDataLoading ? (
+                          {appLoading ? (
                             Array.from({ length: 3 }).map((_, i) => (
                                   <TableRow key={i}>
                                       <TableCell><Skeleton className="h-6 w-32" /></TableCell>
