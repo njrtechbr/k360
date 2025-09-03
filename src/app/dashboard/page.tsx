@@ -3,7 +3,7 @@
 
 import { useAuth } from "@/providers/AuthProvider";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ShieldAlert, ShieldCheck, ShieldHalf, UserIcon, Wrench, Users, PlusCircle, Gift, Building2, Cake, CalendarDays } from "lucide-react";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { differenceInDays, format, getYear, setYear, isFuture, addYears, differenceInYears } from 'date-fns';
+import { Skeleton } from "@/components/ui/skeleton";
 
 const RoleIcon = ({ role }: { role: string }) => {
     switch (role) {
@@ -74,14 +75,20 @@ const getUpcomingAnniversaries = (attendants: Attendant[], type: 'birthday' | 'a
 
 
 export default function DashboardPage() {
-  const { user, isAuthenticated, loading, modules, attendants } = useAuth();
+  const { user, isAuthenticated, loading, modules, attendants, fetchAttendants } = useAuth();
   const router = useRouter();
+  const [isDataLoading, setIsDataLoading] = useState(true);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       router.push("/login");
     }
-  }, [isAuthenticated, loading, router]);
+    if (!loading && isAuthenticated) {
+        setIsDataLoading(true);
+        fetchAttendants().finally(() => setIsDataLoading(false));
+    }
+  }, [isAuthenticated, loading, router, fetchAttendants]);
+
 
   const moduleMap = useMemo(() => {
     return modules.reduce((acc, module) => {
@@ -97,7 +104,7 @@ export default function DashboardPage() {
   if (loading || !user) {
     return (
         <div className="flex items-center justify-center h-full">
-            <p>Carregando...</p>
+            <p>Carregando aplicação...</p>
         </div>
     );
   }
@@ -124,7 +131,20 @@ export default function DashboardPage() {
                     <CardTitle className="flex items-center gap-2"><Gift className="text-pink-500"/> Aniversários</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                    {upcomingBirthdays.length > 0 ? upcomingBirthdays.map(({ attendant, daysUntil, years, date }) => (
+                    {isDataLoading ? (
+                         Array.from({ length: 2 }).map((_, i) => (
+                            <div key={i} className="flex items-center justify-between p-2">
+                                <div className="flex items-center gap-3">
+                                    <Skeleton className="h-10 w-10 rounded-full" />
+                                    <div className="space-y-1">
+                                        <Skeleton className="h-4 w-32" />
+                                        <Skeleton className="h-3 w-24" />
+                                    </div>
+                                </div>
+                                <Skeleton className="h-6 w-16 rounded-full" />
+                            </div>
+                        ))
+                    ) : upcomingBirthdays.length > 0 ? upcomingBirthdays.map(({ attendant, daysUntil, years, date }) => (
                          <div key={attendant.id} className="flex items-center justify-between p-2 rounded-md border">
                             <Link href={`/dashboard/rh/atendentes/${attendant.id}`} className="flex items-center gap-3 group">
                                 <Avatar className="h-10 w-10">
@@ -146,7 +166,20 @@ export default function DashboardPage() {
                     <CardTitle className="flex items-center gap-2"><Building2 className="text-blue-500" /> Aniversários de Admissão</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                     {upcomingWorkAnniversaries.length > 0 ? upcomingWorkAnniversaries.map(({ attendant, daysUntil, years, date }) => (
+                     {isDataLoading ? (
+                         Array.from({ length: 2 }).map((_, i) => (
+                            <div key={i} className="flex items-center justify-between p-2">
+                                <div className="flex items-center gap-3">
+                                    <Skeleton className="h-10 w-10 rounded-full" />
+                                    <div className="space-y-1">
+                                        <Skeleton className="h-4 w-32" />
+                                        <Skeleton className="h-3 w-24" />
+                                    </div>
+                                </div>
+                                <Skeleton className="h-6 w-16 rounded-full" />
+                            </div>
+                        ))
+                    ) : upcomingWorkAnniversaries.length > 0 ? upcomingWorkAnniversaries.map(({ attendant, daysUntil, years, date }) => (
                          <div key={attendant.id} className="flex items-center justify-between p-2 rounded-md border">
                              <Link href={`/dashboard/rh/atendentes/${attendant.id}`} className="flex items-center gap-3 group">
                                 <Avatar className="h-10 w-10">

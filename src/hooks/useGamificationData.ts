@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -73,7 +74,7 @@ export function useGamificationData() {
                 setAchievements(mergedAchievements);
                 setLevelRewards(mergedLevelRewards);
                 setSeasons(data.seasons || []);
-                 console.log("GAMIFICATION: Configurações carregadas do Firestore.");
+                 console.log(`GAMIFICATION: Configurações carregadas do Firestore. ${data.seasons?.length ?? 0} temporadas encontradas.`);
                 return loadedConfig;
             } else {
                 console.log("GAMIFICATION: Nenhuma configuração encontrada, usando e salvando defaults.");
