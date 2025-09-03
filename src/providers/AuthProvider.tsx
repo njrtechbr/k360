@@ -96,7 +96,7 @@ interface AuthContextType {
   // Evaluations
   evaluations: Evaluation[];
   addEvaluation: (evaluationData: Omit<Evaluation, 'id' | 'xpGained' | 'importId'>) => Promise<Evaluation>;
-  deleteEvaluations: (evaluationIds: string[]) => Promise<void>;
+  deleteEvaluations: (evaluationIds: string[], title: string) => Promise<void>;
   
   // Imports
   evaluationImports: EvaluationImport[];
@@ -543,62 +543,77 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return newEvaluation;
   }, [gamificationConfig, seasons]);
 
-    const deleteEvaluations = useCallback(async (evaluationIds: string[]) => {
+    const deleteEvaluations = useCallback(async (evaluationIds: string[], title: string = 'Excluindo Avaliações') => {
         if (!evaluationIds || evaluationIds.length === 0) return;
+        
         setIsProcessing(true);
+        setImportStatus({ isOpen: true, logs: [], progress: 0, title: title, status: 'processing' });
+        
         let totalDeleted = 0;
         let totalSkipped = 0;
 
-        try {
-            for (let i = 0; i < evaluationIds.length; i += 30) {
-                const chunk = evaluationIds.slice(i, i + 30);
-                if (chunk.length === 0) continue;
+        for (const [index, evalId] of evaluationIds.entries()) {
+            const progress = ((index + 1) / evaluationIds.length) * 100;
+            setImportStatus(prev => ({...prev, progress, logs: [...prev.logs, `Processando avaliação ${index + 1}/${evaluationIds.length}...`]}));
+
+            try {
+                const evalDocRef = doc(db, "evaluations", evalId);
+                const evalDoc = await getDoc(evalDocRef);
+
+                if (!evalDoc.exists()) {
+                    setImportStatus(prev => ({...prev, logs: [...prev.logs, `Avaliação ${evalId} não encontrada. Pulando.`]}));
+                    continue;
+                }
+
+                if (evalDoc.data().importId === 'native') {
+                    totalSkipped++;
+                    setImportStatus(prev => ({...prev, logs: [...prev.logs, `Avaliação ${evalId} é nativa e não pode ser excluída. Pulando.`]}));
+                    continue;
+                }
+                
+                // Find and delete related xp_event
+                const xpQuery = query(collection(db, "xp_events"), where("relatedId", "==", evalId), where("type", "==", "evaluation"));
+                const xpSnapshot = await getDocs(xpQuery);
 
                 const batch = writeBatch(db);
-
-                // Get evaluations to check if they are native
-                const evaluationsQuery = query(collection(db, "evaluations"), where(documentId(), "in", chunk));
-                const evaluationsSnapshot = await getDocs(evaluationsQuery);
                 
-                const deletableEvaluationIds: string[] = [];
-                evaluationsSnapshot.forEach(docSnap => {
-                    if (docSnap.data().importId !== 'native') {
-                        deletableEvaluationIds.push(docSnap.id);
-                    } else {
-                        totalSkipped++;
-                    }
-                });
-
-                if (deletableEvaluationIds.length > 0) {
-                    // Find corresponding xp_events
-                    const xpEventsQuery = query(collection(db, "xp_events"), where("relatedId", "in", deletableEvaluationIds), where("type", "==", "evaluation"));
-                    const xpEventsSnapshot = await getDocs(xpEventsQuery);
-                    
-                    // Delete evaluations and their xp_events
-                    deletableEvaluationIds.forEach(id => batch.delete(doc(db, "evaluations", id)));
-                    xpEventsSnapshot.forEach(docSnap => batch.delete(docSnap.ref));
-
-                    await batch.commit();
-                    totalDeleted += deletableEvaluationIds.length;
+                if (!xpSnapshot.empty) {
+                    xpSnapshot.forEach(xpDoc => {
+                        batch.delete(xpDoc.ref);
+                    });
+                    setImportStatus(prev => ({...prev, logs: [...prev.logs, `Evento de XP vinculado à avaliação ${evalId} encontrado e marcado para exclusão.`]}));
+                } else {
+                    setImportStatus(prev => ({...prev, logs: [...prev.logs, `Nenhum evento de XP vinculado à avaliação ${evalId} foi encontrado.`]}));
                 }
-            }
+                
+                // Delete the evaluation itself
+                batch.delete(evalDocRef);
+                
+                await batch.commit();
+                totalDeleted++;
+                
+                // Update local state immediately for responsiveness
+                setEvaluations(prev => prev.filter(e => e.id !== evalId));
+                setXpEvents(prev => prev.filter(xp => xp.relatedId !== evalId || xp.type !== 'evaluation'));
 
-            if (totalDeleted > 0) {
-                setEvaluations(prev => prev.filter(ev => !evaluationIds.includes(ev.id)));
-                setXpEvents(prev => prev.filter(xp => xp.type !== 'evaluation' || !evaluationIds.includes(xp.relatedId)));
-                toast({ title: "Exclusão Concluída", description: `${totalDeleted} avaliações e seus XPs foram removidos.` });
+            } catch (error: any) {
+                console.error(`Erro ao excluir avaliação ${evalId}:`, error);
+                setImportStatus(prev => ({...prev, logs: [...prev.logs, `ERRO ao excluir avaliação ${evalId}: ${error.message}`]}));
             }
-
-            if (totalSkipped > 0) {
-                toast({ variant: 'default', title: 'Aviso', description: `${totalSkipped} avaliações nativas foram ignoradas e não podem ser excluídas.` });
-            }
-            
-        } catch (error: any) {
-            console.error("Error deleting evaluations:", error);
-            toast({ variant: 'destructive', title: "Erro ao Excluir", description: error.message });
-        } finally {
-            setIsProcessing(false);
         }
+        
+        const finalLogs = [...importStatus.logs];
+        if (totalDeleted > 0) {
+            finalLogs.push(`Concluído! ${totalDeleted} avaliações e seus XPs foram removidos.`);
+        }
+        if (totalSkipped > 0) {
+            finalLogs.push(`${totalSkipped} avaliações nativas foram ignoradas.`);
+        }
+        
+        setImportStatus(prev => ({ ...prev, status: 'done', title: 'Exclusão Concluída', logs: finalLogs, progress: 100 }));
+        toast({ title: "Exclusão Concluída", description: `${totalDeleted} avaliações removidas.` });
+        setTimeout(() => setImportStatus(INITIAL_IMPORT_STATUS), 5000);
+        setIsProcessing(false);
     }, [toast]);
   
   // --- Gamification Actions ---
@@ -827,7 +842,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
     if (!importToRevert) return;
     
-    await deleteEvaluations(importToRevert.evaluationIds);
+    await deleteEvaluations(importToRevert.evaluationIds, 'Revertendo Importação');
     await deleteDoc(doc(db, "evaluationImports", importId));
     setEvaluationImports(prev => prev.filter(i => i.id !== importId));
     toast({ title: "Importação Revertida!" });
@@ -1021,4 +1036,3 @@ export const useAuth = () => {
   }
   return context;
 };
-

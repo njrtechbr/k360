@@ -4,14 +4,13 @@
 import { useAuth } from "@/providers/AuthProvider";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Star, Trash2, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import type { Evaluation } from "@/lib/types";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,6 +22,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import ImportProgressModal from "@/components/ImportProgressModal";
 
 const RatingStars = ({ rating }: { rating: number }) => {
     const totalStars = 5;
@@ -39,7 +39,7 @@ const RatingStars = ({ rating }: { rating: number }) => {
 };
 
 export default function GerenciarAvaliacoesPage() {
-    const { user, isAuthenticated, loading, evaluations, attendants, deleteEvaluations } = useAuth();
+    const { user, isAuthenticated, loading, evaluations, attendants, deleteEvaluations, isProcessing } = useAuth();
     const router = useRouter();
 
     const [isDeleteSelectedOpen, setIsDeleteSelectedOpen] = useState(false);
@@ -82,20 +82,21 @@ export default function GerenciarAvaliacoesPage() {
     };
 
     const handleDeleteSelected = async () => {
-        await deleteEvaluations(selectedIds);
+        await deleteEvaluations(selectedIds, 'Excluindo Avaliações Selecionadas');
         setSelectedIds([]);
         setIsDeleteSelectedOpen(false);
     };
 
     const handleDeleteAll = async () => {
         const allIds = sortedEvaluations.map(e => e.id);
-        await deleteEvaluations(allIds);
+        await deleteEvaluations(allIds, 'Excluindo TODAS as Avaliações');
         setSelectedIds([]);
         setIsDeleteAllOpen(false);
     };
 
     return (
         <>
+            <ImportProgressModal />
             <div className="space-y-8">
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                     <div>
@@ -108,7 +109,7 @@ export default function GerenciarAvaliacoesPage() {
                         <Button
                             variant="outline"
                             onClick={() => setIsDeleteSelectedOpen(true)}
-                            disabled={selectedIds.length === 0}
+                            disabled={selectedIds.length === 0 || isProcessing}
                         >
                             <Trash2 className="mr-2 h-4 w-4"/>
                             Excluir {selectedIds.length} Selecionadas
@@ -116,7 +117,7 @@ export default function GerenciarAvaliacoesPage() {
                         <Button
                             variant="destructive"
                             onClick={() => setIsDeleteAllOpen(true)}
-                            disabled={sortedEvaluations.length === 0}
+                            disabled={sortedEvaluations.length === 0 || isProcessing}
                         >
                             <AlertCircle className="mr-2 h-4 w-4"/>
                             Excluir Todas
@@ -128,7 +129,7 @@ export default function GerenciarAvaliacoesPage() {
                     <CardHeader>
                         <CardTitle>Tabela de Avaliações</CardTitle>
                         <CardDescription>
-                            Selecione as avaliações que deseja excluir.
+                            Selecione as avaliações que deseja excluir. As avaliações nativas (criadas diretamente pelo sistema) não podem ser excluídas por aqui.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -137,8 +138,14 @@ export default function GerenciarAvaliacoesPage() {
                                 <TableRow>
                                     <TableHead className="w-[50px]">
                                         <Checkbox
-                                            checked={selectedIds.length > 0 && selectedIds.length === sortedEvaluations.length}
-                                            onCheckedChange={handleSelectAll}
+                                            checked={selectedIds.length > 0 && selectedIds.length === sortedEvaluations.filter(e => e.importId !== 'native').length}
+                                            onCheckedChange={(checked) => {
+                                                if (checked) {
+                                                    setSelectedIds(sortedEvaluations.filter(e => e.importId !== 'native').map(e => e.id));
+                                                } else {
+                                                    setSelectedIds([]);
+                                                }
+                                            }}
                                             aria-label="Selecionar tudo"
                                         />
                                     </TableHead>
@@ -150,13 +157,14 @@ export default function GerenciarAvaliacoesPage() {
                             </TableHeader>
                             <TableBody>
                                 {sortedEvaluations.length > 0 ? (
-                                    sortedEvaluations.map((evaluation, index) => (
-                                        <TableRow key={`${evaluation.id}-${index}`} data-state={selectedIds.includes(evaluation.id) && "selected"}>
+                                    sortedEvaluations.map((evaluation) => (
+                                        <TableRow key={evaluation.id} data-state={selectedIds.includes(evaluation.id) && "selected"}>
                                              <TableCell>
                                                 <Checkbox
                                                     checked={selectedIds.includes(evaluation.id)}
                                                     onCheckedChange={(checked) => handleSelectRow(evaluation.id, !!checked)}
                                                     aria-label={`Selecionar avaliação ${evaluation.id}`}
+                                                    disabled={evaluation.importId === 'native'}
                                                 />
                                             </TableCell>
                                             <TableCell className="font-medium">
