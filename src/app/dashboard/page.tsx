@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { differenceInDays, format, getYear, setYear, isFuture, addYears, differenceInYears } from 'date-fns';
+import { ptBR } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePerformance } from "@/providers/PerformanceProvider";
 
@@ -53,13 +54,22 @@ const getUpcomingAnniversaries = (attendants: Attendant[], type: 'birthday' | 'a
             const dateStr = type === 'birthday' ? attendant.dataNascimento : attendant.dataAdmissao;
             if (!dateStr) return null;
 
-            const originalDate = new Date(dateStr);
+            // Handle DD/MM/YYYY format from old data if present
+            let originalDate: Date;
+            if (dateStr.includes('/')) {
+                const [day, month, year] = dateStr.split('/');
+                originalDate = new Date(Number(year), Number(month) - 1, Number(day));
+            } else {
+                originalDate = new Date(dateStr);
+            }
+
             if (isNaN(originalDate.getTime())) return null;
 
 
             let nextAnniversaryDate = setYear(originalDate, currentYear);
             
-            if (!isFuture(nextAnniversaryDate) && differenceInDays(nextAnniversaryDate, today) < -1 ) {
+             // If the anniversary has already passed this year, check for next year's
+            if (differenceInDays(nextAnniversaryDate, today) < 0 ) {
                  nextAnniversaryDate = addYears(nextAnniversaryDate, 1);
             }
 
@@ -73,7 +83,20 @@ const getUpcomingAnniversaries = (attendants: Attendant[], type: 'birthday' | 'a
             };
         })
         .filter((item): item is Anniversary => item !== null && item.daysUntil >= 0)
-        .sort((a, b) => a.daysUntil - b.daysUntil);
+        .sort((a, b) => a.daysUntil - b.daysUntil)
+        .slice(0, 5); // Take the next 5
+};
+
+const groupAnniversariesByMonth = (anniversaries: Anniversary[]) => {
+    return anniversaries.reduce((acc, anniversary) => {
+        const month = format(anniversary.date, 'MMMM', { locale: ptBR });
+        const capitalizedMonth = month.charAt(0).toUpperCase() + month.slice(1);
+        if (!acc[capitalizedMonth]) {
+            acc[capitalizedMonth] = [];
+        }
+        acc[capitalizedMonth].push(anniversary);
+        return acc;
+    }, {} as Record<string, Anniversary[]>);
 };
 
 
@@ -97,7 +120,10 @@ export default function DashboardPage() {
   }, [modules]);
   
   const upcomingBirthdays = useMemo(() => getUpcomingAnniversaries(attendants, 'birthday'), [attendants]);
+  const groupedBirthdays = useMemo(() => groupAnniversariesByMonth(upcomingBirthdays), [upcomingBirthdays]);
+
   const upcomingWorkAnniversaries = useMemo(() => getUpcomingAnniversaries(attendants, 'admission'), [attendants]);
+  const groupedWorkAnniversaries = useMemo(() => groupAnniversariesByMonth(upcomingWorkAnniversaries), [upcomingWorkAnniversaries]);
 
 
   if (authLoading || appLoading || !user) {
@@ -110,6 +136,45 @@ export default function DashboardPage() {
 
   const canManageSystem = user.role === ROLES.ADMIN || user.role === ROLES.SUPERADMIN;
   const userModules = user.modules?.map(moduleId => moduleMap[moduleId]).filter(Boolean) || [];
+
+  const renderAnniversaryGroup = (groupedData: Record<string, Anniversary[]>, type: 'birthday' | 'admission') => {
+    const sortedMonths = Object.keys(groupedData).sort((a, b) => {
+        const monthA = groupedData[a][0].date.getMonth();
+        const monthB = groupedData[b][0].date.getMonth();
+        const yearA = groupedData[a][0].date.getFullYear();
+        const yearB = groupedData[b][0].date.getFullYear();
+        if(yearA !== yearB) return yearA - yearB;
+        return monthA - monthB;
+    });
+
+    if (sortedMonths.length === 0) {
+        return <p className="text-sm text-muted-foreground px-6 pb-4">Nenhum próximo aniversário para mostrar.</p>;
+    }
+    
+    return sortedMonths.map(month => (
+        <div key={month} className="space-y-3">
+            <h4 className="font-semibold text-sm text-muted-foreground px-6">{month}</h4>
+            {groupedData[month].map(({ attendant, daysUntil, years, date }) => (
+              <div key={attendant.id} className="flex items-center justify-between p-2 mx-4 rounded-md border">
+                  <Link href={`/dashboard/rh/atendentes/${attendant.id}`} className="flex items-center gap-3 group">
+                      <Avatar className="h-10 w-10">
+                          <AvatarImage src={attendant.avatarUrl} alt={attendant.name} />
+                          <AvatarFallback>{getInitials(attendant.name)}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                          <p className="font-medium group-hover:underline">{attendant.name}</p>
+                          <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                              {type === 'birthday' ? <Cake size={14}/> : <CalendarDays size={14}/>}
+                              {format(date, 'dd/MM')} ({years} anos)
+                          </p>
+                      </div>
+                  </Link>
+                  <Badge variant="outline">{daysUntil === 0 ? 'Hoje!' : `em ${daysUntil}d`}</Badge>
+              </div>
+          ))}
+        </div>
+    ));
+  }
 
   return (
     <>
@@ -128,9 +193,9 @@ export default function DashboardPage() {
         <div className="grid md:grid-cols-2 gap-8">
               <Card>
                   <CardHeader>
-                      <CardTitle className="flex items-center gap-2"><Gift className="text-pink-500"/> Aniversários</CardTitle>
+                      <CardTitle className="flex items-center gap-2"><Gift className="text-pink-500"/> Próximos Aniversariantes</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3">
+                  <CardContent className="space-y-4">
                       {appLoading ? (
                           Array.from({ length: 2 }).map((_, i) => (
                               <div key={i} className="flex items-center justify-between p-2">
@@ -144,28 +209,14 @@ export default function DashboardPage() {
                                   <Skeleton className="h-6 w-16 rounded-full" />
                               </div>
                           ))
-                      ) : upcomingBirthdays.length > 0 ? upcomingBirthdays.map(({ attendant, daysUntil, years, date }) => (
-                          <div key={attendant.id} className="flex items-center justify-between p-2 rounded-md border">
-                              <Link href={`/dashboard/rh/atendentes/${attendant.id}`} className="flex items-center gap-3 group">
-                                  <Avatar className="h-10 w-10">
-                                      <AvatarImage src={attendant.avatarUrl} alt={attendant.name} />
-                                      <AvatarFallback>{getInitials(attendant.name)}</AvatarFallback>
-                                  </Avatar>
-                                  <div>
-                                      <p className="font-medium group-hover:underline">{attendant.name}</p>
-                                      <p className="text-sm text-muted-foreground flex items-center gap-1.5"><Cake size={14}/> {format(date, 'dd/MM')} ({years} anos)</p>
-                                  </div>
-                              </Link>
-                              <Badge variant="outline">{daysUntil === 0 ? 'Hoje!' : `em ${daysUntil}d`}</Badge>
-                          </div>
-                      )) : <p className="text-sm text-muted-foreground">Nenhum aniversário próximo.</p>}
+                      ) : renderAnniversaryGroup(groupedBirthdays, 'birthday')}
                   </CardContent>
               </Card>
               <Card>
                   <CardHeader>
                       <CardTitle className="flex items-center gap-2"><Building2 className="text-blue-500" /> Aniversários de Admissão</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3">
+                  <CardContent className="space-y-4">
                       {appLoading ? (
                           Array.from({ length: 2 }).map((_, i) => (
                               <div key={i} className="flex items-center justify-between p-2">
@@ -179,21 +230,7 @@ export default function DashboardPage() {
                                   <Skeleton className="h-6 w-16 rounded-full" />
                               </div>
                           ))
-                      ) : upcomingWorkAnniversaries.length > 0 ? upcomingWorkAnniversaries.map(({ attendant, daysUntil, years, date }) => (
-                          <div key={attendant.id} className="flex items-center justify-between p-2 rounded-md border">
-                              <Link href={`/dashboard/rh/atendentes/${attendant.id}`} className="flex items-center gap-3 group">
-                                  <Avatar className="h-10 w-10">
-                                      <AvatarImage src={attendant.avatarUrl} alt={attendant.name} />
-                                      <AvatarFallback>{getInitials(attendant.name)}</AvatarFallback>
-                                  </Avatar>
-                                  <div>
-                                      <p className="font-medium group-hover:underline">{attendant.name}</p>
-                                      <p className="text-sm text-muted-foreground flex items-center gap-1.5"><CalendarDays size={14}/> {format(date, 'dd/MM')} ({years} anos)</p>
-                                  </div>
-                              </Link>
-                              <Badge variant="outline">{daysUntil === 0 ? 'Hoje!' : `em ${daysUntil}d`}</Badge>
-                          </div>
-                      )) : <p className="text-sm text-muted-foreground">Nenhum aniversário de admissão próximo.</p>}
+                      ) : renderAnniversaryGroup(groupedWorkAnniversaries, 'admission')}
                   </CardContent>
               </Card>
           </div>
