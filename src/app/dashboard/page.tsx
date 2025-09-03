@@ -14,6 +14,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { differenceInDays, format, getYear, setYear, isFuture, addYears, differenceInYears } from 'date-fns';
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePerformance } from "@/providers/PerformanceProvider";
+import { useModules } from "@/providers/ModulesProvider";
+import { useAttendants } from "@/providers/AttendantsProvider";
 
 const RoleIcon = ({ role }: { role: string }) => {
     switch (role) {
@@ -76,7 +78,9 @@ const getUpcomingAnniversaries = (attendants: Attendant[], type: 'birthday' | 'a
 
 
 export default function DashboardPage() {
-  const { user, isAuthenticated, loading: authLoading, modules, attendants, fetchAttendants } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const { modules, fetchModules } = useModules();
+  const { attendants, fetchAttendants } = useAttendants();
   const router = useRouter();
   const [isDataLoading, setIsDataLoading] = useState(true);
   
@@ -86,18 +90,21 @@ export default function DashboardPage() {
   const loadData = useCallback(async () => {
     setIsDataLoading(true);
     const startTime = performance.now();
-    const fetchedAttendants = await fetchAttendants();
+    await Promise.all([
+        fetchAttendants(),
+        fetchModules()
+    ]);
     const endTime = performance.now();
     
     setPerformanceData({
         dataLoadingTime: endTime - startTime,
         renderTime: null,
-        itemCount: fetchedAttendants.length,
-        collectionName: "atendentes"
+        itemCount: attendants.length,
+        collectionName: "atendentes/modulos"
     });
 
     setIsDataLoading(false);
-  }, [fetchAttendants, setPerformanceData]);
+  }, [fetchAttendants, fetchModules, setPerformanceData, attendants.length]);
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
