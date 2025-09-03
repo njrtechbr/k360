@@ -46,6 +46,8 @@ const getUpcomingAnniversaries = (attendants: Attendant[], type: 'birthday' | 'a
     const today = new Date();
     const currentYear = getYear(today);
 
+    if (!attendants) return [];
+
     return attendants
         .map(attendant => {
             const dateStr = type === 'birthday' ? attendant.dataNascimento : attendant.dataAdmissao;
@@ -87,6 +89,7 @@ export default function DashboardPage() {
 
 
   const moduleMap = useMemo(() => {
+    if (!modules) return {};
     return modules.reduce((acc, module) => {
         acc[module.id] = module.name;
         return acc;
@@ -97,7 +100,7 @@ export default function DashboardPage() {
   const upcomingWorkAnniversaries = useMemo(() => getUpcomingAnniversaries(attendants, 'admission'), [attendants]);
 
 
-  if (authLoading || !user) {
+  if (authLoading || appLoading || !user) {
     return (
         <div className="flex items-center justify-center h-full">
             <p>Carregando aplicação...</p>
