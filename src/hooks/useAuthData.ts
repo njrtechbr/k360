@@ -65,3 +65,5 @@ export function useAuthData() {
 
     return { user, setUser, loading, login, logout };
 }
+
+    

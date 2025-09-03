@@ -19,9 +19,6 @@ import { format } from "date-fns";
 import type { Evaluation } from "@/lib/types";
 import { suggestAttendants, type SuggestAttendantOutput } from "@/ai/flows/suggest-attendant-flow";
 import { Combobox } from "@/components/ui/combobox";
-import { useAttendants } from "@/providers/AttendantsProvider";
-import { useEvaluations } from "@/providers/EvaluationsProvider";
-import { useGamification } from "@/providers/GamificationProvider";
 
 
 type CsvRow = {
@@ -38,11 +35,7 @@ type MappedReview = {
 }
 
 export default function ImportarAvaliacoesPage() {
-    const { user, isAuthenticated, loading } = useAuth();
-    const { attendants } = useAttendants();
-    const { addEvaluation, addImportRecord, evaluations } = useEvaluations();
-    const { recalculateAllGamificationData } = useGamification();
-
+    const { user, isAuthenticated, loading, attendants, addEvaluation, addEvaluationImportRecord, recalculateAllGamificationData } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
 
@@ -161,8 +154,6 @@ export default function ImportarAvaliacoesPage() {
         const totalReviews = mappedReviews.length;
         let importedCount = 0;
         const newEvaluationIds: string[] = [];
-        let createdEvaluations: Evaluation[] = [];
-
 
         for (const review of mappedReviews) {
             try {
@@ -174,7 +165,6 @@ export default function ImportarAvaliacoesPage() {
                     importId: "temp-id" // Placeholder, will be replaced by the real import ID
                 });
                 newEvaluationIds.push(newEvaluation.id);
-                createdEvaluations.push(newEvaluation);
 
             } catch (error) {
                 console.error(`Erro ao importar avaliação para ${review.agentName}`, error);
@@ -184,20 +174,13 @@ export default function ImportarAvaliacoesPage() {
              await new Promise(res => setTimeout(res, 50)); // Small delay to allow UI update
         }
 
-        // Create a single import record
-        const importRecord = await addImportRecord({
+        const importRecord = await addEvaluationImportRecord({
             fileName: file?.name || "Arquivo Desconhecido",
             evaluationIds: newEvaluationIds,
             attendantMap: agentMap,
         }, user.id);
 
-        // Update evaluations with the correct import ID
-        const allEvaluations = [...evaluations, ...createdEvaluations];
-        const updatedEvaluations = allEvaluations.map(ev => 
-            newEvaluationIds.includes(ev.id) ? { ...ev, importId: importRecord.id } : ev
-        );
-
-        await recalculateAllGamificationData(attendants, updatedEvaluations, []);
+        await recalculateAllGamificationData();
 
         toast({
             title: "Importação Concluída!",
@@ -208,7 +191,7 @@ export default function ImportarAvaliacoesPage() {
         setParsedData([]);
         setAgentMap({});
         setIsProcessing(false);
-    }, [user, toast, mappedReviews, addEvaluation, addImportRecord, file, agentMap, evaluations, attendants, recalculateAllGamificationData]);
+    }, [user, toast, mappedReviews, addEvaluation, addEvaluationImportRecord, file, agentMap, recalculateAllGamificationData]);
 
     const isMappingStarted = Object.keys(agentMap).length > 0;
     const allAgentsMapped = uniqueAgents.length > 0 && uniqueAgents.every(agent => agentMap[agent]);
@@ -318,3 +301,5 @@ export default function ImportarAvaliacoesPage() {
         </div>
     );
 }
+
+    

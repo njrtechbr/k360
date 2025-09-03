@@ -7,12 +7,8 @@ import type { GamificationConfig, Achievement, LevelReward, GamificationSeason, 
 import { INITIAL_ACHIEVEMENTS, INITIAL_LEVEL_REWARDS } from '@/lib/achievements';
 import { db } from '@/lib/firebase';
 import { collection, doc, getDoc, setDoc, updateDoc, getDocs, deleteDoc, writeBatch } from 'firebase/firestore';
+import { getScoreFromRating } from '@/lib/gamification';
 
-
-export const getScoreFromRating = (rating: number, scores: GamificationConfig['ratingScores']): number => {
-    const key = String(rating) as keyof typeof scores;
-    return scores[key] ?? 0;
-};
 
 const INITIAL_GAMIFICATION_CONFIG: GamificationConfig = {
     ratingScores: {
@@ -83,7 +79,7 @@ export function useGamificationData() {
                 await setDoc(configDocRef, {
                      ...INITIAL_GAMIFICATION_CONFIG,
                     achievements: INITIAL_GAMIFICATION_CONFIG.achievements.map(({ isUnlocked, icon, ...ach }) => ach),
-                    levelRewards: INITIAL_GAMIFICATION_CONFIG.levelRewards.map(({ icon, ...reward }) => reward),
+                    levelRewards: INITIAL_LEVEL_REWARDS.map(({ icon, ...reward }) => reward),
                 });
                 setGamificationConfig(INITIAL_GAMIFICATION_CONFIG);
                  return INITIAL_GAMIFICATION_CONFIG;
@@ -200,25 +196,18 @@ export function useGamificationData() {
         
         const currentConfig = await fetchGamificationConfig();
         
-        // 1. Recalculate XP for all evaluations
-        const updatedEvaluations = allEvaluations.map(ev => {
+        const evBatch = writeBatch(db);
+        allEvaluations.forEach(ev => {
              const evaluationDate = new Date(ev.data);
              const seasonForEvaluation = currentConfig.seasons.find(s => s.active && evaluationDate >= new Date(s.startDate) && evaluationDate <= new Date(s.endDate));
              const baseScore = getScoreFromRating(ev.nota, currentConfig.ratingScores);
              const seasonMultiplier = seasonForEvaluation?.xpMultiplier ?? 1;
              const totalMultiplier = currentConfig.globalXpMultiplier * seasonMultiplier;
-             return { ...ev, xpGained: baseScore * totalMultiplier };
-        });
-
-        const evBatch = writeBatch(db);
-        updatedEvaluations.forEach(ev => {
-            const docRef = doc(db, "evaluations", ev.id);
-            evBatch.update(docRef, { xpGained: ev.xpGained });
+             evBatch.update(doc(db, "evaluations", ev.id), { xpGained: baseScore * totalMultiplier });
         });
         await evBatch.commit();
-        console.log(`GAMIFICATION: XP de ${updatedEvaluations.length} avaliações recalculado.`);
+        console.log(`GAMIFICATION: XP de ${allEvaluations.length} avaliações recalculado.`);
 
-        // 2. Re-evaluate achievements for all attendants
         const currentUnlocked = await fetchUnlockedAchievements();
         const deleteBatch = writeBatch(db);
         currentUnlocked.forEach(ua => deleteBatch.delete(doc(db, "unlockedAchievements", ua.id)));
@@ -230,14 +219,14 @@ export function useGamificationData() {
 
         for (const attendant of allAttendants) {
             const now = new Date();
-            const attendantEvaluations = updatedEvaluations.filter(ev => ev.attendantId === attendant.id);
+            const attendantEvaluations = allEvaluations.filter(ev => ev.attendantId === attendant.id);
 
             for (const achievement of currentConfig.achievements) {
                 const evaluationDateForAchievement = attendantEvaluations.length > 0 ? new Date(attendantEvaluations[attendantEvaluations.length - 1].data) : now;
                 const seasonForAchievement = currentConfig.seasons.find(s => s.active && evaluationDateForAchievement >= new Date(s.startDate) && evaluationDateForAchievement <= new Date(s.endDate));
 
                 if (achievement.active && seasonForAchievement) {
-                    if (achievement.isUnlocked(attendant, attendantEvaluations, updatedEvaluations, allAttendants, allAiAnalysis)) {
+                    if (achievement.isUnlocked(attendant, attendantEvaluations, allEvaluations, allAttendants, allAiAnalysis)) {
                         const seasonMultiplier = seasonForAchievement.xpMultiplier || 1;
                         const totalMultiplier = currentConfig.globalXpMultiplier * seasonMultiplier;
                         
@@ -280,3 +269,5 @@ export function useGamificationData() {
         recalculateAllGamificationData,
     };
 }
+
+    

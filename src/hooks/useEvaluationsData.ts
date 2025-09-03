@@ -7,7 +7,7 @@ import type { Evaluation, EvaluationAnalysis, GamificationConfig, GamificationSe
 import { analyzeEvaluation } from '@/ai/flows/analyze-evaluation-flow';
 import { db } from '@/lib/firebase';
 import { collection, doc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
-import { getScoreFromRating } from './useGamificationData';
+import { getScoreFromRating } from '@/lib/gamification';
 
 
 const AI_ANALYSIS_STORAGE_KEY = "controle_acesso_ai_analysis"; // Can be migrated later if needed
@@ -268,3 +268,5 @@ export function useEvaluationsData({ gamificationConfig, activeSeason }: UseEval
         revertImport,
     };
 }
+
+    

@@ -16,10 +16,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
 import type { Evaluation } from "@/lib/types";
-import { useAttendants } from "@/providers/AttendantsProvider";
-import { useEvaluations } from "@/providers/EvaluationsProvider";
-import { useGamification } from "@/providers/GamificationProvider";
-
 
 type CsvRow = {
     id: string;
@@ -40,11 +36,7 @@ type MappedReview = {
 }
 
 export default function ImportarLegadoPage() {
-    const { user, isAuthenticated, loading } = useAuth();
-    const { attendants } = useAttendants();
-    const { addEvaluation, addImportRecord, evaluations } = useEvaluations();
-    const { recalculateAllGamificationData, achievements } = useGamification();
-
+    const { user, isAuthenticated, loading, attendants, evaluations, addEvaluation, addEvaluationImportRecord, recalculateAllGamificationData } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
 
@@ -119,7 +111,6 @@ export default function ImportarLegadoPage() {
         const totalReviews = validReviews.length;
         let importedCount = 0;
         const newEvaluationIds: string[] = [];
-        let createdEvaluations: Evaluation[] = [];
 
         for (const review of validReviews) {
             try {
@@ -132,7 +123,6 @@ export default function ImportarLegadoPage() {
                     importId: "temp-id" // Placeholder, will be replaced by the real import ID
                 });
                 newEvaluationIds.push(newEvaluation.id);
-                createdEvaluations.push(newEvaluation);
 
             } catch (error) {
                 console.error(`Erro ao importar avaliação ${review.id}`, error);
@@ -142,20 +132,13 @@ export default function ImportarLegadoPage() {
              await new Promise(res => setTimeout(res, 50)); // Small delay to allow UI update
         }
 
-        // Create a single import record
-        const importRecord = await addImportRecord({
+        const importRecord = await addEvaluationImportRecord({
             fileName: file?.name || "Arquivo Desconhecido",
             evaluationIds: newEvaluationIds,
             attendantMap: {}, // No manual mapping needed
         }, user.id);
-
-        // Update evaluations with the correct import ID
-        const allEvaluations = [...evaluations, ...createdEvaluations];
-        const updatedEvaluations = allEvaluations.map(ev => 
-            newEvaluationIds.includes(ev.id) ? { ...ev, importId: importRecord.id } : ev
-        );
-
-        await recalculateAllGamificationData(attendants, updatedEvaluations, []);
+        
+        await recalculateAllGamificationData();
 
 
         toast({
@@ -166,7 +149,7 @@ export default function ImportarLegadoPage() {
         setFile(null);
         setMappedReviews([]);
         setIsProcessing(false);
-    }, [user, toast, mappedReviews, attendants, evaluations, achievements, addEvaluation, addImportRecord, recalculateAllGamificationData, file?.name]);
+    }, [user, toast, mappedReviews, addEvaluation, addEvaluationImportRecord, recalculateAllGamificationData, file?.name]);
     
     const formatDate = (dateStr: string) => {
         try {
@@ -260,3 +243,5 @@ export default function ImportarLegadoPage() {
         </div>
     );
 }
+
+    

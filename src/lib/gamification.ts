@@ -1,3 +1,4 @@
+
 import type { GamificationConfig } from './types';
 
 /**
@@ -10,3 +11,5 @@ export const getScoreFromRating = (rating: number, scores: GamificationConfig['r
     const key = String(rating) as keyof typeof scores;
     return scores[key] ?? 0;
 };
+
+    

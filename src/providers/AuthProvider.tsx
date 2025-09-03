@@ -4,7 +4,7 @@
 import type { ReactNode } from "react";
 import React, { useCallback, useEffect, useState } from "react";
 import type { User, Role, Module, Attendant, Evaluation, EvaluationImport, AttendantImport, Funcao, Setor, GamificationConfig, Achievement, LevelReward, GamificationSeason, UnlockedAchievement, EvaluationAnalysis } from "@/lib/types";
-import { ROLES, INITIAL_MODULES } from "@/lib/types";
+import { ROLES } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 
 // Firebase Imports
@@ -109,7 +109,7 @@ interface AuthContextType {
   addSeason: (seasonData: Omit<GamificationSeason, 'id'>) => void;
   updateSeason: (id: string, seasonData: Partial<Omit<GamificationSeason, 'id'>>) => void;
   deleteSeason: (id: string) => void;
-  recalculateAllGamificationData: (attendants: Attendant[], evaluations: Evaluation[], aiAnalysisResults: EvaluationAnalysis[]) => Promise<void>;
+  recalculateAllGamificationData: () => Promise<void>;
 
   // AI Analysis
   aiAnalysisResults: EvaluationAnalysis[];
@@ -169,52 +169,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   // --- Data Fetching Callbacks ---
-  const fetchAllUsers = useCallback(async () => {
-      console.log("AUTH: Buscando todos os usuários do Firestore...");
-      const snapshot = await getDocs(collection(db, "users"));
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
-  }, []);
-
-  const fetchModules = useCallback(async () => {
-      console.log("MODULES: Buscando módulos do Firestore...");
-      const snapshot = await getDocs(collection(db, "modules"));
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Module));
-  }, []);
-
-  const fetchAttendants = useCallback(async () => {
-      console.log("ATTENDANTS: Buscando atendentes do Firestore...");
-      const snapshot = await getDocs(collection(db, "attendants"));
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Attendant));
-  }, []);
-
-  const fetchEvaluations = useCallback(async () => {
-      console.log("EVALUATIONS: Buscando avaliações do Firestore...");
-      const snapshot = await getDocs(collection(db, "evaluations"));
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Evaluation));
-  }, []);
-  
-  const fetchCollection = useCallback(async (name: 'funcoes' | 'setores' | 'evaluationImports' | 'attendantImports' | 'unlockedAchievements') => {
-      console.log(`DATA: Buscando ${name} do Firestore...`);
-      const snapshot = await getDocs(collection(db, name));
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  }, []);
-
-  const fetchGamificationConfig = useCallback(async () => {
-    console.log("GAMIFICATION: Buscando configurações do Firestore...");
-    const configDocRef = doc(db, "gamification", "config");
-    const configDoc = await getDoc(configDocRef);
-    if (configDoc.exists()) {
-      const data = configDoc.data();
-      const mergedAchievements = data.achievements ? mergeWithDefaults(INITIAL_ACHIEVEMENTS, data.achievements, 'id') : INITIAL_ACHIEVEMENTS;
-      const mergedLevelRewards = data.levelRewards ? mergeWithDefaults(INITIAL_LEVEL_REWARDS, data.levelRewards, 'level') : INITIAL_LEVEL_REWARDS;
-      return { ...INITIAL_GAMIFICATION_CONFIG, ...data, achievements: mergedAchievements, levelRewards: mergedLevelRewards };
-    } else {
-      await setDoc(configDocRef, { ...INITIAL_GAMIFICATION_CONFIG, achievements: INITIAL_ACHIEVEMENTS.map(({ isUnlocked, icon, ...a }) => a), levelRewards: INITIAL_LEVEL_REWARDS.map(({ icon, ...r }) => r) });
-      return INITIAL_GAMIFICATION_CONFIG;
-    }
-  }, []);
-
-  const initializeApp = useCallback(async () => {
+  const fetchAllData = useCallback(async () => {
     setAppLoading(true);
     console.log("AUTH: Iniciando inicialização do App...");
     try {
@@ -223,24 +178,55 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             evaluationImportsData, attendantImportsData, unlockedAchievementsData, 
             gamificationConfigData, funcoesData, setoresData
         ] = await Promise.all([
-            fetchAllUsers(), fetchModules(), fetchAttendants(), fetchEvaluations(),
-            fetchCollection('evaluationImports'), fetchCollection('attendantImports'), fetchCollection('unlockedAchievements'),
-            fetchGamificationConfig(), fetchCollection('funcoes'), fetchCollection('setores')
+            getDocs(collection(db, "users")).then(snap => snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as User))),
+            getDocs(collection(db, "modules")).then(snap => snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Module))),
+            getDocs(collection(db, "attendants")).then(snap => snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Attendant))),
+            getDocs(collection(db, "evaluations")).then(snap => snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Evaluation))),
+            getDocs(collection(db, "evaluationImports")).then(snap => snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as EvaluationImport))),
+            getDocs(collection(db, "attendantImports")).then(snap => snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendantImport))),
+            getDocs(collection(db, "unlockedAchievements")).then(snap => snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as UnlockedAchievement))),
+            getDoc(doc(db, "gamification", "config")).then(async (configDoc) => {
+                if (configDoc.exists()) {
+                    const data = configDoc.data();
+                    const mergedAchievements = data.achievements ? mergeWithDefaults(INITIAL_ACHIEVEMENTS, data.achievements, 'id') : INITIAL_ACHIEVEMENTS;
+                    const mergedLevelRewards = data.levelRewards ? mergeWithDefaults(INITIAL_LEVEL_REWARDS, data.levelRewards, 'level') : INITIAL_LEVEL_REWARDS;
+                    return { ...INITIAL_GAMIFICATION_CONFIG, ...data, achievements: mergedAchievements, levelRewards: mergedLevelRewards };
+                }
+                return INITIAL_GAMIFICATION_CONFIG;
+            }),
+            getDocs(collection(db, "funcoes")).then(snap => snap.docs.map(doc => doc.id)),
+            getDocs(collection(db, "setores")).then(snap => snap.docs.map(doc => doc.id))
         ]);
         
         setAllUsers(usersData);
-        setModules(modulesData);
+        setModules(modulesData.length > 0 ? modulesData : []);
         setAttendants(attendantsData);
         setEvaluations(evaluationsData);
-        setEvaluationImports(evaluationImportsData as EvaluationImport[]);
-        setAttendantImports(attendantImportsData as AttendantImport[]);
-        setUnlockedAchievements(unlockedAchievementsData as UnlockedAchievement[]);
+        setEvaluationImports(evaluationImportsData);
+        setAttendantImports(attendantImportsData);
+        setUnlockedAchievements(unlockedAchievementsData);
         setGamificationConfig(gamificationConfigData);
         setAchievements(gamificationConfigData.achievements);
         setLevelRewards(gamificationConfigData.levelRewards);
         setSeasons(gamificationConfigData.seasons);
-        setFuncoes(funcoesData.map(f => f.id));
-        setSetores(setoresData.map(s => s.id));
+        setFuncoes(funcoesData);
+        setSetores(setoresData);
+
+        if (modulesData.length === 0) {
+            console.log("AUTH: No modules found, seeding initial modules.");
+            const batch = writeBatch(db);
+            const initialModules = [
+              { id: 'rh', name: 'Recursos Humanos', description: 'Gerenciamento de atendentes e funcionários.', path: '/dashboard/rh', active: true },
+              { id: 'pesquisa-satisfacao', name: 'Pesquisa de Satisfação', description: 'Gerenciamento de pesquisas de satisfação e avaliações.', path: '/dashboard/pesquisa-satisfacao', active: true },
+              { id: 'gamificacao', name: 'Gamificação', description: 'Acompanhe o ranking, o progresso e as recompensas da equipe.', path: '/dashboard/gamificacao', active: true },
+            ];
+            initialModules.forEach(mod => {
+              const docRef = doc(db, "modules", mod.id);
+              batch.set(docRef, mod);
+            });
+            await batch.commit();
+            setModules(initialModules);
+        }
 
         console.log("AUTH: Todos os dados foram carregados com sucesso.");
 
@@ -250,7 +236,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } finally {
         setAppLoading(false);
     }
-  }, [fetchAllUsers, fetchModules, fetchAttendants, fetchEvaluations, fetchCollection, fetchGamificationConfig, toast]);
+  }, [toast]);
 
 
   // --- Auth Lifecycle ---
@@ -262,6 +248,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
           setUser({ id: userDoc.id, ...userDoc.data() } as User);
+        } else {
+            setUser(null); // User exists in Auth but not in Firestore DB
         }
       } else {
         setUser(null);
@@ -272,12 +260,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    if (!authLoading && !!user) {
-        initializeApp();
+    if (!authLoading && user) {
+        fetchAllData();
     } else if (!authLoading && !user) {
         setAppLoading(false);
     }
-  }, [user, authLoading, initializeApp]);
+  }, [user, authLoading, fetchAllData]);
   
   useEffect(() => {
     const now = new Date();
@@ -294,7 +282,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = useCallback(async (email: string, password: string) => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      toast({ title: "Login bem-sucedido!", description: `Bem-vindo de volta.` });
+      toast({ title: "Login bem-sucedido!" });
     } catch (error: any) {
       toast({ variant: "destructive", title: "Erro de autenticação", description: "Email ou senha incorretos." });
       throw error;
@@ -304,29 +292,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const register = useCallback(async (userData: Omit<User, 'id'>) => {
     try {
       const allModuleIds = modules.map(doc => doc.id);
-      const userCredential = await createUserWithEmailAndPassword(auth, userData.password ? userData.password : "123456");
+      const userCredential = await createUserWithEmailAndPassword(auth, userData.password! );
       const firebaseUser = userCredential.user;
       await updateFirebaseProfile(firebaseUser, { displayName: userData.name });
       const { password, ...userDataForDb } = userData;
       const finalModules = userData.role === ROLES.SUPERADMIN ? allModuleIds : userDataForDb.modules;
       await setDoc(doc(db, "users", firebaseUser.uid), { ...userDataForDb, modules: finalModules });
-      await fetchAllUsers();
+      await fetchAllData();
       toast({ title: "Conta Criada!", description: "Sua conta foi criada com sucesso." });
     } catch (error: any) {
       const description = error.code === 'auth/email-already-in-use' ? "Este email já está em uso." : "Ocorreu um erro desconhecido.";
       toast({ variant: "destructive", title: "Erro no Registro", description });
       throw error;
     }
-  }, [toast, modules, fetchAllUsers]);
+  }, [toast, modules, fetchAllData]);
 
   const logout = useCallback(async () => {
     await signOut(auth);
     setUser(null);
     setAppLoading(true);
-    setAllUsers([]);
-    setModules([]);
-    setAttendants([]);
-    // Clear all other states as well
   }, []);
 
   const updateProfile = useCallback(async (userData: Partial<User>) => {
@@ -350,9 +334,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const updateUser = useCallback(async (userId: string, userData: { name: string; role: Role; modules: string[] }) => {
     await updateDoc(doc(db, "users", userId), userData);
     if (user?.id === userId) setUser({ ...user, ...userData });
-    await fetchAllUsers().then(setAllUsers);
+    const users = await getDocs(collection(db, "users"));
+    setAllUsers(users.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
     toast({ title: "Usuário Atualizado!", description: "Os dados foram atualizados." });
-  }, [user, fetchAllUsers, toast]);
+  }, [user, toast]);
 
   const deleteUser = useCallback(async (userId: string) => {
     if (user?.id === userId) {
@@ -360,9 +345,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
     }
     await deleteDoc(doc(db, "users", userId));
-    await fetchAllUsers().then(setAllUsers);
+    setAllUsers(prev => prev.filter(u => u.id !== userId));
     toast({ title: "Usuário Removido!" });
-  }, [user?.id, fetchAllUsers, toast]);
+  }, [user?.id, toast]);
 
   // --- Module Actions ---
   const addModule = useCallback(async (moduleData: Omit<Module, 'id' | 'active'>) => {
@@ -371,28 +356,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       toast({ variant: "destructive", title: "Erro", description: "Um módulo com este ID já existe." });
       return;
     }
-    await setDoc(doc(db, "modules", newId), { ...moduleData, active: true, id: newId });
-    await fetchModules().then(setModules);
+    const newModule = { ...moduleData, active: true, id: newId };
+    await setDoc(doc(db, "modules", newId), newModule);
+    setModules(prev => [...prev, newModule]);
     toast({ title: "Módulo Adicionado!" });
-  }, [modules, fetchModules, toast]);
+  }, [modules, toast]);
   
   const updateModule = useCallback(async (moduleId: string, moduleData: Partial<Omit<Module, 'id' | 'active'>>) => {
     await updateDoc(doc(db, "modules", moduleId), moduleData);
-    await fetchModules().then(setModules);
+    setModules(prev => prev.map(m => m.id === moduleId ? {...m, ...moduleData} : m));
     toast({ title: "Módulo Atualizado!" });
-  }, [fetchModules, toast]);
+  }, [toast]);
 
   const toggleModuleStatus = useCallback(async (moduleId: string) => {
     const moduleToUpdate = modules.find(m => m.id === moduleId);
     if (!moduleToUpdate) return;
-    await updateDoc(doc(db, "modules", moduleId), { active: !moduleToUpdate.active });
-    await fetchModules().then(setModules);
+    const newStatus = !moduleToUpdate.active;
+    await updateDoc(doc(db, "modules", moduleId), { active: newStatus });
+    setModules(prev => prev.map(m => m.id === moduleId ? {...m, active: newStatus} : m));
     toast({ title: "Status Alterado!" });
-  }, [modules, fetchModules, toast]);
+  }, [modules, toast]);
 
   const deleteModule = useCallback(async (moduleId: string) => {
     await deleteDoc(doc(db, "modules", moduleId));
-    // Also remove from users
+    setModules(prev => prev.filter(m => m.id !== moduleId));
     const batch = writeBatch(db);
     allUsers.forEach(u => {
         if (u.modules.includes(moduleId)) {
@@ -401,67 +388,66 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     });
     await batch.commit();
-    await fetchModules().then(setModules);
-    await fetchAllUsers().then(setAllUsers);
+    setAllUsers(prev => prev.map(u => ({ ...u, modules: u.modules.filter(m => m !== moduleId) })));
     toast({ title: "Módulo Removido!" });
-  }, [allUsers, fetchModules, fetchAllUsers, toast]);
+  }, [allUsers, toast]);
 
 
   // --- RH Config Actions ---
   const addFuncao = useCallback(async (funcao: string) => {
     await setDoc(doc(db, "funcoes", funcao), { name: funcao });
-    await fetchCollection('funcoes').then(data => setFuncoes(data.map(d => d.id)));
-  }, [fetchCollection]);
+    setFuncoes(prev => [...prev, funcao]);
+  }, []);
 
   const updateFuncao = useCallback(async (oldFuncao: string, newFuncao: string) => {
     await deleteDoc(doc(db, "funcoes", oldFuncao));
     await setDoc(doc(db, "funcoes", newFuncao), { name: newFuncao });
-    await fetchCollection('funcoes').then(data => setFuncoes(data.map(d => d.id)));
-  }, [fetchCollection]);
+    setFuncoes(prev => [...prev.filter(f => f !== oldFuncao), newFuncao]);
+  }, []);
   
   const deleteFuncao = useCallback(async (funcao: string) => {
     await deleteDoc(doc(db, "funcoes", funcao));
-    await fetchCollection('funcoes').then(data => setFuncoes(data.map(d => d.id)));
-  }, [fetchCollection]);
+    setFuncoes(prev => prev.filter(f => f !== funcao));
+  }, []);
 
   const addSetor = useCallback(async (setor: string) => {
     await setDoc(doc(db, "setores", setor), { name: setor });
-    await fetchCollection('setores').then(data => setSetores(data.map(d => d.id)));
-  }, [fetchCollection]);
+    setSetores(prev => [...prev, setor]);
+  }, []);
   
   const updateSetor = useCallback(async (oldSetor: string, newSetor: string) => {
     await deleteDoc(doc(db, "setores", oldSetor));
     await setDoc(doc(db, "setores", newSetor), { name: newSetor });
-    await fetchCollection('setores').then(data => setSetores(data.map(d => d.id)));
-  }, [fetchCollection]);
+    setSetores(prev => [...prev.filter(s => s !== oldSetor), newSetor]);
+  }, []);
   
   const deleteSetor = useCallback(async (setor: string) => {
     await deleteDoc(doc(db, "setores", setor));
-    await fetchCollection('setores').then(data => setSetores(data.map(d => d.id)));
-  }, [fetchCollection]);
+    setSetores(prev => prev.filter(s => s !== setor));
+  }, []);
   
   // --- Attendant Actions ---
   const addAttendant = useCallback(async (attendantData: Omit<Attendant, 'id'>) => {
     const newId = attendantData.id || doc(collection(db, "attendants")).id;
     const finalAttendantData = { ...attendantData, id: newId };
     await setDoc(doc(db, "attendants", newId), finalAttendantData);
-    await fetchAttendants().then(setAttendants);
+    setAttendants(prev => [...prev, finalAttendantData]);
     return finalAttendantData;
-  }, [fetchAttendants]);
+  }, []);
 
   const updateAttendant = useCallback(async (attendantId: string, attendantData: Partial<Omit<Attendant, 'id'>>) => {
      await updateDoc(doc(db, "attendants", attendantId), attendantData);
-     await fetchAttendants().then(setAttendants);
+     setAttendants(prev => prev.map(a => a.id === attendantId ? { ...a, ...attendantData } as Attendant : a));
      toast({ title: "Atendente Atualizado!" });
-  }, [fetchAttendants, toast]);
+  }, [toast]);
 
   const deleteAttendants = useCallback(async (attendantIds: string[]) => {
       const batch = writeBatch(db);
       attendantIds.forEach(id => batch.delete(doc(db, "attendants", id)));
       await batch.commit();
-      await fetchAttendants().then(setAttendants);
+      setAttendants(prev => prev.filter(a => !attendantIds.includes(a.id)));
       toast({ title: "Atendentes Removidos!" });
-  }, [fetchAttendants, toast]);
+  }, [toast]);
 
   // --- Evaluation Actions ---
   const addEvaluation = useCallback(async (evaluationData: Omit<Evaluation, 'id' | 'xpGained'>): Promise<Evaluation> => {
@@ -478,57 +464,57 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const docRef = doc(collection(db, "evaluations"));
         const finalEvaluation = { ...evaluationData, data: evaluationData.data || new Date().toISOString(), xpGained, id: docRef.id };
         await setDoc(docRef, finalEvaluation);
-        await fetchEvaluations().then(setEvaluations);
+        setEvaluations(prev => [...prev, finalEvaluation]);
         return finalEvaluation;
-  }, [gamificationConfig, seasons, fetchEvaluations]);
+  }, [gamificationConfig, seasons]);
 
   const deleteEvaluations = useCallback(async (evaluationIds: string[]) => {
      const batch = writeBatch(db);
      evaluationIds.forEach(id => batch.delete(doc(db, "evaluations", id)));
      await batch.commit();
-     await fetchEvaluations().then(setEvaluations);
+     setEvaluations(prev => prev.filter(e => !evaluationIds.includes(e.id)));
      if (typeof window !== 'undefined') {
         const currentAiAnalysis = JSON.parse(localStorage.getItem(AI_ANALYSIS_STORAGE_KEY) || '[]') as EvaluationAnalysis[];
         const aiAnalysisToKeep = currentAiAnalysis.filter(ar => !evaluationIds.includes(ar.evaluationId));
         localStorage.setItem(AI_ANALYSIS_STORAGE_KEY, JSON.stringify(aiAnalysisToKeep));
         setAiAnalysisResults(aiAnalysisToKeep);
      }
-  }, [fetchEvaluations]);
+  }, []);
 
   // --- Import Actions ---
   const addEvaluationImportRecord = useCallback(async (importData: Omit<EvaluationImport, 'id'>, userId: string) => {
     const docRef = doc(collection(db, "evaluationImports"));
     const newImport = { ...importData, id: docRef.id, importedBy: userId, importedAt: new Date().toISOString() };
     await setDoc(docRef, newImport);
-    await fetchCollection('evaluationImports').then(data => setEvaluationImports(data as EvaluationImport[]));
+    setEvaluationImports(prev => [...prev, newImport]);
     return newImport;
-  }, [fetchCollection]);
+  }, []);
   
   const revertEvaluationImport = useCallback(async (importId: string) => {
     const importToRevert = evaluationImports.find(i => i.id === importId);
     if (!importToRevert) return;
     await deleteEvaluations(importToRevert.evaluationIds);
     await deleteDoc(doc(db, "evaluationImports", importId));
-    await fetchCollection('evaluationImports').then(data => setEvaluationImports(data as EvaluationImport[]));
+    setEvaluationImports(prev => prev.filter(i => i.id !== importId));
     toast({ title: "Importação Revertida!" });
-  }, [evaluationImports, deleteEvaluations, fetchCollection, toast]);
+  }, [evaluationImports, deleteEvaluations, toast]);
 
   const addAttendantImportRecord = useCallback(async (importData: Omit<AttendantImport, 'id'>, userId: string) => {
     const docRef = doc(collection(db, "attendantImports"));
     const newImport = { ...importData, id: docRef.id, importedBy: userId, importedAt: new Date().toISOString() };
     await setDoc(docRef, newImport);
-    await fetchCollection('attendantImports').then(data => setAttendantImports(data as AttendantImport[]));
+    setAttendantImports(prev => [...prev, newImport]);
     return newImport;
-  }, [fetchCollection]);
+  }, []);
   
   const revertAttendantImport = useCallback(async (importId: string) => {
     const importToRevert = attendantImports.find(i => i.id === importId);
     if (!importToRevert) return;
     await deleteAttendants(importToRevert.attendantIds);
     await deleteDoc(doc(db, "attendantImports", importId));
-    await fetchCollection('attendantImports').then(data => setAttendantImports(data as AttendantImport[]));
+    setAttendantImports(prev => prev.filter(i => i.id !== importId));
     toast({ title: "Importação Revertida!" });
-  }, [attendantImports, deleteAttendants, fetchCollection, toast]);
+  }, [attendantImports, deleteAttendants, toast]);
   
   // --- Gamification Actions ---
   const updateFullGamificationConfig = useCallback(async (config: GamificationConfig) => {
@@ -538,19 +524,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             levelRewards: config.levelRewards.map(({ icon, ...reward }) => reward),
         };
         await setDoc(doc(db, "gamification", "config"), configToSave);
-        await fetchGamificationConfig().then(setGamificationConfig);
-  }, [fetchGamificationConfig]);
+        const newConfig = await getDoc(doc(db, "gamification", "config")).then(d => d.data() as GamificationConfig);
+        setGamificationConfig(newConfig);
+        setAchievements(newConfig.achievements);
+        setLevelRewards(newConfig.levelRewards);
+        setSeasons(newConfig.seasons);
+  }, []);
 
   const updateGamificationConfig = useCallback(async (newConfig: Partial<Pick<GamificationConfig, 'ratingScores' | 'globalXpMultiplier'>>) => {
-        await updateDoc(doc(db, "gamification", "config"), newConfig);
-        await fetchGamificationConfig().then(cfg => {
-            setGamificationConfig(cfg);
-            setAchievements(cfg.achievements);
-            setLevelRewards(cfg.levelRewards);
-            setSeasons(cfg.seasons);
-        });
+        const configDocRef = doc(db, "gamification", "config");
+        await updateDoc(configDocRef, newConfig);
+        setGamificationConfig(prev => ({...prev, ...newConfig}));
         toast({ title: "Configurações Salvas!" });
-  }, [fetchGamificationConfig, toast]);
+  }, [toast]);
 
   const updateAchievement = useCallback(async (id: string, data: Partial<Omit<Achievement, 'id' | 'icon' | 'color' | 'isUnlocked'>>) => {
     const updatedAchievements = achievements.map(ach => ach.id === id ? { ...ach, ...data } : ach);
@@ -564,8 +550,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   
   const saveSeasons = useCallback(async (newSeasons: GamificationSeason[]) => {
     await updateDoc(doc(db, "gamification", "config"), { seasons: newSeasons });
-    await fetchGamificationConfig().then(cfg => setSeasons(cfg.seasons));
-  }, [fetchGamificationConfig]);
+    setSeasons(newSeasons);
+  }, []);
 
   const addSeason = useCallback((seasonData: Omit<GamificationSeason, 'id'>) => {
     saveSeasons([...seasons, { ...seasonData, id: crypto.randomUUID() }]);
@@ -582,11 +568,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     toast({ title: "Sessão Removida!" });
   }, [seasons, saveSeasons, toast]);
   
-  const recalculateAllGamificationData = useCallback(async (allAttendants: Attendant[], allEvaluations: Evaluation[], allAiAnalysis: EvaluationAnalysis[]) => {
+  const recalculateAllGamificationData = useCallback(async () => {
     console.log("GAMIFICATION: Iniciando recalculo geral...");
-    const currentConfig = await fetchGamificationConfig();
+    
+    // Fetch latest config to ensure we have the most up-to-date rules
+    const configDoc = await getDoc(doc(db, "gamification", "config"));
+    const currentConfig = configDoc.exists() ? { ...INITIAL_GAMIFICATION_CONFIG, ...configDoc.data() } as GamificationConfig : INITIAL_GAMIFICATION_CONFIG;
+    
     const evBatch = writeBatch(db);
-    allEvaluations.forEach(ev => {
+    evaluations.forEach(ev => {
         const evaluationDate = new Date(ev.data);
         const seasonForEvaluation = currentConfig.seasons.find(s => s.active && evaluationDate >= new Date(s.startDate) && evaluationDate <= new Date(s.endDate));
         const baseScore = getScoreFromRating(ev.nota, currentConfig.ratingScores);
@@ -594,33 +584,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         evBatch.update(doc(db, "evaluations", ev.id), { xpGained: baseScore * currentConfig.globalXpMultiplier * seasonMultiplier });
     });
     await evBatch.commit();
+    const updatedEvals = await getDocs(collection(db, "evaluations")).then(s => s.docs.map(d => ({id: d.id, ...d.data()} as Evaluation)));
+    setEvaluations(updatedEvals);
+    console.log(`GAMIFICATION: XP de ${updatedEvals.length} avaliações recalculado.`);
     
-    const currentUnlocked = await fetchCollection('unlockedAchievements');
+    const currentUnlocked = await getDocs(collection(db, "unlockedAchievements")).then(s => s.docs.map(d => d.id));
     const deleteBatch = writeBatch(db);
-    currentUnlocked.forEach(ua => deleteBatch.delete(doc(db, "unlockedAchievements", ua.id)));
+    currentUnlocked.forEach(uaId => deleteBatch.delete(doc(db, "unlockedAchievements", uaId)));
     await deleteBatch.commit();
+    console.log(`GAMIFICATION: ${currentUnlocked.length} conquistas desbloqueadas antigas removidas.`);
 
     const addBatch = writeBatch(db);
-    for (const attendant of allAttendants) {
-        const attendantEvaluations = allEvaluations.filter(ev => ev.attendantId === attendant.id);
+    let newUnlockCount = 0;
+
+    for (const attendant of attendants) {
+        const now = new Date();
+        const attendantEvaluations = updatedEvals.filter(ev => ev.attendantId === attendant.id);
+
         for (const achievement of currentConfig.achievements) {
             const seasonForAchievement = currentConfig.seasons.find(s => s.active);
-            if (achievement.active && seasonForAchievement && achievement.isUnlocked(attendant, attendantEvaluations, allEvaluations, allAttendants, allAiAnalysis)) {
+            if (achievement.active && seasonForAchievement && achievement.isUnlocked(attendant, attendantEvaluations, updatedEvals, attendants, aiAnalysisResults)) {
                 const totalMultiplier = currentConfig.globalXpMultiplier * (seasonForAchievement.xpMultiplier || 1);
-                addBatch.set(doc(collection(db, "unlockedAchievements")), {
+                const newDocRef = doc(collection(db, "unlockedAchievements"));
+                addBatch.set(newDocRef, {
                     attendantId: attendant.id,
                     achievementId: achievement.id,
-                    unlockedAt: new Date().toISOString(),
+                    unlockedAt: now.toISOString(),
                     xpGained: achievement.xp * totalMultiplier,
                 });
+                newUnlockCount++;
             }
         }
     }
     await addBatch.commit();
-    await fetchEvaluations().then(setEvaluations);
-    await fetchCollection('unlockedAchievements').then(data => setUnlockedAchievements(data as UnlockedAchievement[]));
+    console.log(`GAMIFICATION: Recálculo concluído. ${newUnlockCount} novas conquistas registradas.`);
+    const newUnlocked = await getDocs(collection(db, "unlockedAchievements")).then(s => s.docs.map(d => ({id: d.id, ...d.data()} as UnlockedAchievement)));
+    setUnlockedAchievements(newUnlocked);
     toast({title: "Gamificação Recalculada!", description: "Todos os pontos e conquistas foram atualizados."});
-  }, [fetchGamificationConfig, fetchCollection, fetchEvaluations, toast]);
+  }, [evaluations, attendants, aiAnalysisResults, toast]);
 
   // --- AI Analysis Actions ---
   const runAiAnalysis = useCallback(async () => {
@@ -741,3 +742,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    
