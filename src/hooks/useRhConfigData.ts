@@ -13,12 +13,14 @@ export function useRhConfigData() {
     const { toast } = useToast();
 
     const fetchCollection = useCallback(async (collectionName: 'funcoes' | 'setores') => {
+        const startTime = performance.now();
         console.log(`RH_CONFIG: Buscando ${collectionName} do Firestore...`);
         try {
             const col = collection(db, collectionName);
             const snapshot = await getDocs(col);
             const list = snapshot.docs.map(doc => doc.id);
-            console.log(`RH_CONFIG: ${list.length} ${collectionName} carregados.`);
+            const endTime = performance.now();
+            console.log(`PERF: fetchCollection for ${collectionName} (${list.length} items) took ${(endTime - startTime).toFixed(2)}ms`);
             return list;
         } catch (error) {
             console.error(`RH_CONFIG: Erro ao buscar ${collectionName}:`, error);

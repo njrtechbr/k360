@@ -12,13 +12,15 @@ export function useAttendantsData() {
     const { toast } = useToast();
 
     const fetchAttendants = useCallback(async () => {
+        const startTime = performance.now();
         console.log("ATTENDANTS: Buscando atendentes do Firestore...");
         try {
             const attendantsCollection = collection(db, "attendants");
             const attendantsSnapshot = await getDocs(attendantsCollection);
             const attendantsList = attendantsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Attendant));
             setAttendants(attendantsList);
-            console.log(`ATTENDANTS: ${attendantsList.length} atendentes carregados.`);
+            const endTime = performance.now();
+            console.log(`PERF: fetchAttendants (${attendantsList.length} items) took ${(endTime - startTime).toFixed(2)}ms`);
             return attendantsList;
         } catch (error) {
             console.error("Error fetching attendants from Firestore: ", error);
@@ -29,11 +31,13 @@ export function useAttendantsData() {
 
 
      const fetchAttendantImports = useCallback(async (): Promise<AttendantImport[]> => {
+        const startTime = performance.now();
         console.log("ATTENDANTS: Buscando histórico de importações do Firestore...");
         try {
             const snapshot = await getDocs(collection(db, "attendantImports"));
             const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendantImport));
-            console.log(`ATTENDANTS: ${list.length} históricos de importação carregados.`);
+            const endTime = performance.now();
+            console.log(`PERF: fetchAttendantImports (${list.length} items) took ${(endTime - startTime).toFixed(2)}ms`);
             return list;
         } catch (error) {
             console.error("ATTENDANTS: Erro ao buscar históricos de importação:", error);

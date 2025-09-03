@@ -38,12 +38,14 @@ export function useEvaluationsData({ gamificationConfig, seasons }: UseEvaluatio
     const { toast } = useToast();
 
     const fetchEvaluations = useCallback(async () => {
+        const startTime = performance.now();
         console.log("EVALUATIONS: Buscando avaliações do Firestore...");
         try {
             const snapshot = await getDocs(collection(db, "evaluations"));
             const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Evaluation));
             setEvaluations(list);
-            console.log(`EVALUATIONS: ${list.length} avaliações carregadas.`);
+            const endTime = performance.now();
+            console.log(`PERF: fetchEvaluations (${list.length} items) took ${(endTime - startTime).toFixed(2)}ms`);
             return list;
         } catch (error) {
             console.error("EVALUATIONS: Erro ao buscar avaliações:", error);
@@ -52,12 +54,14 @@ export function useEvaluationsData({ gamificationConfig, seasons }: UseEvaluatio
     }, []);
 
     const fetchEvaluationImports = useCallback(async () => {
+        const startTime = performance.now();
         console.log("EVALUATIONS: Buscando histórico de importação...");
          try {
             const snapshot = await getDocs(collection(db, "evaluationImports"));
             const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as EvaluationImport));
             setEvaluationImports(list);
-            console.log(`EVALUATIONS: ${list.length} históricos de importação carregados.`);
+            const endTime = performance.now();
+            console.log(`PERF: fetchEvaluationImports (${list.length} items) took ${(endTime - startTime).toFixed(2)}ms`);
             return list;
         } catch (error) {
             console.error("EVALUATIONS: Erro ao buscar históricos:", error);

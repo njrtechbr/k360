@@ -55,6 +55,7 @@ export function useGamificationData() {
     const { toast } = useToast();
 
     const fetchGamificationConfig = useCallback(async () => {
+        const startTime = performance.now();
         console.log("GAMIFICATION: Buscando configurações do Firestore...");
         try {
             const configDocRef = doc(db, "gamification", "config");
@@ -74,7 +75,8 @@ export function useGamificationData() {
                 setAchievements(mergedAchievements);
                 setLevelRewards(mergedLevelRewards);
                 setSeasons(data.seasons || []);
-                 console.log(`GAMIFICATION: Configurações carregadas do Firestore. ${data.seasons?.length ?? 0} temporadas encontradas.`);
+                const endTime = performance.now();
+                console.log(`PERF: fetchGamificationConfig took ${(endTime - startTime).toFixed(2)}ms`);
                 return loadedConfig;
             } else {
                 console.log("GAMIFICATION: Nenhuma configuração encontrada, usando e salvando defaults.");
@@ -94,12 +96,14 @@ export function useGamificationData() {
     }, [toast]);
     
     const fetchUnlockedAchievements = useCallback(async () => {
+        const startTime = performance.now();
         console.log("GAMIFICATION: Buscando conquistas desbloqueadas...");
         try {
             const snapshot = await getDocs(collection(db, "unlockedAchievements"));
             const unlockedList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UnlockedAchievement));
             setUnlockedAchievements(unlockedList);
-            console.log(`GAMIFICATION: ${unlockedList.length} conquistas desbloqueadas carregadas.`);
+            const endTime = performance.now();
+            console.log(`PERF: fetchUnlockedAchievements (${unlockedList.length} items) took ${(endTime - startTime).toFixed(2)}ms`);
             return unlockedList;
         } catch (error) {
             console.error("GAMIFICATION: Erro ao buscar conquistas desbloqueadas:", error);

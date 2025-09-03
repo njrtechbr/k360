@@ -3,7 +3,7 @@
 
 import { useAuth } from "@/providers/AuthProvider";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ShieldAlert, ShieldCheck, ShieldHalf, UserIcon, Wrench, Users, PlusCircle, Gift, Building2, Cake, CalendarDays } from "lucide-react";
@@ -75,19 +75,38 @@ const getUpcomingAnniversaries = (attendants: Attendant[], type: 'birthday' | 'a
 
 
 export default function DashboardPage() {
-  const { user, isAuthenticated, loading, modules, attendants, fetchAttendants } = useAuth();
+  const { user, isAuthenticated, loading: authLoading, modules, attendants, fetchAttendants } = useAuth();
   const router = useRouter();
   const [isDataLoading, setIsDataLoading] = useState(true);
 
+  const renderTimeRef = useRef(performance.now());
+
   useEffect(() => {
-    if (!loading && !isAuthenticated) {
+    const startRenderTime = performance.now();
+    
+    // Log the time after the component has rendered
+    const timeoutId = setTimeout(() => {
+        const endRenderTime = performance.now();
+        console.log(`PERF: Page /dashboard rendered in ${(endRenderTime - startRenderTime).toFixed(2)}ms`);
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
+  }, [isDataLoading]); // Re-run when data loading state changes
+
+  const loadData = useCallback(async () => {
+    setIsDataLoading(true);
+    await fetchAttendants();
+    setIsDataLoading(false);
+  }, [fetchAttendants]);
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
       router.push("/login");
     }
-    if (!loading && isAuthenticated) {
-        setIsDataLoading(true);
-        fetchAttendants().finally(() => setIsDataLoading(false));
+    if (!authLoading && isAuthenticated) {
+        loadData();
     }
-  }, [isAuthenticated, loading, router, fetchAttendants]);
+  }, [authLoading, isAuthenticated, router, loadData]);
 
 
   const moduleMap = useMemo(() => {
@@ -101,7 +120,7 @@ export default function DashboardPage() {
   const upcomingWorkAnniversaries = useMemo(() => getUpcomingAnniversaries(attendants, 'admission'), [attendants]);
 
 
-  if (loading || !user) {
+  if (authLoading || !user) {
     return (
         <div className="flex items-center justify-center h-full">
             <p>Carregando aplicação...</p>

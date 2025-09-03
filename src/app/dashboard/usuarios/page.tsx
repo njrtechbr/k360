@@ -81,6 +81,18 @@ export default function UsuariosPage() {
     await fetchAllUsers();
     setIsDataLoading(false);
   }, [fetchAllUsers]);
+  
+  useEffect(() => {
+    const startRenderTime = performance.now();
+    
+    // Log the time after the component has rendered
+    const timeoutId = setTimeout(() => {
+        const endRenderTime = performance.now();
+        console.log(`PERF: Page /dashboard/usuarios rendered in ${(endRenderTime - startRenderTime).toFixed(2)}ms`);
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
+  }, [isDataLoading]); // Re-run when data loading state changes
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {

@@ -12,13 +12,15 @@ export function useModulesData() {
     const { toast } = useToast();
 
     const fetchModules = useCallback(async () => {
+        const startTime = performance.now();
         console.log("MODULES: Buscando módulos do Firestore...");
         try {
             const modulesCollection = collection(db, "modules");
             const modulesSnapshot = await getDocs(modulesCollection);
             const modulesList = modulesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Module));
             setModules(modulesList);
-            console.log(`MODULES: ${modulesList.length} módulos carregados com sucesso.`);
+            const endTime = performance.now();
+            console.log(`PERF: fetchModules (${modulesList.length} items) took ${(endTime - startTime).toFixed(2)}ms`);
             return modulesList;
         } catch (error) {
             console.error("MODULES: Erro ao buscar módulos do Firestore:", error);
