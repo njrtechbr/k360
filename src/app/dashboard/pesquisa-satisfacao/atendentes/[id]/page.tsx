@@ -19,7 +19,8 @@ import { getLevelFromXp } from '@/lib/xp';
 import { achievements } from "@/lib/achievements";
 import RewardTrack from "@/components/RewardTrack";
 import { cn } from "@/lib/utils";
-import { getScoreFromRating } from "@/lib/gamification";
+import type { XpEvent } from "@/lib/types";
+
 
 const RatingStars = ({ rating, className }: { rating: number, className?: string }) => {
     const totalStars = 5;
@@ -45,18 +46,11 @@ const DetailItem = ({ icon, label, value }: { icon: React.ReactNode, label: stri
     </div>
 );
 
-type XpEvent = {
-    reason: string;
-    points: number;
-    date: string;
-    type: 'evaluation' | 'achievement';
-    icon: React.ElementType;
-};
 
 export default function AttendantProfilePage() {
     const { id } = useParams();
     const router = useRouter();
-    const { attendants, evaluations, loading, user, aiAnalysisResults, gamificationConfig } = useAuth();
+    const { attendants, evaluations, loading, user, xpEvents, activeSeason } = useAuth();
 
     const attendant = useMemo(() => attendants.find(a => a.id === id), [attendants, id]);
     
@@ -66,43 +60,28 @@ export default function AttendantProfilePage() {
             .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
     }, [evaluations, id]);
     
-    const unlockedAchievements = useMemo(() => {
-        if (!attendant) return [];
-        return achievements.filter(ach => ach.isUnlocked(attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults));
-    }, [attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults]);
-    
+    const attendantXpEvents = useMemo(() => {
+        const events = xpEvents.filter(e => e.attendantId === id);
+        if (activeSeason) {
+            const startDate = new Date(activeSeason.startDate);
+            const endDate = new Date(activeSeason.endDate);
+            return events.filter(e => {
+                const eventDate = new Date(e.date);
+                return eventDate >= startDate && eventDate <= endDate;
+            });
+        }
+        return []; // No active season, no points.
+    }, [xpEvents, id, activeSeason]);
+
     const currentScore = useMemo(() => {
-        if (!attendant) return 0;
-        const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => acc + getScoreFromRating(ev.nota, gamificationConfig.ratingScores), 0);
-        const scoreFromAchievements = unlockedAchievements.reduce((acc, ach) => acc + ach.xp, 0);
-        return scoreFromRatings + scoreFromAchievements;
-    }, [attendant, attendantEvaluations, unlockedAchievements, gamificationConfig]);
+        return attendantXpEvents.reduce((acc, event) => acc + event.points, 0);
+    }, [attendantXpEvents]);
 
-    const xpHistory = useMemo(() => {
-        const evaluationEvents: XpEvent[] = attendantEvaluations.map(ev => ({
-            reason: `Avaliação de ${ev.nota} estrela(s)`,
-            points: getScoreFromRating(ev.nota, gamificationConfig.ratingScores),
-            date: ev.data,
-            type: 'evaluation',
-            icon: Star,
-        }));
-        
-        // This is an approximation of when an achievement was unlocked.
-        // A more robust system would store the unlock date.
-        // For now, we use the date of the last evaluation as the unlock date.
-        const lastEvaluationDate = attendantEvaluations.length > 0 ? attendantEvaluations[attendantEvaluations.length - 1].data : new Date(0).toISOString();
-
-        const achievementEvents: XpEvent[] = unlockedAchievements.map(ach => ({
-            reason: `Troféu: ${ach.title}`,
-            points: ach.xp,
-            date: lastEvaluationDate, 
-            type: 'achievement',
-            icon: Trophy,
-        }));
-
-        return [...evaluationEvents, ...achievementEvents]
+    const xpHistorySorted = useMemo(() => {
+        return [...attendantXpEvents]
+            .map(e => ({...e, icon: e.type === 'evaluation' ? Star : Trophy}))
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [attendantEvaluations, unlockedAchievements, gamificationConfig]);
+    }, [attendantXpEvents]);
 
 
     const stats = useMemo(() => {
@@ -181,8 +160,8 @@ export default function AttendantProfilePage() {
                     </Card>
                      <Card>
                         <CardHeader>
-                            <CardTitle>Estatísticas</CardTitle>
-                            <CardDescription>Resumo do desempenho.</CardDescription>
+                            <CardTitle>Estatísticas {activeSeason && `(${activeSeason.name})`}</CardTitle>
+                            <CardDescription>Resumo do desempenho na temporada atual.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                            <div className="flex items-center justify-between">
@@ -207,7 +186,7 @@ export default function AttendantProfilePage() {
                                    <Sparkles size={18}/>
                                    <span className="text-sm">Pontos de Experiência</span>
                                </div>
-                               <span className="font-bold text-lg">{currentScore} XP</span>
+                               <span className="font-bold text-lg">{Math.round(currentScore)} XP</span>
                            </div>
                         </CardContent>
                     </Card>
@@ -240,17 +219,17 @@ export default function AttendantProfilePage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {xpHistory.length > 0 ? (
-                                        xpHistory.map((ev, index) => (
+                                    {xpHistorySorted.length > 0 ? (
+                                        xpHistorySorted.map((ev, index) => (
                                             <TableRow key={index}>
                                                 <TableCell className="font-medium flex items-center gap-2">
                                                     <ev.icon className={cn("h-4 w-4", ev.type === 'achievement' ? 'text-amber-500' : 'text-muted-foreground')} />
                                                     {ev.reason}
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Badge variant={ev.points > 0 ? 'secondary' : 'destructive'} className="flex items-center gap-1 w-fit">
-                                                        {ev.points > 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                                                        {ev.points > 0 ? `+${ev.points}` : ev.points} XP
+                                                    <Badge variant={ev.points >= 0 ? 'secondary' : 'destructive'} className="flex items-center gap-1 w-fit">
+                                                        {ev.points >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                                                        {ev.points >= 0 ? `+${Math.round(ev.points)}` : Math.round(ev.points)} XP
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell className="text-right text-sm text-muted-foreground">

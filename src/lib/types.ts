@@ -1,4 +1,5 @@
 
+
 import { z } from "zod";
 
 export const ROLES = {
@@ -189,3 +190,13 @@ export interface AttendantImport {
   fileName: string;
   attendantIds: string[];
 }
+
+export type XpEvent = {
+    id: string;
+    attendantId: string;
+    points: number;
+    reason: string;
+    date: string; // ISO String
+    type: 'evaluation' | 'achievement';
+    relatedId: string; // ID of the evaluation or achievement
+};

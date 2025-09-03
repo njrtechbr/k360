@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useAuth } from "@/providers/AuthProvider";
@@ -14,6 +15,7 @@ import { ptBR } from "date-fns/locale";
 import { ArrowLeft, BarChart3, Calendar, FileText, Hash, History, Mail, Phone, Sparkles, Star, TrendingDown, TrendingUp, Trophy, UserCircle, UserCog } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import type { XpEvent } from "@/lib/types";
 
 const RatingStars = ({ rating, className }: { rating: number, className?: string }) => {
     const totalStars = 5;
@@ -39,79 +41,54 @@ const DetailItem = ({ icon, label, value }: { icon: React.ReactNode, label: stri
     </div>
 );
 
-type XpEvent = {
-    reason: string;
-    points: number;
-    date: string;
-    type: 'evaluation' | 'achievement';
-    icon: React.ElementType;
-};
 
 export default function AttendantProfilePage() {
     const { id } = useParams();
     const router = useRouter();
-    const { attendants, evaluations, loading, user, unlockedAchievements, gamificationConfig, achievements, activeSeason } = useAuth();
+    const { attendants, evaluations, loading, user, xpEvents, activeSeason } = useAuth();
 
     const attendant = useMemo(() => attendants.find(a => a.id === id), [attendants, id]);
     
-    const seasonEvaluations = useMemo(() => {
-        const evs = evaluations.filter(e => e.attendantId === id);
-        if (!activeSeason) return []; // Return empty if no active season
-        return evs.filter(e => new Date(e.data) >= new Date(activeSeason.startDate) && new Date(e.data) <= new Date(activeSeason.endDate));
-    }, [evaluations, id, activeSeason]);
-
-    const seasonUnlockedAchievements = useMemo(() => {
-        if (!activeSeason) return [];
-        return unlockedAchievements.filter(ua => 
-            ua.attendantId === id &&
-            new Date(ua.unlockedAt) >= new Date(activeSeason.startDate) &&
-            new Date(ua.unlockedAt) <= new Date(activeSeason.endDate)
-        );
-    }, [unlockedAchievements, id, activeSeason]);
+    const attendantEvaluations = useMemo(() => {
+        return evaluations
+            .filter(e => e.attendantId === id)
+            .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
+    }, [evaluations, id]);
     
+    const attendantXpEvents = useMemo(() => {
+        const events = xpEvents.filter(e => e.attendantId === id);
+        if (activeSeason) {
+            const startDate = new Date(activeSeason.startDate);
+            const endDate = new Date(activeSeason.endDate);
+            return events.filter(e => {
+                const eventDate = new Date(e.date);
+                return eventDate >= startDate && eventDate <= endDate;
+            });
+        }
+        return []; // No active season, no points.
+    }, [xpEvents, id, activeSeason]);
+
     const currentScore = useMemo(() => {
-        if (!attendant) return 0;
-        const scoreFromRatings = seasonEvaluations.reduce((acc, ev) => acc + (ev.xpGained || 0), 0);
-        const scoreFromAchievements = seasonUnlockedAchievements.reduce((acc, ua) => acc + (ua.xpGained || 0), 0);
-        return scoreFromRatings + scoreFromAchievements;
-    }, [attendant, seasonEvaluations, seasonUnlockedAchievements]);
+        return attendantXpEvents.reduce((acc, event) => acc + event.points, 0);
+    }, [attendantXpEvents]);
 
-    const xpHistory = useMemo(() => {
-        const evaluationEvents: XpEvent[] = seasonEvaluations.map(ev => ({
-            reason: `Avaliação de ${ev.nota} estrela(s)`,
-            points: ev.xpGained,
-            date: ev.data,
-            type: 'evaluation',
-            icon: Star,
-        }));
-        
-        const achievementEvents: XpEvent[] = seasonUnlockedAchievements.map(ua => {
-            const achievement = achievements.find(a => a.id === ua.achievementId);
-            return {
-                reason: `Troféu: ${achievement?.title || 'Desconhecido'}`,
-                points: ua.xpGained,
-                date: ua.unlockedAt, 
-                type: 'achievement',
-                icon: Trophy,
-            }
-        });
-
-        return [...evaluationEvents, ...achievementEvents]
+    const xpHistorySorted = useMemo(() => {
+        return [...attendantXpEvents]
+            .map(e => ({...e, icon: e.type === 'evaluation' ? Star : Trophy}))
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-            
-    }, [seasonEvaluations, seasonUnlockedAchievements, achievements]);
+    }, [attendantXpEvents]);
 
 
     const stats = useMemo(() => {
-        if (seasonEvaluations.length === 0) {
+        if (attendantEvaluations.length === 0) {
             return { averageRating: 0, totalEvaluations: 0 };
         }
-        const totalRating = seasonEvaluations.reduce((sum, ev) => sum + ev.nota, 0);
+        const totalRating = attendantEvaluations.reduce((sum, ev) => sum + ev.nota, 0);
         return {
-            averageRating: totalRating / seasonEvaluations.length,
-            totalEvaluations: seasonEvaluations.length
+            averageRating: totalRating / attendantEvaluations.length,
+            totalEvaluations: attendantEvaluations.length
         };
-    }, [seasonEvaluations]);
+    }, [attendantEvaluations]);
     
     useEffect(() => {
         if (!loading && !user) {
@@ -237,8 +214,8 @@ export default function AttendantProfilePage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {xpHistory.length > 0 ? (
-                                        xpHistory.map((ev, index) => (
+                                    {xpHistorySorted.length > 0 ? (
+                                        xpHistorySorted.map((ev, index) => (
                                             <TableRow key={index}>
                                                 <TableCell className="font-medium flex items-center gap-2">
                                                     <ev.icon className={cn("h-4 w-4", ev.type === 'achievement' ? 'text-amber-500' : 'text-muted-foreground')} />

@@ -1,9 +1,9 @@
 
+
 "use client";
 
 import { useSearchParams } from 'next/navigation';
-import { useAttendants } from '@/providers/AttendantsProvider';
-import { useEvaluations } from '@/providers/EvaluationsProvider';
+import { useAuth } from '@/providers/AuthProvider';
 import { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -32,19 +32,9 @@ const RatingSelector = ({ rating, setRating }: { rating: number; setRating: (r: 
 
 export default function SurveyPage() {
     const searchParams = useSearchParams();
-    const { attendants, fetchAttendants } = useAttendants();
-    const { addEvaluation } = useEvaluations();
+    const { attendants, addEvaluation, appLoading } = useAuth();
     
     const attendantId = searchParams.get('attendantId');
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-      const loadInitialData = async () => {
-        await fetchAttendants();
-        setLoading(false);
-      }
-      loadInitialData();
-    }, [fetchAttendants]);
 
     const attendant = useMemo(() => attendants.find(a => a.id === attendantId), [attendants, attendantId]);
 
@@ -81,7 +71,6 @@ export default function SurveyPage() {
                 attendantId: attendant!.id,
                 nota: rating,
                 comentario: comment || '(Sem comentário)',
-                data: new Date().toISOString(),
             });
             setIsSubmitted(true);
         } catch (err) {
@@ -91,7 +80,7 @@ export default function SurveyPage() {
         }
     };
     
-    if (loading) {
+    if (appLoading) {
         return (
              <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-800">
                  <Card className="w-full max-w-md shadow-2xl rounded-2xl p-8">

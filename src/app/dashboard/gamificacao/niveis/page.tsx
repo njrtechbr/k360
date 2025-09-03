@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useAuth } from "@/providers/AuthProvider";
@@ -23,7 +24,7 @@ const getMedal = (rank: number) => {
 };
 
 export default function NiveisPage() {
-    const { user, isAuthenticated, loading, evaluations, attendants, unlockedAchievements, activeSeason } = useAuth();
+    const { user, isAuthenticated, loading, attendants, xpEvents, activeSeason } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
@@ -33,27 +34,23 @@ export default function NiveisPage() {
     }, [isAuthenticated, loading, router]);
     
     const leaderboard = useMemo(() => {
-        const seasonEvaluations = activeSeason 
-            ? evaluations.filter(ev => 
-                new Date(ev.data) >= new Date(activeSeason.startDate) && new Date(ev.data) <= new Date(activeSeason.endDate)
-            ) 
-            : [];
+        const xpByAttendant = new Map<string, number>();
 
-         const seasonUnlockedAchievements = activeSeason
-            ? unlockedAchievements.filter(ua => 
-                 new Date(ua.unlockedAt) >= new Date(activeSeason.startDate) && new Date(ua.unlockedAt) <= new Date(activeSeason.endDate)
-            )
+        const seasonXpEvents = activeSeason 
+            ? xpEvents.filter(e => {
+                const eventDate = new Date(e.date);
+                return eventDate >= new Date(activeSeason.startDate) && eventDate <= new Date(activeSeason.endDate);
+            })
             : [];
+        
+        seasonXpEvents.forEach(event => {
+            const currentXp = xpByAttendant.get(event.attendantId) || 0;
+            xpByAttendant.set(event.attendantId, currentXp + event.points);
+        });
 
         return attendants
             .map(attendant => {
-                const attendantEvaluations = seasonEvaluations.filter(ev => ev.attendantId === attendant.id);
-                const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => acc + (ev.xpGained || 0), 0);
-                
-                const attendantUnlockedAchievements = seasonUnlockedAchievements.filter(ua => ua.attendantId === attendant.id);
-                const scoreFromAchievements = attendantUnlockedAchievements.reduce((acc, ua) => acc + (ua.xpGained || 0), 0);
-
-                const totalScore = scoreFromRatings + scoreFromAchievements;
+                const totalScore = xpByAttendant.get(attendant.id) || 0;
                 const levelData = getLevelFromXp(totalScore);
 
                 return {
@@ -66,7 +63,7 @@ export default function NiveisPage() {
             })
             .sort((a, b) => b.score - a.score);
 
-    }, [evaluations, attendants, unlockedAchievements, activeSeason]);
+    }, [attendants, xpEvents, activeSeason]);
 
 
     if (loading || !user) {
