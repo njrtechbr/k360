@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ShieldAlert, ShieldCheck, ShieldHalf, UserIcon, Wrench, Users, PlusCircle, Gift, Building2, Cake, CalendarDays } from "lucide-react";
+import { ShieldAlert, ShieldCheck, ShieldHalf, UserIcon, Wrench, Users, PlusCircle, Gift, Building2, Cake, CalendarDays, PartyPopper } from "lucide-react";
 import { ROLES, type Attendant } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -44,20 +44,23 @@ type Anniversary = {
     daysUntil: number;
     date: Date;
     years: number;
+    type: 'birthday' | 'admission';
 };
 
-const getUpcomingAnniversaries = (attendants: Attendant[], type: 'birthday' | 'admission'): Anniversary[] => {
+const getUpcomingAnniversaries = (attendants: Attendant[]): Anniversary[] => {
     const today = new Date();
     const currentYear = getYear(today);
 
     if (!attendants) return [];
+    
+    const anniversaries: Anniversary[] = [];
 
-    return attendants
-        .map(attendant => {
+    attendants.forEach(attendant => {
+        const types: ('birthday' | 'admission')[] = ['birthday', 'admission'];
+        types.forEach(type => {
             const dateStr = type === 'birthday' ? attendant.dataNascimento : attendant.dataAdmissao;
-            if (!dateStr) return null;
+            if (!dateStr) return;
 
-            // Handle DD/MM/YYYY format from old data if present
             let originalDate: Date;
             if (dateStr.includes('/')) {
                 const [day, month, year] = dateStr.split('/');
@@ -65,27 +68,28 @@ const getUpcomingAnniversaries = (attendants: Attendant[], type: 'birthday' | 'a
             } else {
                 originalDate = new Date(dateStr);
             }
-
-            if (isNaN(originalDate.getTime())) return null;
-
+             if (isNaN(originalDate.getTime())) return;
 
             let nextAnniversaryDate = setYear(originalDate, currentYear);
             
-             // If the anniversary has already passed this year, check for next year's
-            if (differenceInDays(nextAnniversaryDate, today) < -1 ) { // Allow for today
+            if (differenceInDays(nextAnniversaryDate, today) < 0 ) {
                  nextAnniversaryDate = addYears(nextAnniversaryDate, 1);
             }
-
+            
             const years = differenceInYears(nextAnniversaryDate, originalDate);
 
-            return {
+            anniversaries.push({
                 attendant,
                 daysUntil: differenceInDays(nextAnniversaryDate, today),
                 date: nextAnniversaryDate,
                 years,
-            };
-        })
-        .filter((item): item is Anniversary => item !== null && item.daysUntil >= 0)
+                type: type,
+            });
+        });
+    });
+
+    return anniversaries
+        .filter((item): item is Anniversary => item !== null)
         .sort((a, b) => a.daysUntil - b.daysUntil)
 };
 
@@ -115,6 +119,12 @@ export default function DashboardPage() {
     }
   }, [authLoading, isAuthenticated, router]);
 
+  const allAnniversaries = useMemo(() => getUpcomingAnniversaries(attendants), [attendants]);
+
+  const todayAnniversaries = useMemo(() => allAnniversaries.filter(a => a.daysUntil === 0), [allAnniversaries]);
+  const upcomingBirthdays = useMemo(() => allAnniversaries.filter(a => a.type === 'birthday' && a.daysUntil > 0), [allAnniversaries]);
+  const upcomingWorkAnniversaries = useMemo(() => allAnniversaries.filter(a => a.type === 'admission' && a.daysUntil > 0), [allAnniversaries]);
+
 
   const moduleMap = useMemo(() => {
     if (!modules) return {};
@@ -124,9 +134,6 @@ export default function DashboardPage() {
     }, {} as Record<string, string>);
   }, [modules]);
   
-  const upcomingBirthdays = useMemo(() => getUpcomingAnniversaries(attendants, 'birthday'), [attendants]);
-  const upcomingWorkAnniversaries = useMemo(() => getUpcomingAnniversaries(attendants, 'admission'), [attendants]);
-
   const handleOpenModal = (type: 'birthday' | 'admission') => {
       if (type === 'birthday') {
           setModalContent({ type, title: 'Todos os Próximos Aniversariantes', data: upcomingBirthdays });
@@ -149,7 +156,7 @@ export default function DashboardPage() {
   const userModules = user.modules?.map(moduleId => moduleMap[moduleId]).filter(Boolean) || [];
 
   const renderAnniversaryGroup = (anniversaries: Anniversary[], type: 'birthday' | 'admission') => {
-    const groupedData = groupAnniversariesByMonth(anniversaries);
+    const groupedData = groupAnniversariesByMonth(anniversaries.filter(a => a.type === type));
     const sortedMonths = Object.keys(groupedData).sort((a, b) => {
         const monthA = groupedData[a][0].date.getMonth();
         const monthB = groupedData[b][0].date.getMonth();
@@ -189,6 +196,49 @@ export default function DashboardPage() {
         </div>
     ));
   }
+  
+    const renderModalAnniversaryGroup = (anniversaries: Anniversary[]) => {
+    const groupedData = groupAnniversariesByMonth(anniversaries);
+    const sortedMonths = Object.keys(groupedData).sort((a, b) => {
+        const monthA = groupedData[a][0].date.getMonth();
+        const monthB = groupedData[b][0].date.getMonth();
+        const yearA = groupedData[a][0].date.getFullYear();
+        const yearB = groupedData[b][0].date.getFullYear();
+        if(yearA !== yearB) return yearA - yearB;
+        return monthA - monthB;
+    });
+
+    if (sortedMonths.length === 0) {
+        return <p className="text-sm text-muted-foreground px-6 pb-4">Nenhum próximo aniversário para mostrar.</p>;
+    }
+    
+    return sortedMonths.map(month => (
+        <div key={month} className="space-y-3">
+            <h4 className="font-semibold text-sm text-muted-foreground px-6">{month}</h4>
+            <div className="space-y-2">
+                {groupedData[month].map(({ attendant, daysUntil, years, date, type }) => (
+                <div key={attendant.id} className="flex items-center justify-between p-2 mx-4 rounded-md border">
+                    <Link href={`/dashboard/rh/atendentes/${attendant.id}`} className="flex items-center gap-3 group">
+                        <Avatar className="h-10 w-10">
+                            <AvatarImage src={attendant.avatarUrl} alt={attendant.name} />
+                            <AvatarFallback>{getInitials(attendant.name)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                            <p className="font-medium group-hover:underline">{attendant.name}</p>
+                            <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                                {type === 'birthday' ? <Cake size={14}/> : <CalendarDays size={14}/>}
+                                {format(date, 'dd/MM')} ({years} anos)
+                            </p>
+                        </div>
+                    </Link>
+                    <Badge variant="outline">{daysUntil === 0 ? 'Hoje!' : `em ${daysUntil}d`}</Badge>
+                </div>
+            ))}
+            </div>
+        </div>
+    ));
+  }
+
 
   return (
     <>
@@ -204,6 +254,33 @@ export default function DashboardPage() {
           </Badge>
         </div>
         
+        {todayAnniversaries.length > 0 && (
+            <Card className="border-amber-400 bg-amber-50 dark:bg-amber-950/30">
+                 <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400"><PartyPopper /> Celebrações de Hoje!</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {todayAnniversaries.map(({ attendant, years, type }) => (
+                         <div key={`${attendant.id}-${type}`} className="flex items-center justify-between p-3 bg-background rounded-md border">
+                            <Link href={`/dashboard/rh/atendentes/${attendant.id}`} className="flex items-center gap-3 group">
+                                <Avatar className="h-10 w-10">
+                                    <AvatarImage src={attendant.avatarUrl} alt={attendant.name} />
+                                    <AvatarFallback>{getInitials(attendant.name)}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <p className="font-bold text-primary group-hover:underline">{attendant.name}</p>
+                                    <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                                        {type === 'birthday' ? <Cake size={14} className="text-pink-500" /> : <Building2 size={14} className="text-blue-500"/>}
+                                        {type === 'birthday' ? 'Aniversário' : `${years} ano(s) de casa`}
+                                    </p>
+                                </div>
+                            </Link>
+                        </div>
+                    ))}
+                </CardContent>
+            </Card>
+        )}
+
         <div className="grid md:grid-cols-2 gap-8">
               <Card>
                   <CardHeader>
@@ -343,7 +420,7 @@ export default function DashboardPage() {
                     <DialogTitle>{modalContent?.title}</DialogTitle>
                 </DialogHeader>
                 <ScrollArea className="h-96 pr-6">
-                    {modalContent && renderAnniversaryGroup(modalContent.data, modalContent.type)}
+                    {modalContent && renderModalAnniversaryGroup(modalContent.data)}
                 </ScrollArea>
             </DialogContent>
         </Dialog>
