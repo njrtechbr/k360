@@ -36,7 +36,7 @@ type MappedReview = {
 }
 
 export default function ImportarLegadoPage() {
-    const { user, isAuthenticated, loading, attendants, evaluations, addEvaluation, addEvaluationImportRecord, recalculateAllGamificationData } = useAuth();
+    const { user, isAuthenticated, loading, attendants, evaluations, importLegacyEvaluations } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
 
@@ -108,48 +108,30 @@ export default function ImportarLegadoPage() {
         setIsProcessing(true);
         setImportProgress(0);
 
-        const totalReviews = validReviews.length;
-        let importedCount = 0;
-        const newEvaluationIds: string[] = [];
+        const newEvaluationsData = validReviews.map(review => ({
+            id: review.id,
+            attendantId: review.attendantId,
+            nota: review.rating,
+            comentario: review.comment,
+            data: review.date,
+        }));
 
-        for (const review of validReviews) {
-            try {
-                const newEvaluation = await addEvaluation({
-                    id: review.id, // Use ID from old system
-                    attendantId: review.attendantId,
-                    nota: review.rating,
-                    comentario: review.comment,
-                    data: review.date,
-                    importId: "temp-id" // Placeholder, will be replaced by the real import ID
-                });
-                newEvaluationIds.push(newEvaluation.id);
-
-            } catch (error) {
-                console.error(`Erro ao importar avaliação ${review.id}`, error);
-            }
-             importedCount++;
-             setImportProgress((importedCount / totalReviews) * 100);
-             await new Promise(res => setTimeout(res, 50)); // Small delay to allow UI update
+        try {
+            await importLegacyEvaluations(newEvaluationsData, file?.name || "Arquivo Desconhecido", user.id);
+            toast({
+                title: "Importação Concluída!",
+                description: `${newEvaluationsData.length} avaliações foram importadas e a gamificação foi atualizada.`,
+            });
+            setFile(null);
+            setMappedReviews([]);
+        } catch (error) {
+            console.error("Erro durante a importação legada:", error);
+            toast({ variant: "destructive", title: "Erro na Importação", description: "Ocorreu um erro ao salvar os dados."})
+        } finally {
+            setIsProcessing(false);
         }
 
-        const importRecord = await addEvaluationImportRecord({
-            fileName: file?.name || "Arquivo Desconhecido",
-            evaluationIds: newEvaluationIds,
-            attendantMap: {}, // No manual mapping needed
-        }, user.id);
-        
-        await recalculateAllGamificationData();
-
-
-        toast({
-            title: "Importação Concluída!",
-            description: `${importedCount} de ${totalReviews} avaliações foram importadas e a gamificação foi atualizada.`,
-        });
-        
-        setFile(null);
-        setMappedReviews([]);
-        setIsProcessing(false);
-    }, [user, toast, mappedReviews, addEvaluation, addEvaluationImportRecord, recalculateAllGamificationData, file?.name]);
+    }, [user, toast, mappedReviews, file?.name, importLegacyEvaluations]);
     
     const formatDate = (dateStr: string) => {
         try {
@@ -243,5 +225,3 @@ export default function ImportarLegadoPage() {
         </div>
     );
 }
-
-    

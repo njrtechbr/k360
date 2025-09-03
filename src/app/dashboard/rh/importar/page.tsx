@@ -43,7 +43,7 @@ type ImportConfig = {
 };
 
 export default function ImportarAtendentesPage() {
-    const { user, isAuthenticated, loading, attendants, addAttendant, funcoes, setores, addAttendantImportRecord } = useAuth();
+    const { user, isAuthenticated, loading, attendants, funcoes, setores, importAttendants } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
 
@@ -136,63 +136,44 @@ export default function ImportarAtendentesPage() {
         setIsProcessing(true);
         setImportProgress(0);
 
-        const totalToImport = attendantsToImport.length;
         let importedCount = 0;
-        const attendantIds: string[] = [];
 
-        for (const config of attendantsToImport) {
+        const newAttendantsData = attendantsToImport.map(config => {
             const { csvRow, setor, funcao } = config;
-            try {
-                 const newAttendantData: Attendant = {
-                    id: csvRow.id, // Use ID from CSV
-                    name: csvRow.name || "Nome não informado",
-                    email: csvRow.email || `sem-email-${importedCount}@invalido.com`,
-                    funcao: funcao!,
-                    setor: setor!,
-                    status: csvRow.status?.toLowerCase() === 'ativo' ? ATTENDANT_STATUS.ACTIVE : ATTENDANT_STATUS.INACTIVE,
-                    avatarUrl: csvRow.avatarUrl || "",
-                    telefone: csvRow.telefone || "00000000000",
-                    portaria: csvRow.portaria || "N/A",
-                    situacao: csvRow.situacao || "N/A",
-                    dataAdmissao: csvRow.dataAdmissao ? new Date(csvRow.dataAdmissao).toISOString() : new Date().toISOString(),
-                    dataNascimento: csvRow.dataNascimento ? new Date(csvRow.dataNascimento).toISOString() : new Date().toISOString(),
-                    rg: csvRow.rg || "000000000",
-                    cpf: csvRow.cpf || `00000000000${importedCount}`,
-                    importId: "temp-id" // Placeholder
-                };
+            importedCount++;
+            return {
+                id: csvRow.id,
+                name: csvRow.name || "Nome não informado",
+                email: csvRow.email || `sem-email-${importedCount}@invalido.com`,
+                funcao: funcao!,
+                setor: setor!,
+                status: csvRow.status?.toLowerCase() === 'ativo' ? ATTENDANT_STATUS.ACTIVE : ATTENDANT_STATUS.INACTIVE,
+                avatarUrl: csvRow.avatarUrl || "",
+                telefone: csvRow.telefone || "00000000000",
+                portaria: csvRow.portaria || "N/A",
+                situacao: csvRow.situacao || "N/A",
+                dataAdmissao: csvRow.dataAdmissao ? new Date(csvRow.dataAdmissao).toISOString() : new Date().toISOString(),
+                dataNascimento: csvRow.dataNascimento ? new Date(csvRow.dataNascimento).toISOString() : new Date().toISOString(),
+                rg: csvRow.rg || "000000000",
+                cpf: csvRow.cpf || `00000000000${importedCount}`,
+            } as Omit<Attendant, 'importId'>;
+        });
 
-                const newAttendant = await addAttendant(newAttendantData);
-                attendantIds.push(newAttendant.id);
-
-            } catch (error) {
-                console.error(`Erro ao importar atendente ${csvRow.name}`, error);
-            }
-             importedCount++;
-             setImportProgress((importedCount / totalToImport) * 100);
-             await new Promise(res => setTimeout(res, 100)); // Small delay to allow UI update
+        try {
+            await importAttendants(newAttendantsData, file?.name || "Arquivo Desconhecido", user.id);
+             toast({
+                title: "Importação Concluída!",
+                description: `${newAttendantsData.length} novos atendentes foram importados.`,
+            });
+            setFile(null);
+            setImportConfig([]);
+        } catch (error) {
+            console.error("Erro durante a importação de atendentes:", error);
+            toast({ variant: "destructive", title: "Erro na Importação", description: "Ocorreu um erro ao salvar os dados."})
+        } finally {
+            setIsProcessing(false);
         }
 
-        // Create a single import record
-        const importRecord = addAttendantImportRecord({
-            fileName: file?.name || "Arquivo Desconhecido",
-            attendantIds: attendantIds,
-        }, user.id);
-
-        // Update attendants with the correct import ID
-        const allAttendants = JSON.parse(localStorage.getItem('controle_acesso_attendants') || '[]') as Attendant[];
-        const updatedAttendants = allAttendants.map(att => 
-            attendantIds.includes(att.id) ? { ...att, importId: importRecord.id } : att
-        );
-        localStorage.setItem('controle_acesso_attendants', JSON.stringify(updatedAttendants));
-
-        toast({
-            title: "Importação Concluída!",
-            description: `${importedCount} de ${totalToImport} novos atendentes foram importados.`,
-        });
-        
-        setFile(null);
-        setImportConfig([]);
-        setIsProcessing(false);
     };
     
     if (loading) {

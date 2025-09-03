@@ -3,7 +3,7 @@
 
 import type { ReactNode } from "react";
 import React, { useCallback, useEffect, useState } from "react";
-import type { User, Role, Module, Attendant, Evaluation, EvaluationImport, AttendantImport, Funcao, Setor, GamificationConfig, Achievement, LevelReward, GamificationSeason, UnlockedAchievement, EvaluationAnalysis } from "@/lib/types";
+import type { User, Role, Module, Attendant, Evaluation, EvaluationImport, AttendantImport, Funcao, Setor, GamificationConfig, Achievement, LevelReward, GamificationSeason, UnlockedAchievement, EvaluationAnalysis, XpEvent } from "@/lib/types";
 import { ROLES } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 
@@ -84,18 +84,20 @@ interface AuthContextType {
 
   // Evaluations
   evaluations: Evaluation[];
-  addEvaluation: (evaluationData: Omit<Evaluation, 'id' | 'xpGained'>) => Promise<Evaluation>;
+  addEvaluation: (evaluationData: Omit<Evaluation, 'id'|'relatedId'>) => Promise<Evaluation>;
   deleteEvaluations: (evaluationIds: string[]) => Promise<void>;
   
   // Imports
   evaluationImports: EvaluationImport[];
   attendantImports: AttendantImport[];
-  addEvaluationImportRecord: (importData: Omit<EvaluationImport, 'id'>, userId: string) => Promise<EvaluationImport>;
+  importLegacyEvaluations: (evaluationsData: Omit<Evaluation, 'xpGained' | 'relatedId'>[], fileName: string, userId: string) => Promise<void>;
+  importWhatsAppEvaluations: (evaluationsData: Omit<Evaluation, 'id' | 'xpGained' | 'relatedId'>[], agentMap: Record<string, string>, fileName: string, userId: string) => Promise<void>;
+  importAttendants: (attendantsData: Omit<Attendant, 'importId'>[], fileName: string, userId: string) => Promise<void>;
   revertEvaluationImport: (importId: string) => Promise<void>;
-  addAttendantImportRecord: (importData: Omit<AttendantImport, 'id'>, userId: string) => Promise<AttendantImport>;
   revertAttendantImport: (importId: string) => Promise<void>;
 
   // Gamification
+  xpEvents: XpEvent[];
   gamificationConfig: GamificationConfig;
   achievements: Achievement[];
   levelRewards: LevelReward[];
@@ -109,7 +111,7 @@ interface AuthContextType {
   addSeason: (seasonData: Omit<GamificationSeason, 'id'>) => void;
   updateSeason: (id: string, seasonData: Partial<Omit<GamificationSeason, 'id'>>) => void;
   deleteSeason: (id: string) => void;
-  recalculateAllGamificationData: () => Promise<void>;
+  recalculateAllGamificationData: (currentAttendants: Attendant[], currentEvaluations: Evaluation[]) => Promise<void>;
 
   // AI Analysis
   aiAnalysisResults: EvaluationAnalysis[];
@@ -159,7 +161,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [activeSeason, setActiveSeason] = useState<GamificationSeason | null>(null);
   const [nextSeason, setNextSeason] = useState<GamificationSeason | null>(null);
   const [unlockedAchievements, setUnlockedAchievements] = useState<UnlockedAchievement[]>([]);
-  
+  const [xpEvents, setXpEvents] = useState<XpEvent[]>([]);
+
   // AI Analysis State
   const [aiAnalysisResults, setAiAnalysisResults] = useState<EvaluationAnalysis[]>([]);
   const [lastAiAnalysis, setLastAiAnalysis] = useState<string | null>(null);
@@ -176,7 +179,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const [
             usersData, modulesData, attendantsData, evaluationsData, 
             evaluationImportsData, attendantImportsData, unlockedAchievementsData, 
-            gamificationConfigData, funcoesData, setoresData
+            gamificationConfigData, funcoesData, setoresData, xpEventsData
         ] = await Promise.all([
             getDocs(collection(db, "users")).then(snap => snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as User))),
             getDocs(collection(db, "modules")).then(snap => snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Module))),
@@ -195,7 +198,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 return INITIAL_GAMIFICATION_CONFIG;
             }),
             getDocs(collection(db, "funcoes")).then(snap => snap.docs.map(doc => doc.id)),
-            getDocs(collection(db, "setores")).then(snap => snap.docs.map(doc => doc.id))
+            getDocs(collection(db, "setores")).then(snap => snap.docs.map(doc => doc.id)),
+            getDocs(collection(db, "xp_events")).then(snap => snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as XpEvent))),
         ]);
         
         setAllUsers(usersData);
@@ -211,6 +215,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setSeasons(gamificationConfigData.seasons);
         setFuncoes(funcoesData);
         setSetores(setoresData);
+        setXpEvents(xpEventsData);
 
         if (modulesData.length === 0) {
             console.log("AUTH: No modules found, seeding initial modules.");
@@ -450,23 +455,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [toast]);
 
   // --- Evaluation Actions ---
-  const addEvaluation = useCallback(async (evaluationData: Omit<Evaluation, 'id' | 'xpGained'>): Promise<Evaluation> => {
-        const evaluationDate = new Date(evaluationData.data);
-        const baseScore = getScoreFromRating(evaluationData.nota, gamificationConfig.ratingScores);
-        
-        let xpGained = baseScore;
-        const currentActiveSeason = seasons.find(s => s.active && evaluationDate >= new Date(s.startDate) && evaluationDate <= new Date(s.endDate));
-        if (currentActiveSeason) {
-            const totalMultiplier = gamificationConfig.globalXpMultiplier * currentActiveSeason.xpMultiplier;
-            xpGained = baseScore * totalMultiplier;
-        }
-        
-        const docRef = doc(collection(db, "evaluations"));
-        const finalEvaluation = { ...evaluationData, data: evaluationData.data || new Date().toISOString(), xpGained, id: docRef.id };
-        await setDoc(docRef, finalEvaluation);
-        setEvaluations(prev => [...prev, finalEvaluation]);
-        return finalEvaluation;
-  }, [gamificationConfig, seasons]);
+  const addEvaluation = useCallback(async (evaluationData: Omit<Evaluation, 'id' | 'relatedId'>): Promise<Evaluation> => {
+    const docRef = doc(collection(db, "evaluations"));
+    const finalEvaluation = { ...evaluationData, id: docRef.id, relatedId: docRef.id };
+    await setDoc(docRef, finalEvaluation);
+    setEvaluations(prev => [...prev, finalEvaluation]);
+    return finalEvaluation;
+  }, []);
 
   const deleteEvaluations = useCallback(async (evaluationIds: string[]) => {
      const batch = writeBatch(db);
@@ -480,16 +475,134 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setAiAnalysisResults(aiAnalysisToKeep);
      }
   }, []);
+  
+  // --- Gamification Actions ---
+  const recalculateAllGamificationData = useCallback(async (currentAttendants: Attendant[], currentEvaluations: Evaluation[]) => {
+    console.log("GAMIFICATION: Iniciando recalculo geral...");
+
+    const configDoc = await getDoc(doc(db, "gamification", "config"));
+    const loadedConfigData = configDoc.exists() ? configDoc.data() : {};
+    const mergedAchievements = loadedConfigData.achievements ? mergeWithDefaults(INITIAL_ACHIEVEMENTS, loadedConfigData.achievements, 'id') : INITIAL_ACHIEVEMENTS;
+    const mergedLevelRewards = loadedConfigData.levelRewards ? mergeWithDefaults(INITIAL_LEVEL_REWARDS, loadedConfigData.levelRewards, 'level') : INITIAL_LEVEL_REWARDS;
+    const currentConfig = { ...INITIAL_GAMIFICATION_CONFIG, ...loadedConfigData, achievements: mergedAchievements, levelRewards: mergedLevelRewards };
+
+    const xpEventsBatch = writeBatch(db);
+    const existingXpEventsSnapshot = await getDocs(collection(db, "xp_events"));
+    existingXpEventsSnapshot.forEach(doc => xpEventsBatch.delete(doc.ref));
+
+    const allAiAnalysis = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem(AI_ANALYSIS_STORAGE_KEY) || '[]') : [];
+
+    for (const ev of currentEvaluations) {
+        const evaluationDate = new Date(ev.data);
+        const seasonForEvaluation = currentConfig.seasons.find(s => s.active && evaluationDate >= new Date(s.startDate) && evaluationDate <= new Date(s.endDate));
+        const baseScore = getScoreFromRating(ev.nota, currentConfig.ratingScores);
+        const seasonMultiplier = seasonForEvaluation?.xpMultiplier ?? 1;
+        const totalMultiplier = currentConfig.globalXpMultiplier * seasonMultiplier;
+        const finalXp = baseScore * totalMultiplier;
+
+        const xpEventRef = doc(collection(db, "xp_events"));
+        xpEventsBatch.set(xpEventRef, {
+            attendantId: ev.attendantId,
+            points: finalXp,
+            reason: `Avaliação de ${ev.nota} estrela(s)`,
+            date: ev.data,
+            type: 'evaluation',
+            relatedId: ev.id,
+        });
+    }
+
+    for (const attendant of currentAttendants) {
+        const attendantEvaluations = currentEvaluations.filter(e => e.attendantId === attendant.id);
+        for (const achievement of currentConfig.achievements) {
+            if (achievement.active && achievement.isUnlocked(attendant, attendantEvaluations, currentEvaluations, currentAttendants, allAiAnalysis)) {
+                const seasonForAchievement = currentConfig.seasons.find(s => s.active);
+                if (seasonForAchievement) {
+                    const totalMultiplier = currentConfig.globalXpMultiplier * (seasonForAchievement.xpMultiplier || 1);
+                    const xpEventRef = doc(collection(db, "xp_events"));
+                    xpEventsBatch.set(xpEventRef, {
+                        attendantId: attendant.id,
+                        points: achievement.xp * totalMultiplier,
+                        reason: `Troféu: ${achievement.title}`,
+                        date: new Date().toISOString(),
+                        type: 'achievement',
+                        relatedId: achievement.id,
+                    });
+                }
+            }
+        }
+    }
+
+    await xpEventsBatch.commit();
+    console.log("GAMIFICATION: Recálculo de eventos de XP concluído.");
+    await fetchAllData();
+  }, [fetchAllData]);
 
   // --- Import Actions ---
-  const addEvaluationImportRecord = useCallback(async (importData: Omit<EvaluationImport, 'id'>, userId: string) => {
-    const docRef = doc(collection(db, "evaluationImports"));
-    const newImport = { ...importData, id: docRef.id, importedBy: userId, importedAt: new Date().toISOString() };
-    await setDoc(docRef, newImport);
-    setEvaluationImports(prev => [...prev, newImport]);
-    return newImport;
-  }, []);
-  
+  const importLegacyEvaluations = useCallback(async (evaluationsData: Omit<Evaluation, 'xpGained' | 'relatedId'>[], fileName: string, userId: string) => {
+    const batch = writeBatch(db);
+    const newEvaluationIds: string[] = [];
+
+    evaluationsData.forEach(evData => {
+        const docRef = doc(db, "evaluations", evData.id);
+        batch.set(docRef, evData);
+        newEvaluationIds.push(evData.id);
+    });
+
+    const importDocRef = doc(collection(db, "evaluationImports"));
+    batch.set(importDocRef, { fileName, evaluationIds: newEvaluationIds, attendantMap: {}, importedBy: userId, importedAt: new Date().toISOString() });
+    
+    await batch.commit();
+    
+    const allAttendants = await getDocs(collection(db, "attendants")).then(snap => snap.docs.map(d => ({id: d.id, ...d.data()}) as Attendant));
+    const allEvaluations = await getDocs(collection(db, "evaluations")).then(snap => snap.docs.map(d => ({id: d.id, ...d.data()}) as Evaluation));
+
+    await recalculateAllGamificationData(allAttendants, allEvaluations);
+
+  }, [recalculateAllGamificationData]);
+
+  const importWhatsAppEvaluations = useCallback(async (evaluationsData: Omit<Evaluation, 'id' | 'xpGained' | 'relatedId'>[], agentMap: Record<string, string>, fileName: string, userId: string) => {
+      const batch = writeBatch(db);
+      const newEvaluationIds: string[] = [];
+      
+      evaluationsData.forEach(evData => {
+          const docRef = doc(collection(db, "evaluations"));
+          batch.set(docRef, evData);
+          newEvaluationIds.push(docRef.id);
+      });
+
+      const importDocRef = doc(collection(db, "evaluationImports"));
+      batch.set(importDocRef, { fileName, evaluationIds: newEvaluationIds, attendantMap: agentMap, importedBy: userId, importedAt: new Date().toISOString() });
+
+      await batch.commit();
+
+      const allAttendants = await getDocs(collection(db, "attendants")).then(snap => snap.docs.map(d => ({id: d.id, ...d.data()}) as Attendant));
+      const allEvaluations = await getDocs(collection(db, "evaluations")).then(snap => snap.docs.map(d => ({id: d.id, ...d.data()}) as Evaluation));
+
+      await recalculateAllGamificationData(allAttendants, allEvaluations);
+  }, [recalculateAllGamificationData]);
+
+  const importAttendants = useCallback(async (attendantsData: Omit<Attendant, 'importId'>[], fileName: string, userId: string) => {
+      const batch = writeBatch(db);
+      const newAttendantIds: string[] = [];
+
+      attendantsData.forEach(attData => {
+          const docRef = doc(db, "attendants", attData.id);
+          batch.set(docRef, attData);
+          newAttendantIds.push(attData.id);
+      });
+      
+      const importDocRef = doc(collection(db, "attendantImports"));
+      batch.set(importDocRef, { fileName, attendantIds: newAttendantIds, importedBy: userId, importedAt: new Date().toISOString() });
+      
+      await batch.commit();
+      
+      const allAttendants = await getDocs(collection(db, "attendants")).then(snap => snap.docs.map(d => ({id: d.id, ...d.data()}) as Attendant));
+      const allEvaluations = await getDocs(collection(db, "evaluations")).then(snap => snap.docs.map(d => ({id: d.id, ...d.data()}) as Evaluation));
+
+      await recalculateAllGamificationData(allAttendants, allEvaluations);
+  }, [recalculateAllGamificationData]);
+
+
   const revertEvaluationImport = useCallback(async (importId: string) => {
     const importToRevert = evaluationImports.find(i => i.id === importId);
     if (!importToRevert) return;
@@ -498,14 +611,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setEvaluationImports(prev => prev.filter(i => i.id !== importId));
     toast({ title: "Importação Revertida!" });
   }, [evaluationImports, deleteEvaluations, toast]);
-
-  const addAttendantImportRecord = useCallback(async (importData: Omit<AttendantImport, 'id'>, userId: string) => {
-    const docRef = doc(collection(db, "attendantImports"));
-    const newImport = { ...importData, id: docRef.id, importedBy: userId, importedAt: new Date().toISOString() };
-    await setDoc(docRef, newImport);
-    setAttendantImports(prev => [...prev, newImport]);
-    return newImport;
-  }, []);
   
   const revertAttendantImport = useCallback(async (importId: string) => {
     const importToRevert = attendantImports.find(i => i.id === importId);
@@ -516,7 +621,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     toast({ title: "Importação Revertida!" });
   }, [attendantImports, deleteAttendants, toast]);
   
-  // --- Gamification Actions ---
   const updateFullGamificationConfig = useCallback(async (config: GamificationConfig) => {
         const configToSave = {
             ...config,
@@ -568,61 +672,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     toast({ title: "Sessão Removida!" });
   }, [seasons, saveSeasons, toast]);
   
-  const recalculateAllGamificationData = useCallback(async () => {
-    console.log("GAMIFICATION: Iniciando recalculo geral...");
-    
-    // Fetch latest config to ensure we have the most up-to-date rules
-    const configDoc = await getDoc(doc(db, "gamification", "config"));
-    const currentConfig = configDoc.exists() ? { ...INITIAL_GAMIFICATION_CONFIG, ...configDoc.data() } as GamificationConfig : INITIAL_GAMIFICATION_CONFIG;
-    
-    const evBatch = writeBatch(db);
-    evaluations.forEach(ev => {
-        const evaluationDate = new Date(ev.data);
-        const seasonForEvaluation = currentConfig.seasons.find(s => s.active && evaluationDate >= new Date(s.startDate) && evaluationDate <= new Date(s.endDate));
-        const baseScore = getScoreFromRating(ev.nota, currentConfig.ratingScores);
-        const seasonMultiplier = seasonForEvaluation?.xpMultiplier ?? 1;
-        evBatch.update(doc(db, "evaluations", ev.id), { xpGained: baseScore * currentConfig.globalXpMultiplier * seasonMultiplier });
-    });
-    await evBatch.commit();
-    const updatedEvals = await getDocs(collection(db, "evaluations")).then(s => s.docs.map(d => ({id: d.id, ...d.data()} as Evaluation)));
-    setEvaluations(updatedEvals);
-    console.log(`GAMIFICATION: XP de ${updatedEvals.length} avaliações recalculado.`);
-    
-    const currentUnlocked = await getDocs(collection(db, "unlockedAchievements")).then(s => s.docs.map(d => d.id));
-    const deleteBatch = writeBatch(db);
-    currentUnlocked.forEach(uaId => deleteBatch.delete(doc(db, "unlockedAchievements", uaId)));
-    await deleteBatch.commit();
-    console.log(`GAMIFICATION: ${currentUnlocked.length} conquistas desbloqueadas antigas removidas.`);
-
-    const addBatch = writeBatch(db);
-    let newUnlockCount = 0;
-
-    for (const attendant of attendants) {
-        const now = new Date();
-        const attendantEvaluations = updatedEvals.filter(ev => ev.attendantId === attendant.id);
-
-        for (const achievement of currentConfig.achievements) {
-            const seasonForAchievement = currentConfig.seasons.find(s => s.active);
-            if (achievement.active && seasonForAchievement && achievement.isUnlocked(attendant, attendantEvaluations, updatedEvals, attendants, aiAnalysisResults)) {
-                const totalMultiplier = currentConfig.globalXpMultiplier * (seasonForAchievement.xpMultiplier || 1);
-                const newDocRef = doc(collection(db, "unlockedAchievements"));
-                addBatch.set(newDocRef, {
-                    attendantId: attendant.id,
-                    achievementId: achievement.id,
-                    unlockedAt: now.toISOString(),
-                    xpGained: achievement.xp * totalMultiplier,
-                });
-                newUnlockCount++;
-            }
-        }
-    }
-    await addBatch.commit();
-    console.log(`GAMIFICATION: Recálculo concluído. ${newUnlockCount} novas conquistas registradas.`);
-    const newUnlocked = await getDocs(collection(db, "unlockedAchievements")).then(s => s.docs.map(d => ({id: d.id, ...d.data()} as UnlockedAchievement)));
-    setUnlockedAchievements(newUnlocked);
-    toast({title: "Gamificação Recalculada!", description: "Todos os pontos e conquistas foram atualizados."});
-  }, [evaluations, attendants, aiAnalysisResults, toast]);
-
   // --- AI Analysis Actions ---
   const runAiAnalysis = useCallback(async () => {
     setIsAiAnalysisRunning(true);
@@ -705,10 +754,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     deleteEvaluations,
     evaluationImports,
     attendantImports,
-    addEvaluationImportRecord,
+    importLegacyEvaluations,
+    importWhatsAppEvaluations,
+    importAttendants,
     revertEvaluationImport,
-    addAttendantImportRecord,
     revertAttendantImport,
+    xpEvents,
     gamificationConfig,
     achievements,
     levelRewards,
@@ -742,5 +793,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    

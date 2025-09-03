@@ -35,7 +35,7 @@ type MappedReview = {
 }
 
 export default function ImportarAvaliacoesPage() {
-    const { user, isAuthenticated, loading, attendants, addEvaluation, addEvaluationImportRecord, recalculateAllGamificationData } = useAuth();
+    const { user, isAuthenticated, loading, attendants, importWhatsAppEvaluations } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
 
@@ -151,47 +151,32 @@ export default function ImportarAvaliacoesPage() {
         setIsProcessing(true);
         setImportProgress(0);
 
-        const totalReviews = mappedReviews.length;
-        let importedCount = 0;
-        const newEvaluationIds: string[] = [];
+        const newEvaluationsData = mappedReviews.map(review => ({
+            attendantId: review.attendantId,
+            nota: review.rating,
+            comentario: `Importado do WhatsApp em ${format(new Date(review.date), 'dd/MM/yyyy')}`,
+            data: review.date,
+        }));
 
-        for (const review of mappedReviews) {
-            try {
-                const newEvaluation = await addEvaluation({
-                    attendantId: review.attendantId,
-                    nota: review.rating,
-                    comentario: `Importado do WhatsApp em ${format(new Date(review.date), 'dd/MM/yyyy')}`,
-                    data: review.date,
-                    importId: "temp-id" // Placeholder, will be replaced by the real import ID
-                });
-                newEvaluationIds.push(newEvaluation.id);
+        try {
+            await importWhatsAppEvaluations(newEvaluationsData, agentMap, file?.name || "Arquivo Desconhecido", user.id);
 
-            } catch (error) {
-                console.error(`Erro ao importar avaliação para ${review.agentName}`, error);
-            }
-             importedCount++;
-             setImportProgress((importedCount / totalReviews) * 100);
-             await new Promise(res => setTimeout(res, 50)); // Small delay to allow UI update
+            toast({
+                title: "Importação Concluída!",
+                description: `${newEvaluationsData.length} avaliações foram importadas e a gamificação foi atualizada.`,
+            });
+            
+            setFile(null);
+            setParsedData([]);
+            setAgentMap({});
+        } catch (error) {
+            console.error("Erro durante a importação do WhatsApp:", error);
+            toast({ variant: "destructive", title: "Erro na Importação", description: "Ocorreu um erro ao salvar os dados."})
+        } finally {
+            setIsProcessing(false);
         }
 
-        const importRecord = await addEvaluationImportRecord({
-            fileName: file?.name || "Arquivo Desconhecido",
-            evaluationIds: newEvaluationIds,
-            attendantMap: agentMap,
-        }, user.id);
-
-        await recalculateAllGamificationData();
-
-        toast({
-            title: "Importação Concluída!",
-            description: `${importedCount} de ${totalReviews} avaliações foram importadas e a gamificação foi atualizada.`,
-        });
-        
-        setFile(null);
-        setParsedData([]);
-        setAgentMap({});
-        setIsProcessing(false);
-    }, [user, toast, mappedReviews, addEvaluation, addEvaluationImportRecord, file, agentMap, recalculateAllGamificationData]);
+    }, [user, toast, mappedReviews, agentMap, file?.name, importWhatsAppEvaluations]);
 
     const isMappingStarted = Object.keys(agentMap).length > 0;
     const allAgentsMapped = uniqueAgents.length > 0 && uniqueAgents.every(agent => agentMap[agent]);
@@ -301,5 +286,3 @@ export default function ImportarAvaliacoesPage() {
         </div>
     );
 }
-
-    
