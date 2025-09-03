@@ -1,0 +1,141 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(USUARIO)
+  modules   Module[] @relation("UserModules")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attendantImports   AttendantImport[]
+  evaluationImports EvaluationImport[]
+}
+
+model Module {
+  id          String @id
+  name        String
+  description String
+  path        String
+  active      Boolean @default(true)
+  users       User[]  @relation("UserModules")
+}
+
+model Attendant {
+  id              String    @id @default(cuid())
+  name            String
+  email           String    @unique
+  funcao          String
+  setor           String
+  status          String
+  avatarUrl       String?
+  telefone        String
+  portaria        String?
+  situacao        String?
+  dataAdmissao    DateTime
+  dataNascimento  DateTime
+  rg              String
+  cpf             String    @unique
+  importId        String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  evaluations Evaluation[]
+  import      AttendantImport? @relation(fields: [importId], references: [id])
+}
+
+model Evaluation {
+  id          String   @id @default(cuid())
+  attendantId String
+  nota        Int
+  comentario  String
+  data        DateTime
+  xpGained    Float
+  importId    String?
+  createdAt   DateTime @default(now())
+
+  attendant Attendant         @relation(fields: [attendantId], references: [id], onDelete: Cascade)
+  import    EvaluationImport? @relation(fields: [importId], references: [id])
+}
+
+model XpEvent {
+  id          String   @id @default(cuid())
+  attendantId String
+  points      Float
+  basePoints  Float
+  multiplier  Float
+  reason      String
+  date        DateTime
+  type        String // "evaluation" or "achievement"
+  relatedId   String
+  createdAt   DateTime @default(now())
+}
+
+model GamificationConfig {
+  id                 String @id @default("main")
+  ratingScore1       Int    @default(-5)
+  ratingScore2       Int    @default(-2)
+  ratingScore3       Int    @default(1)
+  ratingScore4       Int    @default(3)
+  ratingScore5       Int    @default(5)
+  globalXpMultiplier Float  @default(1)
+  achievementsJson   Json   @default("[]")
+  levelRewardsJson   Json   @default("[]")
+  updatedAt          DateTime @updatedAt
+}
+
+model GamificationSeason {
+  id           String   @id @default(cuid())
+  name         String
+  startDate    DateTime
+  endDate      DateTime
+  active       Boolean
+  xpMultiplier Float
+  createdAt    DateTime @default(now())
+}
+
+model AttendantImport {
+  id          String      @id @default(cuid())
+  importedById String
+  importedAt   DateTime
+  fileName    String
+  attendants  Attendant[]
+
+  importedBy User @relation(fields: [importedById], references: [id])
+}
+
+model EvaluationImport {
+  id           String       @id @default(cuid())
+  importedById  String
+  importedAt   DateTime
+  fileName     String
+  attendantMap Json
+  evaluations  Evaluation[]
+
+  importedBy User @relation(fields: [importedById], references: [id])
+}
+
+model Funcao {
+    name String @id @unique
+}
+
+model Setor {
+    name String @id @unique
+}
+
+enum Role {
+  SUPERADMIN
+  ADMIN
+  SUPERVISOR
+  USUARIO
+}

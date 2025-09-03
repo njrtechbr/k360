@@ -2,11 +2,14 @@
 
 import { z } from "zod";
 
+// This file will now primarily be for Zod schemas and front-end types.
+// The Prisma-generated types will be the source of truth for backend models.
+
 export const ROLES = {
-  SUPERADMIN: 'superadmin',
-  ADMIN: 'admin',
-  SUPERVISOR: 'supervisor',
-  USER: 'usuario',
+  SUPERADMIN: 'SUPERADMIN',
+  ADMIN: 'ADMIN',
+  SUPERVISOR: 'SUPERVISOR',
+  USER: 'USUARIO',
 } as const;
 
 export type Role = (typeof ROLES)[keyof typeof ROLES];
@@ -30,9 +33,9 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  password?: string; // Should be hashed in a real app
+  password?: string;
   role: Role;
-  modules: string[]; // Will store module ids
+  modules: Module[]; 
 }
 
 export const ATTENDANT_STATUS = {
@@ -75,15 +78,15 @@ export interface Attendant {
   funcao: Funcao;
   setor: Setor;
   status: AttendantStatus;
-  avatarUrl: string;
+  avatarUrl: string | null;
   telefone: string;
-  portaria: string;
-  situacao: string;
+  portaria: string | null;
+  situacao: string | null;
   dataAdmissao: string; // Storing as ISO string
   dataNascimento: string; // Storing as ISO string
   rg: string;
   cpf: string;
-  importId?: string; // Optional ID to link to an import batch
+  importId?: string | null;
 }
 
 export interface Evaluation {
@@ -93,7 +96,7 @@ export interface Evaluation {
   comentario: string;
   data: string; // Storing as ISO string for simplicity
   xpGained: number; // XP calculated at the time of evaluation
-  importId?: string; // Optional ID to link to an import batch
+  importId?: string | null;
 }
 
 export const AnalyzeEvaluationInputSchema = z.object({
@@ -122,8 +125,8 @@ export type Achievement = {
   description: string;
   icon: React.ElementType;
   color: string;
-  xp: number; // XP concedido ao desbloquear
-  active: boolean; // Controla se a conquista está ativa no sistema
+  xp: number;
+  active: boolean;
   isUnlocked: (
     attendant: Attendant, 
     attendantEvaluations: Evaluation[], 
@@ -132,15 +135,6 @@ export type Achievement = {
     aiAnalysisResults?: EvaluationAnalysis[]
   ) => boolean;
 };
-
-export interface UnlockedAchievement {
-    id: string; // a unique id for this unlock event
-    attendantId: string;
-    achievementId: string;
-    unlockedAt: string; // ISO string date
-    xpGained: number;
-}
-
 
 export type LevelReward = {
     level: number;
@@ -194,9 +188,9 @@ export interface AttendantImport {
 export type XpEvent = {
     id: string;
     attendantId: string;
-    points: number; // This will be final points (base * multiplier)
-    basePoints: number; // The score before any multiplier
-    multiplier: number; // The total multiplier used
+    points: number; 
+    basePoints: number; 
+    multiplier: number; 
     reason: string;
     date: string; // ISO String
     type: 'evaluation' | 'achievement';
