@@ -1,26 +1,20 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import type { User, Role } from '@/lib/types';
-import { ROLES } from '@/lib/types';
+import { useAuth } from '@/providers/AuthProvider';
 
 // Firebase Imports
-import { auth, db } from "@/lib/firebase";
-import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { doc, updateDoc, collection, getDocs, deleteDoc } from "firebase/firestore";
 
 
-const SESSION_STORAGE_KEY = "controle_acesso_session";
-
-type UseUsersDataProps = {
-  user: User | null;
-  setUser: React.Dispatch<React.SetStateAction<User | null>>;
-};
-
-export function useUsersData({ user, setUser }: UseUsersDataProps) {
+export function useUsersData() {
     const [allUsers, setAllUsers] = useState<User[]>([]);
     const { toast } = useToast();
+    const { user, setUser } = useAuth();
     
     const fetchAllUsers = useCallback(async (): Promise<User[]> => {
         const startTime = performance.now();
@@ -49,7 +43,6 @@ export function useUsersData({ user, setUser }: UseUsersDataProps) {
             if (user && user.id === userId) {
                 const updatedSessionUser = { ...user, ...userData };
                 setUser(updatedSessionUser);
-                localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(updatedSessionUser));
             }
             
             await fetchAllUsers();
