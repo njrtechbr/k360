@@ -37,7 +37,7 @@ import { useToast } from "@/hooks/use-toast";
 import QRCode from "react-qr-code";
 import { toPng } from 'html-to-image';
 import { Skeleton } from "@/components/ui/skeleton";
-import PerformanceStatusBar from "@/components/PerformanceStatusBar";
+import { usePerformance } from "@/providers/PerformanceProvider";
 
 
 const formSchema = z.object({
@@ -110,44 +110,48 @@ export default function AtendentesPage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isDataLoading, setIsDataLoading] = useState(true);
 
-  // Performance Metrics
-  const [dataLoadingTime, setDataLoadingTime] = useState<number | null>(null);
-  const [renderTime, setRenderTime] = useState<number | null>(null);
+  const { setPerformanceData } = usePerformance();
   const renderTimeRef = useRef(performance.now());
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: defaultFormValues,
   });
-  
-  useEffect(() => {
-    if (!isDataLoading) {
-      const endRenderTime = performance.now();
-      const startRenderTime = renderTimeRef.current;
-      setRenderTime(endRenderTime - startRenderTime);
-      console.log(`PERF: Page /dashboard/rh/atendentes rendered in ${(endRenderTime - startRenderTime).toFixed(2)}ms`);
-    } else {
-        renderTimeRef.current = performance.now();
-    }
-  }, [isDataLoading]);
 
   const loadData = useCallback(async () => {
     setIsDataLoading(true);
     const startTime = performance.now();
-    await fetchAttendants();
+    const fetchedData = await fetchAttendants();
     const endTime = performance.now();
-    setDataLoadingTime(endTime - startTime);
+    setPerformanceData({
+        dataLoadingTime: endTime - startTime,
+        renderTime: null,
+        itemCount: fetchedData.length,
+        collectionName: "atendentes"
+    });
     setIsDataLoading(false);
-  }, [fetchAttendants]);
+  }, [fetchAttendants, setPerformanceData]);
 
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+        loadData();
+    }
+  }, [authLoading, isAuthenticated, loadData]);
+
+  useEffect(() => {
+     if (!isDataLoading) {
+        const endRenderTime = performance.now();
+        setPerformanceData(prev => ({ ...prev, renderTime: endRenderTime - renderTimeRef.current }));
+    } else {
+        renderTimeRef.current = performance.now();
+    }
+  }, [isDataLoading, setPerformanceData]);
+  
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       router.push("/login");
     }
-    if (!authLoading && isAuthenticated) {
-        loadData();
-    }
-  }, [authLoading, isAuthenticated, router, loadData]);
+  }, [authLoading, isAuthenticated, router]);
 
   useEffect(() => {
     if (isFormDialogOpen) {
@@ -581,12 +585,6 @@ export default function AtendentesPage() {
               </AlertDialogContent>
           </AlertDialog>
       </div>
-      <PerformanceStatusBar 
-        dataLoadingTime={dataLoadingTime}
-        renderTime={renderTime}
-        itemCount={attendants.length}
-        collectionName="atendentes"
-      />
     </>
   );
 }

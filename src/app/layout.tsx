@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppLayout from '@/components/AppLayout';
+import { PerformanceProvider } from '@/providers/PerformanceProvider';
 
 
 export const metadata: Metadata = {
@@ -30,12 +31,14 @@ export default function RootLayout({
       </head>
       <body className={cn('font-sans antialiased')}>
         <AuthProvider>
-          <SidebarProvider>
-            <AppLayout>
-              {children}
-            </AppLayout>
-            <Toaster />
-          </SidebarProvider>
+          <PerformanceProvider>
+            <SidebarProvider>
+              <AppLayout>
+                {children}
+              </AppLayout>
+              <Toaster />
+            </SidebarProvider>
+          </PerformanceProvider>
         </AuthProvider>
       </body>
     </html>

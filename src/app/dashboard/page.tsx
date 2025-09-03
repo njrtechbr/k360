@@ -13,7 +13,7 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { differenceInDays, format, getYear, setYear, isFuture, addYears, differenceInYears } from 'date-fns';
 import { Skeleton } from "@/components/ui/skeleton";
-import PerformanceStatusBar from "@/components/PerformanceStatusBar";
+import { usePerformance } from "@/providers/PerformanceProvider";
 
 const RoleIcon = ({ role }: { role: string }) => {
     switch (role) {
@@ -79,40 +79,46 @@ export default function DashboardPage() {
   const { user, isAuthenticated, loading: authLoading, modules, attendants, fetchAttendants } = useAuth();
   const router = useRouter();
   const [isDataLoading, setIsDataLoading] = useState(true);
-
-  // Performance Metrics
-  const [dataLoadingTime, setDataLoadingTime] = useState<number | null>(null);
-  const [renderTime, setRenderTime] = useState<number | null>(null);
+  
+  const { setPerformanceData } = usePerformance();
   const renderTimeRef = useRef(performance.now());
-
-  useEffect(() => {
-    if (isDataLoading) {
-      renderTimeRef.current = performance.now();
-    } else {
-      const endRenderTime = performance.now();
-      const startRenderTime = renderTimeRef.current;
-      setRenderTime(endRenderTime - startRenderTime);
-      console.log(`PERF: Page /dashboard rendered in ${(endRenderTime - startRenderTime).toFixed(2)}ms`);
-    }
-  }, [isDataLoading]);
 
   const loadData = useCallback(async () => {
     setIsDataLoading(true);
     const startTime = performance.now();
-    await fetchAttendants();
+    const fetchedAttendants = await fetchAttendants();
     const endTime = performance.now();
-    setDataLoadingTime(endTime - startTime);
+    
+    setPerformanceData({
+        dataLoadingTime: endTime - startTime,
+        renderTime: null,
+        itemCount: fetchedAttendants.length,
+        collectionName: "atendentes"
+    });
+
     setIsDataLoading(false);
-  }, [fetchAttendants]);
+  }, [fetchAttendants, setPerformanceData]);
+
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+        loadData();
+    }
+  }, [authLoading, isAuthenticated, loadData]);
+
+  useEffect(() => {
+     if (!isDataLoading) {
+        const endRenderTime = performance.now();
+        setPerformanceData(prev => ({ ...prev, renderTime: endRenderTime - renderTimeRef.current }));
+    } else {
+        renderTimeRef.current = performance.now();
+    }
+  }, [isDataLoading, setPerformanceData]);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       router.push("/login");
     }
-    if (!authLoading && isAuthenticated) {
-        loadData();
-    }
-  }, [authLoading, isAuthenticated, router, loadData]);
+  }, [authLoading, isAuthenticated, router]);
 
 
   const moduleMap = useMemo(() => {
@@ -305,12 +311,6 @@ export default function DashboardPage() {
           </Card>
         )}
       </div>
-      <PerformanceStatusBar 
-        dataLoadingTime={dataLoadingTime}
-        renderTime={renderTime}
-        itemCount={attendants.length}
-        collectionName="atendentes"
-      />
     </>
   );
 }

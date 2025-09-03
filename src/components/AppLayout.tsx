@@ -7,6 +7,7 @@ import SiteHeader from '@/components/SiteHeader';
 import { cn } from '@/lib/utils';
 import type { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
+import PerformanceStatusBar from './PerformanceStatusBar';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
     const { state } = useSidebar();
@@ -30,6 +31,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                     {children}
                 </main>
             </div>
+            <PerformanceStatusBar />
         </div>
     );
 }

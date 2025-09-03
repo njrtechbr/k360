@@ -1,16 +1,16 @@
 
 "use client";
 
+import { usePerformance } from "@/providers/PerformanceProvider";
 import { Database, GanttChart, Thermometer } from "lucide-react";
 
-type PerformanceStatusBarProps = {
-    dataLoadingTime: number | null;
-    renderTime: number | null;
-    itemCount: number | null;
-    collectionName: string;
-};
+export default function PerformanceStatusBar() {
+    const { performanceData } = usePerformance();
+    
+    if (!performanceData) return null;
+    
+    const { dataLoadingTime, renderTime, itemCount, collectionName } = performanceData;
 
-export default function PerformanceStatusBar({ dataLoadingTime, renderTime, itemCount, collectionName }: PerformanceStatusBarProps) {
     if (dataLoadingTime === null && renderTime === null) {
         return null;
     }

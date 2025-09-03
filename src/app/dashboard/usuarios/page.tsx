@@ -29,7 +29,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
-import PerformanceStatusBar from "@/components/PerformanceStatusBar";
+import { usePerformance } from "@/providers/PerformanceProvider";
 
 const editFormSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
@@ -60,10 +60,9 @@ export default function UsuariosPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isDataLoading, setIsDataLoading] = useState(true);
 
-  // Performance Metrics
-  const [dataLoadingTime, setDataLoadingTime] = useState<number | null>(null);
-  const [renderTime, setRenderTime] = useState<number | null>(null);
+  const { setPerformanceData } = usePerformance();
   const renderTimeRef = useRef(performance.now());
+
 
   const editForm = useForm<z.infer<typeof editFormSchema>>({
     resolver: zodResolver(editFormSchema),
@@ -81,34 +80,34 @@ export default function UsuariosPage() {
     },
   });
 
-  useEffect(() => {
-    if (!isDataLoading) {
-      const endRenderTime = performance.now();
-      const startRenderTime = renderTimeRef.current;
-      setRenderTime(endRenderTime - startRenderTime);
-      console.log(`PERF: Page /dashboard/usuarios rendered in ${(endRenderTime - startRenderTime).toFixed(2)}ms`);
-    } else {
-        renderTimeRef.current = performance.now();
-    }
-  }, [isDataLoading]);
-
   const loadData = useCallback(async () => {
     setIsDataLoading(true);
     const startTime = performance.now();
-    await fetchAllUsers();
+    const fetchedData = await fetchAllUsers();
     const endTime = performance.now();
-    setDataLoadingTime(endTime - startTime);
+    setPerformanceData({
+      dataLoadingTime: endTime - startTime,
+      renderTime: null,
+      itemCount: fetchedData.length,
+      collectionName: "usuarios"
+    });
     setIsDataLoading(false);
-  }, [fetchAllUsers]);
+  }, [fetchAllUsers, setPerformanceData]);
   
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push("/login");
-    }
-     if (!authLoading && isAuthenticated) {
+    if (!authLoading && isAuthenticated) {
         loadData();
     }
-  }, [authLoading, isAuthenticated, router, loadData]);
+  }, [authLoading, isAuthenticated, loadData]);
+  
+  useEffect(() => {
+     if (!isDataLoading) {
+        const endRenderTime = performance.now();
+        setPerformanceData(prev => ({ ...prev, renderTime: endRenderTime - renderTimeRef.current }));
+    } else {
+        renderTimeRef.current = performance.now();
+    }
+  }, [isDataLoading, setPerformanceData]);
 
   useEffect(() => {
     if (selectedUser) {
@@ -510,12 +509,6 @@ export default function UsuariosPage() {
               </AlertDialogContent>
           </AlertDialog>
       </div>
-      <PerformanceStatusBar 
-        dataLoadingTime={dataLoadingTime}
-        renderTime={renderTime}
-        itemCount={allUsers.length}
-        collectionName="usuários"
-      />
     </>
   );
 }
