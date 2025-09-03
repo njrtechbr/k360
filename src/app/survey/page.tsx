@@ -2,7 +2,8 @@
 "use client";
 
 import { useSearchParams } from 'next/navigation';
-import { useAuth } from '@/providers/AuthProvider';
+import { useAttendants } from '@/providers/AttendantsProvider';
+import { useEvaluations } from '@/providers/EvaluationsProvider';
 import { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -11,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { MessageCircle, ShieldCheck, Star, ThumbsUp, UserCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const RatingSelector = ({ rating, setRating }: { rating: number; setRating: (r: number) => void }) => {
     return (
@@ -30,9 +32,20 @@ const RatingSelector = ({ rating, setRating }: { rating: number; setRating: (r: 
 
 export default function SurveyPage() {
     const searchParams = useSearchParams();
-    const { attendants, addEvaluation, loading } = useAuth();
+    const { attendants, fetchAttendants } = useAttendants();
+    const { addEvaluation } = useEvaluations();
     
     const attendantId = searchParams.get('attendantId');
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+      const loadInitialData = async () => {
+        await fetchAttendants();
+        setLoading(false);
+      }
+      loadInitialData();
+    }, [fetchAttendants]);
+
     const attendant = useMemo(() => attendants.find(a => a.id === attendantId), [attendants, attendantId]);
 
     const [rating, setRating] = useState(0);
@@ -68,6 +81,7 @@ export default function SurveyPage() {
                 attendantId: attendant!.id,
                 nota: rating,
                 comentario: comment || '(Sem comentário)',
+                data: new Date().toISOString(),
             });
             setIsSubmitted(true);
         } catch (err) {
@@ -80,7 +94,16 @@ export default function SurveyPage() {
     if (loading) {
         return (
              <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-900 dark:to-slate-800">
-                <p>Carregando...</p>
+                 <Card className="w-full max-w-md shadow-2xl rounded-2xl p-8">
+                    <div className="flex justify-center mb-4">
+                        <Skeleton className="h-28 w-28 rounded-full" />
+                    </div>
+                    <div className="text-center space-y-3">
+                        <Skeleton className="h-8 w-48 mx-auto" />
+                        <Skeleton className="h-6 w-32 mx-auto" />
+                        <Skeleton className="h-6 w-64 mx-auto mt-4" />
+                    </div>
+                 </Card>
             </div>
         )
     }

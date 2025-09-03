@@ -3,7 +3,7 @@
 
 import { useAuth } from "@/providers/AuthProvider";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,9 @@ import { format } from "date-fns";
 import type { Evaluation } from "@/lib/types";
 import { suggestAttendants, type SuggestAttendantOutput } from "@/ai/flows/suggest-attendant-flow";
 import { Combobox } from "@/components/ui/combobox";
+import { useAttendants } from "@/providers/AttendantsProvider";
+import { useEvaluations } from "@/providers/EvaluationsProvider";
+import { useGamification } from "@/providers/GamificationProvider";
 
 
 type CsvRow = {
@@ -35,7 +38,11 @@ type MappedReview = {
 }
 
 export default function ImportarAvaliacoesPage() {
-    const { user, isAuthenticated, loading, attendants, addEvaluation, addImportRecord, recalculateAllGamificationData, evaluations, aiAnalysisResults } = useAuth();
+    const { user, isAuthenticated, loading } = useAuth();
+    const { attendants } = useAttendants();
+    const { addEvaluation, addImportRecord, evaluations } = useEvaluations();
+    const { recalculateAllGamificationData } = useGamification();
+
     const router = useRouter();
     const { toast } = useToast();
 
@@ -142,7 +149,7 @@ export default function ImportarAvaliacoesPage() {
             .filter((row): row is MappedReview => row !== null && !isNaN(row.rating));
     }, [parsedData, agentMap]);
     
-    const handleImport = async () => {
+    const handleImport = useCallback(async () => {
         if (!user) {
             toast({ variant: "destructive", title: "Erro de Autenticação", description: "Usuário não encontrado."});
             return;
@@ -153,7 +160,9 @@ export default function ImportarAvaliacoesPage() {
 
         const totalReviews = mappedReviews.length;
         let importedCount = 0;
-        const evaluationIds: string[] = [];
+        const newEvaluationIds: string[] = [];
+        let createdEvaluations: Evaluation[] = [];
+
 
         for (const review of mappedReviews) {
             try {
@@ -164,7 +173,8 @@ export default function ImportarAvaliacoesPage() {
                     data: review.date,
                     importId: "temp-id" // Placeholder, will be replaced by the real import ID
                 });
-                evaluationIds.push(newEvaluation.id);
+                newEvaluationIds.push(newEvaluation.id);
+                createdEvaluations.push(newEvaluation);
 
             } catch (error) {
                 console.error(`Erro ao importar avaliação para ${review.agentName}`, error);
@@ -175,21 +185,19 @@ export default function ImportarAvaliacoesPage() {
         }
 
         // Create a single import record
-        const importRecord = addImportRecord({
+        const importRecord = await addImportRecord({
             fileName: file?.name || "Arquivo Desconhecido",
-            evaluationIds: evaluationIds,
+            evaluationIds: newEvaluationIds,
             attendantMap: agentMap,
         }, user.id);
 
         // Update evaluations with the correct import ID
-        const allEvaluations = JSON.parse(localStorage.getItem('controle_acesso_evaluations') || '[]') as Evaluation[];
+        const allEvaluations = [...evaluations, ...createdEvaluations];
         const updatedEvaluations = allEvaluations.map(ev => 
-            evaluationIds.includes(ev.id) ? { ...ev, importId: importRecord.id } : ev
+            newEvaluationIds.includes(ev.id) ? { ...ev, importId: importRecord.id } : ev
         );
-        localStorage.setItem('controle_acesso_evaluations', JSON.stringify(updatedEvaluations));
 
-        // Recalculate gamification data for all users
-        recalculateAllGamificationData(attendants, updatedEvaluations, aiAnalysisResults);
+        await recalculateAllGamificationData(attendants, updatedEvaluations, []);
 
         toast({
             title: "Importação Concluída!",
@@ -200,11 +208,7 @@ export default function ImportarAvaliacoesPage() {
         setParsedData([]);
         setAgentMap({});
         setIsProcessing(false);
-    };
-
-    if (loading) {
-        return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
-    }
+    }, [user, toast, mappedReviews, addEvaluation, addImportRecord, file, agentMap, evaluations, attendants, recalculateAllGamificationData]);
 
     const isMappingStarted = Object.keys(agentMap).length > 0;
     const allAgentsMapped = uniqueAgents.length > 0 && uniqueAgents.every(agent => agentMap[agent]);

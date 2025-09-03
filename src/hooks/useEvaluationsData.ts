@@ -7,6 +7,7 @@ import type { Evaluation, EvaluationAnalysis, GamificationConfig, GamificationSe
 import { analyzeEvaluation } from '@/ai/flows/analyze-evaluation-flow';
 import { db } from '@/lib/firebase';
 import { collection, doc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { getScoreFromRating } from './useGamificationData';
 
 
 const AI_ANALYSIS_STORAGE_KEY = "controle_acesso_ai_analysis"; // Can be migrated later if needed
@@ -23,10 +24,10 @@ type AnalysisProgress = {
 
 type UseEvaluationsDataProps = {
     gamificationConfig: GamificationConfig;
-    seasons: GamificationSeason[];
+    activeSeason: GamificationSeason | null;
 };
 
-export function useEvaluationsData({ gamificationConfig, seasons }: UseEvaluationsDataProps) {
+export function useEvaluationsData({ gamificationConfig, activeSeason }: UseEvaluationsDataProps) {
     const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
     const [evaluationImports, setEvaluationImports] = useState<EvaluationImport[]>([]);
     const [aiAnalysisResults, setAiAnalysisResults] = useState<EvaluationAnalysis[]>([]);
@@ -102,12 +103,22 @@ export function useEvaluationsData({ gamificationConfig, seasons }: UseEvaluatio
         setLastAiAnalysis(date);
     };
 
-    const addEvaluation = async (evaluationData: Omit<Evaluation, 'id' | 'xpGained'>, xpGained: number): Promise<Evaluation> => {
+    const addEvaluation = async (evaluationData: Omit<Evaluation, 'id' | 'xpGained'>): Promise<Evaluation> => {
+        const evaluationDate = new Date(evaluationData.data);
+        const baseScore = getScoreFromRating(evaluationData.nota, gamificationConfig.ratingScores);
+        
+        let xpGained = baseScore;
+        if (activeSeason && evaluationDate >= new Date(activeSeason.startDate) && evaluationDate <= new Date(activeSeason.endDate)) {
+            const totalMultiplier = gamificationConfig.globalXpMultiplier * activeSeason.xpMultiplier;
+            xpGained = baseScore * totalMultiplier;
+        }
+        
         const newEvaluation: Omit<Evaluation, 'id'> = {
             ...evaluationData,
             data: evaluationData.data || new Date().toISOString(),
             xpGained,
         };
+
         const docRef = doc(collection(db, "evaluations"));
         await setDoc(docRef, newEvaluation);
         const finalEvaluation = { ...newEvaluation, id: docRef.id };

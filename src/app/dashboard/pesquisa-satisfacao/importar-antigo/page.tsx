@@ -3,7 +3,7 @@
 
 import { useAuth } from "@/providers/AuthProvider";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
 import type { Evaluation } from "@/lib/types";
+import { useAttendants } from "@/providers/AttendantsProvider";
+import { useEvaluations } from "@/providers/EvaluationsProvider";
+import { useGamification } from "@/providers/GamificationProvider";
+
 
 type CsvRow = {
     id: string;
@@ -36,7 +40,11 @@ type MappedReview = {
 }
 
 export default function ImportarLegadoPage() {
-    const { user, isAuthenticated, loading, attendants, addEvaluation, addImportRecord, recalculateAllGamificationData, evaluations, aiAnalysisResults } = useAuth();
+    const { user, isAuthenticated, loading } = useAuth();
+    const { attendants } = useAttendants();
+    const { addEvaluation, addImportRecord, evaluations } = useEvaluations();
+    const { recalculateAllGamificationData, achievements } = useGamification();
+
     const router = useRouter();
     const { toast } = useToast();
 
@@ -46,6 +54,8 @@ export default function ImportarLegadoPage() {
     const [importProgress, setImportProgress] = useState(0);
 
     const attendantMap = useMemo(() => new Map(attendants.map(a => [a.id, a.name])), [attendants]);
+    const evaluationMap = useMemo(() => new Set(evaluations.map(e => e.id)), [evaluations]);
+
 
     useEffect(() => {
         if (!loading && !isAuthenticated) {
@@ -69,11 +79,12 @@ export default function ImportarLegadoPage() {
             complete: (results) => {
                 const mapped = results.data.map(row => {
                     const attendantExists = attendantMap.has(row.attendantId);
+                    const evaluationExists = evaluationMap.has(row.id);
                     return {
                         id: row.id,
                         attendantId: row.attendantId,
                         attendantName: attendantMap.get(row.attendantId),
-                        isValid: attendantExists,
+                        isValid: attendantExists && !evaluationExists,
                         rating: parseInt(row.rating, 10),
                         comment: row.comment || "(Sem comentário)",
                         date: new Date(row.date).toISOString(),
@@ -90,7 +101,7 @@ export default function ImportarLegadoPage() {
         });
     };
     
-    const handleImport = async () => {
+    const handleImport = useCallback(async () => {
         if (!user) {
             toast({ variant: "destructive", title: "Erro de Autenticação", description: "Usuário não encontrado."});
             return;
@@ -107,7 +118,8 @@ export default function ImportarLegadoPage() {
 
         const totalReviews = validReviews.length;
         let importedCount = 0;
-        const evaluationIds: string[] = [];
+        const newEvaluationIds: string[] = [];
+        let createdEvaluations: Evaluation[] = [];
 
         for (const review of validReviews) {
             try {
@@ -119,7 +131,8 @@ export default function ImportarLegadoPage() {
                     data: review.date,
                     importId: "temp-id" // Placeholder, will be replaced by the real import ID
                 });
-                evaluationIds.push(newEvaluation.id);
+                newEvaluationIds.push(newEvaluation.id);
+                createdEvaluations.push(newEvaluation);
 
             } catch (error) {
                 console.error(`Erro ao importar avaliação ${review.id}`, error);
@@ -130,21 +143,20 @@ export default function ImportarLegadoPage() {
         }
 
         // Create a single import record
-        const importRecord = addImportRecord({
+        const importRecord = await addImportRecord({
             fileName: file?.name || "Arquivo Desconhecido",
-            evaluationIds: evaluationIds,
+            evaluationIds: newEvaluationIds,
             attendantMap: {}, // No manual mapping needed
         }, user.id);
 
         // Update evaluations with the correct import ID
-        const allEvaluations = JSON.parse(localStorage.getItem('controle_acesso_evaluations') || '[]') as Evaluation[];
+        const allEvaluations = [...evaluations, ...createdEvaluations];
         const updatedEvaluations = allEvaluations.map(ev => 
-            evaluationIds.includes(ev.id) ? { ...ev, importId: importRecord.id } : ev
+            newEvaluationIds.includes(ev.id) ? { ...ev, importId: importRecord.id } : ev
         );
-        localStorage.setItem('controle_acesso_evaluations', JSON.stringify(updatedEvaluations));
 
-        // Recalculate gamification data for all users
-        recalculateAllGamificationData(attendants, updatedEvaluations, aiAnalysisResults);
+        await recalculateAllGamificationData(attendants, updatedEvaluations, []);
+
 
         toast({
             title: "Importação Concluída!",
@@ -154,8 +166,8 @@ export default function ImportarLegadoPage() {
         setFile(null);
         setMappedReviews([]);
         setIsProcessing(false);
-    };
-
+    }, [user, toast, mappedReviews, attendants, evaluations, achievements, addEvaluation, addImportRecord, recalculateAllGamificationData, file?.name]);
+    
     const formatDate = (dateStr: string) => {
         try {
             return format(new Date(dateStr), 'dd/MM/yyyy HH:mm');
@@ -196,7 +208,7 @@ export default function ImportarLegadoPage() {
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2"><Check /> 2. Confirmar e Importar</CardTitle>
                         <CardDescription>
-                            Revise os dados que serão importados. Avaliações com 'attendantId' inválido serão ignoradas.
+                            Revise os dados que serão importados. Avaliações com 'attendantId' inválido ou avaliações já existentes serão ignoradas.
                         </CardDescription>
                          <div className="flex gap-4 pt-2">
                             <Badge variant="secondary" className="text-base"><CheckCircle className="mr-2 h-4 w-4 text-green-500"/>{validCount} Válidas</Badge>
@@ -222,7 +234,7 @@ export default function ImportarLegadoPage() {
                                                     <Badge variant="outline">{review.attendantName}</Badge>
                                                 ) : (
                                                     <div className="flex flex-col">
-                                                         <Badge variant="destructive">Inválido</Badge>
+                                                         <Badge variant="destructive">Inválido/Duplicado</Badge>
                                                          <span className="text-xs text-muted-foreground">{review.attendantId}</span>
                                                     </div>
                                                 )}

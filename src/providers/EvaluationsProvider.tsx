@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { useEvaluationsData } from '@/hooks/useEvaluationsData';
 import type { Evaluation, EvaluationImport, EvaluationAnalysis } from '@/lib/types';
 import { useGamification } from './GamificationProvider';
@@ -27,8 +27,14 @@ interface EvaluationsContextType {
 const EvaluationsContext = createContext<EvaluationsContextType | undefined>(undefined);
 
 export const EvaluationsProvider = ({ children }: { children: ReactNode }) => {
-    const { gamificationConfig, seasons } = useGamification();
-    const data = useEvaluationsData({ gamificationConfig, seasons });
+    const { gamificationConfig, activeSeason } = useGamification();
+    const data = useEvaluationsData({ gamificationConfig, activeSeason });
+
+    useEffect(() => {
+        data.fetchEvaluations();
+        data.fetchEvaluationImports();
+    }, [data.fetchEvaluations, data.fetchEvaluationImports]);
+
 
     return (
         <EvaluationsContext.Provider value={data}>
