@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ROLES } from "@/lib/types";
 import GamificationSeasonStatus from "@/components/GamificationSeasonStatus";
-import { getScoreFromRating } from "@/hooks/useGamificationData";
+import { getScoreFromRating } from "@/lib/gamification";
 
 const getMedal = (rank: number) => {
     if (rank === 1) return <span className="text-2xl" title="1º Lugar">🥇</span>;

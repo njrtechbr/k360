@@ -14,7 +14,7 @@ import { achievements } from "@/lib/achievements";
 import RewardTrack from "@/components/RewardTrack";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
-import { getScoreFromRating } from "@/hooks/useGamificationData";
+import { getScoreFromRating } from "@/lib/gamification";
 
 const getMedal = (rank: number) => {
     if (rank === 1) return <span className="text-2xl" title="1º Lugar">🥇</span>;

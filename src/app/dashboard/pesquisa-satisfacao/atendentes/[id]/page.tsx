@@ -19,7 +19,7 @@ import { getLevelFromXp } from '@/lib/xp';
 import { achievements } from "@/lib/achievements";
 import RewardTrack from "@/components/RewardTrack";
 import { cn } from "@/lib/utils";
-import { getScoreFromRating } from "@/hooks/useGamificationData";
+import { getScoreFromRating } from "@/lib/gamification";
 
 const RatingStars = ({ rating, className }: { rating: number, className?: string }) => {
     const totalStars = 5;
