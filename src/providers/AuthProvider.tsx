@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { ReactNode } from "react";
@@ -94,14 +95,14 @@ interface AuthContextType {
 
   // Evaluations
   evaluations: Evaluation[];
-  addEvaluation: (evaluationData: Omit<Evaluation, 'id' | 'xpGained'>) => Promise<Evaluation>;
+  addEvaluation: (evaluationData: Omit<Evaluation, 'id' | 'xpGained' | 'importId'>) => Promise<Evaluation>;
   deleteEvaluations: (evaluationIds: string[]) => Promise<void>;
   
   // Imports
   evaluationImports: EvaluationImport[];
   attendantImports: AttendantImport[];
   importLegacyEvaluations: (evaluationsData: Omit<Evaluation, 'xpGained'>[], fileName: string, userId: string) => Promise<void>;
-  importWhatsAppEvaluations: (evaluationsData: Omit<Evaluation, 'id' | 'xpGained'>[], agentMap: Record<string, string>, fileName: string, userId: string) => Promise<void>;
+  importWhatsAppEvaluations: (evaluationsData: Omit<Evaluation, 'id' | 'xpGained' | 'importId'>[], agentMap: Record<string, string>, fileName: string, userId: string) => Promise<void>;
   importAttendants: (attendantsData: Omit<Attendant, 'importId'>[], fileName: string, userId: string) => Promise<void>;
   revertEvaluationImport: (importId: string) => Promise<void>;
   revertAttendantImport: (importId: string) => Promise<void>;
@@ -483,7 +484,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [toast]);
 
   // --- Evaluation Actions ---
-  const addEvaluation = useCallback(async (evaluationData: Omit<Evaluation, 'id' | 'xpGained'>): Promise<Evaluation> => {
+  const addEvaluation = useCallback(async (evaluationData: Omit<Evaluation, 'id' | 'xpGained' | 'importId'>): Promise<Evaluation> => {
       const evaluationDate = new Date();
       const baseScore = getScoreFromRating(evaluationData.nota, gamificationConfig.ratingScores);
       
@@ -497,6 +498,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           id: '', // Will be set by Firestore
           data: evaluationDate.toISOString(),
           xpGained: finalXp,
+          importId: "native" // Mark as a native evaluation
       };
 
       const docRef = doc(collection(db, "evaluations"));
@@ -530,9 +532,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (evaluationIds.length === 0) return;
     setIsProcessing(true);
     try {
-        const chunkSize = 30;
-        for (let i = 0; i < evaluationIds.length; i += chunkSize) {
-            const chunk = evaluationIds.slice(i, i + chunkSize);
+        const evaluationsToDelete = evaluations.filter(ev => evaluationIds.includes(ev.id));
+        const importedEvaluationsToDelete = evaluationsToDelete.filter(ev => ev.importId !== 'native');
+
+        if (importedEvaluationsToDelete.length === 0) {
+            toast({ title: "Nenhuma avaliação importada para excluir", description: "Avaliações nativas não podem ser excluídas." });
+            setIsProcessing(false);
+            return;
+        }
+
+        const idsToDelete = importedEvaluationsToDelete.map(ev => ev.id);
+        
+        for (let i = 0; i < idsToDelete.length; i += 30) {
+            const chunk = idsToDelete.slice(i, i + 30);
+            if (chunk.length === 0) continue;
+
             const batch = writeBatch(db);
             
             // Query for related xp_events in chunks
@@ -553,10 +567,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
 
         // Update local state
-        setEvaluations(prev => prev.filter(ev => !evaluationIds.includes(ev.id)));
-        setXpEvents(prev => prev.filter(xp => !(xp.type === 'evaluation' && evaluationIds.includes(xp.relatedId))));
+        setEvaluations(prev => prev.filter(ev => !idsToDelete.includes(ev.id)));
+        setXpEvents(prev => prev.filter(xp => !(xp.type === 'evaluation' && idsToDelete.includes(xp.relatedId))));
 
-        toast({ title: "Exclusão Concluída", description: `${evaluationIds.length} avaliações e seus XPs foram removidos.` });
+        toast({ title: "Exclusão Concluída", description: `${idsToDelete.length} avaliações e seus XPs foram removidos.` });
 
     } catch (error: any) {
         console.error("Error deleting evaluations:", error);
@@ -564,7 +578,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } finally {
         setIsProcessing(false);
     }
-  }, [toast]);
+  }, [evaluations, toast]);
   
   // --- Gamification Actions ---
   const recalculateAllGamificationData = useCallback(async () => {
@@ -646,12 +660,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
         setImportStatus(prev => ({...prev, logs: [...prev.logs, `Iniciando importação do arquivo: ${fileName}`]}));
         const batch = writeBatch(db);
+        const importDocRef = doc(collection(db, "evaluationImports"));
+        
         evaluationsData.forEach(evData => {
             const docRef = doc(db, "evaluations", evData.id);
-            batch.set(docRef, evData);
+            batch.set(docRef, {...evData, importId: importDocRef.id});
         });
         
-        const importDocRef = doc(collection(db, "evaluationImports"));
         batch.set(importDocRef, { fileName, evaluationIds: evaluationsData.map(e => e.id), attendantMap: {}, importedBy: userId, importedAt: new Date().toISOString() });
         setImportStatus(prev => ({...prev, progress: 25, logs: [...prev.logs, `Lote com ${evaluationsData.length} avaliações preparado.`]}));
         
@@ -673,7 +688,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [recalculateAllGamificationData, toast]);
 
-  const importWhatsAppEvaluations = useCallback(async (evaluationsData: Omit<Evaluation, 'id' | 'xpGained'>[], agentMap: Record<string, string>, fileName: string, userId: string) => {
+  const importWhatsAppEvaluations = useCallback(async (evaluationsData: Omit<Evaluation, 'id' | 'xpGained' | 'importId'>[], agentMap: Record<string, string>, fileName: string, userId: string) => {
       setIsProcessing(true);
       setImportStatus({ isOpen: true, logs: [], progress: 0, title: 'Importando Avaliações (WhatsApp)', status: 'processing' });
 
@@ -681,14 +696,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setImportStatus(prev => ({...prev, logs: [...prev.logs, `Iniciando importação de ${fileName}`]}));
           const batch = writeBatch(db);
           const newEvaluationIds: string[] = [];
-          
+          const importDocRef = doc(collection(db, "evaluationImports"));
+
           evaluationsData.forEach(evData => {
               const docRef = doc(collection(db, "evaluations"));
-              batch.set(docRef, evData);
+              batch.set(docRef, {...evData, importId: importDocRef.id});
               newEvaluationIds.push(docRef.id);
           });
           
-          const importDocRef = doc(collection(db, "evaluationImports"));
           batch.set(importDocRef, { fileName, evaluationIds: newEvaluationIds, attendantMap: agentMap, importedBy: userId, importedAt: new Date().toISOString() });
           setImportStatus(prev => ({...prev, progress: 25, logs: [...prev.logs, `${evaluationsData.length} avaliações preparadas.`]}));
           
@@ -717,14 +732,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setImportStatus(prev => ({...prev, logs: [...prev.logs, `Iniciando importação de ${fileName}`]}));
           const batch = writeBatch(db);
           const newAttendantIds: string[] = [];
+          const importDocRef = doc(collection(db, "attendantImports"));
 
           attendantsData.forEach(attData => {
               const docRef = doc(db, "attendants", attData.id);
-              batch.set(docRef, attData);
+              batch.set(docRef, {...attData, importId: importDocRef.id});
               newAttendantIds.push(attData.id);
           });
           
-          const importDocRef = doc(collection(db, "attendantImports"));
           batch.set(importDocRef, { fileName, attendantIds: newAttendantIds, importedBy: userId, importedAt: new Date().toISOString() });
            setImportStatus(prev => ({...prev, progress: 50, logs: [...prev.logs, `${attendantsData.length} atendentes salvos no banco.`]}));
           
@@ -733,7 +748,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setImportStatus(prev => ({...prev, progress: 100, logs: [...prev.logs, 'Finalizando...']}));
           await fetchAllData();
 
-          setImportStatus(prev => ({...prev, status: 'done', title: 'Importação Concluída!', logs: [...prev.logs, 'Processo finalizado.'] }));
+          setImportStatus(prev => ({...prev, status: 'done', title: 'Importação de Atendentes Concluída!', logs: [...prev.logs, 'Processo finalizado.'] }));
           toast({ title: "Importação de Atendentes Concluída!" });
           setTimeout(() => setImportStatus(INITIAL_IMPORT_STATUS), 3000);
 

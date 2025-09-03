@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useAuth } from "@/providers/AuthProvider";
@@ -42,7 +43,7 @@ const RatingStars = ({ rating }: { rating: number }) => {
 
 
 export default function HistoricoImportacoesPage() {
-    const { user, isAuthenticated, loading, evaluationImports, allUsers, revertEvaluationImport, evaluations, attendants, deleteEvaluations } = useAuth();
+    const { user, isAuthenticated, loading, evaluationImports, revertEvaluationImport, evaluations, attendants, deleteEvaluations } = useAuth();
     const router = useRouter();
 
     const [isRevertDialogOpen, setIsRevertDialogOpen] = useState(false);
@@ -154,6 +155,8 @@ export default function HistoricoImportacoesPage() {
     if (loading || !user) {
         return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
     }
+    
+    const { allUsers } = useAuth(); // Fetch allUsers for the userMap
 
     const sortedImports = [...evaluationImports].sort((a, b) => new Date(b.importedAt).getTime() - new Date(a.importedAt).getTime());
 
