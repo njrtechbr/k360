@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useAuth } from "@/providers/AuthProvider";
@@ -8,7 +7,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Crown, Star as StarIcon, TrendingUp, TrendingDown, UserCircle, Shield, ChevronRight, BookOpen, BarChartHorizontal, Settings } from "lucide-react";
+import { Crown, Star as StarIcon, TrendingUp, TrendingDown, UserCircle, Shield, ChevronRight, BookOpen, BarChartHorizontal, Settings, History } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Attendant, Achievement } from "@/lib/types";
@@ -149,6 +148,17 @@ export default function GamificacaoPage() {
                 </Card>
                  <Card>
                     <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><History /> Histórico de Temporadas</CardTitle>
+                        <CardDescription>Veja o "Hall da Fama" com os resultados de temporadas anteriores.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                       <Button asChild>
+                           <Link href="/dashboard/gamificacao/historico-temporadas">Ver Histórico</Link>
+                       </Button>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader>
                         <CardTitle className="flex items-center gap-2"><BookOpen /> Manual da Gamificação</CardTitle>
                         <CardDescription>Entenda como funciona o sistema de pontos, níveis e troféus.</CardDescription>
                     </CardHeader>
@@ -177,7 +187,7 @@ export default function GamificacaoPage() {
                 <div className="lg:col-span-2">
                     <Card className="shadow-lg">
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><Crown /> Leaderboard</CardTitle>
+                            <CardTitle className="flex items-center gap-2"><Crown /> Leaderboard (Temporada Atual)</CardTitle>
                             <CardDescription>Classificação dos atendentes com base na pontuação total (XP) da temporada atual.</CardDescription>
                         </CardHeader>
                         <CardContent>
