@@ -545,36 +545,51 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const deleteEvaluations = useCallback(async (evaluationIds: string[]) => {
         if (evaluationIds.length === 0) return;
         setIsProcessing(true);
+        
+        let deletedCount = 0;
+        let skippedCount = 0;
+        
         try {
+            const batch = writeBatch(db);
+            const xpEventsToDelete = new Set<string>();
+
+            // Find all related xp_events in chunks
             for (let i = 0; i < evaluationIds.length; i += 30) {
                 const chunk = evaluationIds.slice(i, i + 30);
                 if (chunk.length === 0) continue;
-
-                const batch = writeBatch(db);
                 
-                const evaluationsToDelete = evaluations.filter(ev => chunk.includes(ev.id));
-                const nativeEvaluations = evaluationsToDelete.filter(ev => ev.importId === 'native');
-                if (nativeEvaluations.length > 0) {
-                    toast({ variant: 'destructive', title: 'Ação Interrompida', description: 'A exclusão em massa só é permitida para avaliações importadas.' });
-                    continue; // Skip this chunk if it contains native evaluations
-                }
-                
-                // Query for related xp_events to delete them as well
-                const xpEventsQuery = query(collection(db, "xp_events"), where("type", "==", "evaluation"), where("relatedId", "in", chunk));
-                const xpEventsSnapshot = await getDocs(xpEventsQuery);
-                
-                // Add evaluations and their related xp_events to the batch
-                chunk.forEach(id => batch.delete(doc(db, "evaluations", id)));
-                xpEventsSnapshot.forEach(doc => batch.delete(doc.ref));
-                
-                await batch.commit();
+                const q = query(collection(db, "xp_events"), where("relatedId", "in", chunk), where("type", "==", "evaluation"));
+                const snapshot = await getDocs(q);
+                snapshot.forEach(doc => xpEventsToDelete.add(doc.id));
             }
+            
+            // Prepare batch delete
+            for (const evaluationId of evaluationIds) {
+                const evaluation = evaluations.find(ev => ev.id === evaluationId);
+                if (evaluation && evaluation.importId === 'native') {
+                    skippedCount++;
+                    continue; // Skip native evaluations
+                }
+                batch.delete(doc(db, "evaluations", evaluationId));
+                deletedCount++;
+            }
+
+            xpEventsToDelete.forEach(eventId => {
+                batch.delete(doc(db, "xp_events", eventId));
+            });
+
+            await batch.commit();
 
             // Update local state for immediate feedback
             setEvaluations(prev => prev.filter(ev => !evaluationIds.includes(ev.id)));
-            setXpEvents(prev => prev.filter(xp => !(xp.type === 'evaluation' && evaluationIds.includes(xp.relatedId))));
+            setXpEvents(prev => prev.filter(xp => !xpEventsToDelete.has(xp.id)));
 
-            toast({ title: "Exclusão Concluída", description: `${evaluationIds.length} avaliações e seus XPs foram removidos.` });
+            if(deletedCount > 0) {
+              toast({ title: "Exclusão Concluída", description: `${deletedCount} avaliações e seus XPs foram removidos.` });
+            }
+            if(skippedCount > 0) {
+              toast({ variant: 'default', title: 'Aviso', description: `${skippedCount} avaliações nativas foram ignoradas e não podem ser excluídas em massa.` });
+            }
 
         } catch (error: any) {
             console.error("Error deleting evaluations:", error);
@@ -984,4 +999,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
