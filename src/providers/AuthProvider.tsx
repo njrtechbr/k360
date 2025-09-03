@@ -543,7 +543,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return newEvaluation;
   }, [gamificationConfig, seasons]);
 
-  const deleteEvaluations = useCallback(async (evaluationIds: string[]) => {
+const deleteEvaluations = useCallback(async (evaluationIds: string[]) => {
     if (!evaluationIds || evaluationIds.length === 0) return;
     setIsProcessing(true);
     let totalDeleted = 0;
@@ -553,41 +553,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const allDeletedXpEventIds = new Set<string>();
 
     try {
-        for (let i = 0; i < evaluationIds.length; i += 30) {
-            const chunk = evaluationIds.slice(i, i + 30);
-            const batch = writeBatch(db);
-            const evaluationDocsToDelete = new Set<string>();
-            const xpEventsToDelete = new Set<string>();
-            
-            const evaluationsQuery = query(collection(db, "evaluations"), where(documentId(), "in", chunk));
-            const evaluationsSnapshot = await getDocs(evaluationsQuery);
+        const fullEvaluations = await getDocs(query(collection(db, "evaluations"), where(documentId(), "in", evaluationIds.slice(0, 30))))
+            .then(snap => snap.docs.map(d => ({id: d.id, ...d.data()} as Evaluation)));
 
-            evaluationsSnapshot.forEach(doc => {
-                const evaluation = doc.data() as Evaluation;
-                if (evaluation.importId === 'native') {
-                    totalSkipped++;
-                } else {
-                    evaluationDocsToDelete.add(doc.id);
-                }
-            });
-
-            if (evaluationDocsToDelete.size > 0) {
-                const idsToDeleteArray = Array.from(evaluationDocsToDelete);
-                const q = query(collection(db, "xp_events"), where("relatedId", "in", idsToDeleteArray), where("type", "==", "evaluation"));
-                const snapshot = await getDocs(q);
-                snapshot.forEach(doc => xpEventsToDelete.add(doc.id));
-                
-                evaluationDocsToDelete.forEach(id => batch.delete(doc(db, "evaluations", id)));
-                xpEventsToDelete.forEach(id => batch.delete(doc(db, "xp_events", id)));
-
-                await batch.commit();
-                
-                evaluationDocsToDelete.forEach(id => allDeletedEvaluationIds.add(id));
-                xpEventsToDelete.forEach(id => allDeletedXpEventIds.add(id));
-                totalDeleted += evaluationDocsToDelete.size;
+        const deletableEvaluations = fullEvaluations.filter(ev => {
+            if (ev.importId === 'native') {
+                totalSkipped++;
+                return false;
             }
-        }
+            return true;
+        });
+
+        const deletableEvaluationIds = deletableEvaluations.map(ev => ev.id);
         
+        for (let i = 0; i < deletableEvaluationIds.length; i += 30) {
+            const batch = writeBatch(db);
+            const chunk = deletableEvaluationIds.slice(i, i + 30);
+            
+            if (chunk.length === 0) continue;
+            
+            const xpEventsQuery = query(collection(db, "xp_events"), where("relatedId", "in", chunk), where("type", "==", "evaluation"));
+            const xpEventsSnapshot = await getDocs(xpEventsQuery);
+            
+            const xpEventIdsToDelete = xpEventsSnapshot.docs.map(doc => doc.id);
+            
+            chunk.forEach(id => {
+                batch.delete(doc(db, "evaluations", id));
+                allDeletedEvaluationIds.add(id);
+            });
+            xpEventIdsToDelete.forEach(id => {
+                batch.delete(doc(db, "xp_events", id));
+                allDeletedXpEventIds.add(id);
+            });
+            
+            await batch.commit();
+            totalDeleted += chunk.length;
+        }
+
         if (totalDeleted > 0) {
             setEvaluations(prev => prev.filter(ev => !allDeletedEvaluationIds.has(ev.id)));
             setXpEvents(prev => prev.filter(xp => !allDeletedXpEventIds.has(xp.id)));
@@ -1027,3 +1029,4 @@ export const useAuth = () => {
   }
   return context;
 };
+
