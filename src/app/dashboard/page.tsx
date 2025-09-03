@@ -13,6 +13,7 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { differenceInDays, format, getYear, setYear, isFuture, addYears, differenceInYears } from 'date-fns';
 import { Skeleton } from "@/components/ui/skeleton";
+import PerformanceStatusBar from "@/components/PerformanceStatusBar";
 
 const RoleIcon = ({ role }: { role: string }) => {
     switch (role) {
@@ -79,23 +80,28 @@ export default function DashboardPage() {
   const router = useRouter();
   const [isDataLoading, setIsDataLoading] = useState(true);
 
+  // Performance Metrics
+  const [dataLoadingTime, setDataLoadingTime] = useState<number | null>(null);
+  const [renderTime, setRenderTime] = useState<number | null>(null);
   const renderTimeRef = useRef(performance.now());
 
   useEffect(() => {
-    const startRenderTime = performance.now();
-    
-    // Log the time after the component has rendered
-    const timeoutId = setTimeout(() => {
-        const endRenderTime = performance.now();
-        console.log(`PERF: Page /dashboard rendered in ${(endRenderTime - startRenderTime).toFixed(2)}ms`);
-    }, 0);
-
-    return () => clearTimeout(timeoutId);
-  }, [isDataLoading]); // Re-run when data loading state changes
+    if (isDataLoading) {
+      renderTimeRef.current = performance.now();
+    } else {
+      const endRenderTime = performance.now();
+      const startRenderTime = renderTimeRef.current;
+      setRenderTime(endRenderTime - startRenderTime);
+      console.log(`PERF: Page /dashboard rendered in ${(endRenderTime - startRenderTime).toFixed(2)}ms`);
+    }
+  }, [isDataLoading]);
 
   const loadData = useCallback(async () => {
     setIsDataLoading(true);
+    const startTime = performance.now();
     await fetchAttendants();
+    const endTime = performance.now();
+    setDataLoadingTime(endTime - startTime);
     setIsDataLoading(false);
   }, [fetchAttendants]);
 
@@ -132,171 +138,179 @@ export default function DashboardPage() {
   const userModules = user.modules?.map(moduleId => moduleMap[moduleId]).filter(Boolean) || [];
 
   return (
-    <div className="space-y-8">
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-3xl font-bold font-heading">Dashboard</h1>
-          <p className="text-muted-foreground">Bem-vindo de volta, {user.name}!</p>
+    <>
+      <div className="space-y-8">
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold font-heading">Dashboard</h1>
+            <p className="text-muted-foreground">Bem-vindo de volta, {user.name}!</p>
+          </div>
+          <Badge variant="outline" className="text-sm capitalize flex items-center gap-2">
+              <RoleIcon role={user.role} />
+              Seu nível de acesso: {user.role}
+          </Badge>
         </div>
-         <Badge variant="outline" className="text-sm capitalize flex items-center gap-2">
-            <RoleIcon role={user.role} />
-            Seu nível de acesso: {user.role}
-        </Badge>
+        
+        <div className="grid md:grid-cols-2 gap-8">
+              <Card>
+                  <CardHeader>
+                      <CardTitle className="flex items-center gap-2"><Gift className="text-pink-500"/> Aniversários</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                      {isDataLoading ? (
+                          Array.from({ length: 2 }).map((_, i) => (
+                              <div key={i} className="flex items-center justify-between p-2">
+                                  <div className="flex items-center gap-3">
+                                      <Skeleton className="h-10 w-10 rounded-full" />
+                                      <div className="space-y-1">
+                                          <Skeleton className="h-4 w-32" />
+                                          <Skeleton className="h-3 w-24" />
+                                      </div>
+                                  </div>
+                                  <Skeleton className="h-6 w-16 rounded-full" />
+                              </div>
+                          ))
+                      ) : upcomingBirthdays.length > 0 ? upcomingBirthdays.map(({ attendant, daysUntil, years, date }) => (
+                          <div key={attendant.id} className="flex items-center justify-between p-2 rounded-md border">
+                              <Link href={`/dashboard/rh/atendentes/${attendant.id}`} className="flex items-center gap-3 group">
+                                  <Avatar className="h-10 w-10">
+                                      <AvatarImage src={attendant.avatarUrl} alt={attendant.name} />
+                                      <AvatarFallback>{getInitials(attendant.name)}</AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                      <p className="font-medium group-hover:underline">{attendant.name}</p>
+                                      <p className="text-sm text-muted-foreground flex items-center gap-1.5"><Cake size={14}/> {format(date, 'dd/MM')} ({years} anos)</p>
+                                  </div>
+                              </Link>
+                              <Badge variant="outline">{daysUntil === 0 ? 'Hoje!' : `em ${daysUntil}d`}</Badge>
+                          </div>
+                      )) : <p className="text-sm text-muted-foreground">Nenhum aniversário próximo.</p>}
+                  </CardContent>
+              </Card>
+              <Card>
+                  <CardHeader>
+                      <CardTitle className="flex items-center gap-2"><Building2 className="text-blue-500" /> Aniversários de Admissão</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                      {isDataLoading ? (
+                          Array.from({ length: 2 }).map((_, i) => (
+                              <div key={i} className="flex items-center justify-between p-2">
+                                  <div className="flex items-center gap-3">
+                                      <Skeleton className="h-10 w-10 rounded-full" />
+                                      <div className="space-y-1">
+                                          <Skeleton className="h-4 w-32" />
+                                          <Skeleton className="h-3 w-24" />
+                                      </div>
+                                  </div>
+                                  <Skeleton className="h-6 w-16 rounded-full" />
+                              </div>
+                          ))
+                      ) : upcomingWorkAnniversaries.length > 0 ? upcomingWorkAnniversaries.map(({ attendant, daysUntil, years, date }) => (
+                          <div key={attendant.id} className="flex items-center justify-between p-2 rounded-md border">
+                              <Link href={`/dashboard/rh/atendentes/${attendant.id}`} className="flex items-center gap-3 group">
+                                  <Avatar className="h-10 w-10">
+                                      <AvatarImage src={attendant.avatarUrl} alt={attendant.name} />
+                                      <AvatarFallback>{getInitials(attendant.name)}</AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                      <p className="font-medium group-hover:underline">{attendant.name}</p>
+                                      <p className="text-sm text-muted-foreground flex items-center gap-1.5"><CalendarDays size={14}/> {format(date, 'dd/MM')} ({years} anos)</p>
+                                  </div>
+                              </Link>
+                              <Badge variant="outline">{daysUntil === 0 ? 'Hoje!' : `em ${daysUntil}d`}</Badge>
+                          </div>
+                      )) : <p className="text-sm text-muted-foreground">Nenhum aniversário de admissão próximo.</p>}
+                  </CardContent>
+              </Card>
+          </div>
+
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Seus Módulos de Acesso</CardTitle>
+            <CardDescription>Estes são os módulos do sistema que você pode acessar.</CardDescription>
+          </CardHeader>
+          <CardContent>
+              <div className="flex gap-2 mt-2 flex-wrap">
+                  {userModules.length > 0 ? (
+                      userModules.map(moduleName => <Badge key={moduleName} className="capitalize">{moduleName}</Badge>)
+                  ) : (
+                      <p className="text-sm text-muted-foreground">Nenhum módulo atribuído.</p>
+                  )}
+              </div>
+          </CardContent>
+        </Card>
+        
+        {canManageSystem && (
+          <div>
+            <h2 className="text-2xl font-bold font-heading mb-4">Área Administrativa</h2>
+              <div className="grid md:grid-cols-2 gap-8">
+                  <Card>
+                      <CardHeader>
+                        <CardTitle>Gerenciamento de Usuários</CardTitle>
+                        <CardDescription>Adicione, edite ou remova usuários do sistema.</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                          <p className="text-sm text-muted-foreground mb-4">
+                              Controle os níveis de acesso e as permissões de cada usuário.
+                          </p>
+                          <Button asChild>
+                              <Link href="/dashboard/usuarios">
+                                  <Users className="mr-2 h-4 w-4" />
+                                  Gerenciar Usuários
+                              </Link>
+                          </Button>
+                      </CardContent>
+                  </Card>
+                  <Card>
+                      <CardHeader>
+                          <CardTitle>Gerenciamento de Módulos</CardTitle>
+                          <CardDescription>Adicione ou edite os módulos do sistema.</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                          <p className="text-sm text-muted-foreground mb-4">
+                              Os módulos definem as áreas do sistema que os usuários podem acessar.
+                          </p>
+                          <Button asChild>
+                              <Link href="/dashboard/modulos">
+                                  <Wrench className="mr-2 h-4 w-4" />
+                                  Gerenciar Módulos
+                              </Link>
+                          </Button>
+                      </CardContent>
+                  </Card>
+              </div>
+          </div>
+        )}
+        {(user.role === ROLES.SUPERVISOR) && (
+          <Card>
+              <CardHeader>
+                  <CardTitle>Visão do Supervisor</CardTitle>
+                  <CardDescription>Você tem permissões de supervisão.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                  <p>Aqui você pode ver relatórios e dados relevantes para sua função.</p>
+              </CardContent>
+          </Card>
+        )}
+        {(user.role === ROLES.USER) && (
+          <Card>
+              <CardHeader>
+                  <CardTitle>Painel do Usuário</CardTitle>
+                  <CardDescription>Bem-vindo à sua área pessoal.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                  <p>Você pode visualizar e editar seu perfil na página de perfil.</p>
+              </CardContent>
+          </Card>
+        )}
       </div>
-      
-       <div className="grid md:grid-cols-2 gap-8">
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Gift className="text-pink-500"/> Aniversários</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                    {isDataLoading ? (
-                         Array.from({ length: 2 }).map((_, i) => (
-                            <div key={i} className="flex items-center justify-between p-2">
-                                <div className="flex items-center gap-3">
-                                    <Skeleton className="h-10 w-10 rounded-full" />
-                                    <div className="space-y-1">
-                                        <Skeleton className="h-4 w-32" />
-                                        <Skeleton className="h-3 w-24" />
-                                    </div>
-                                </div>
-                                <Skeleton className="h-6 w-16 rounded-full" />
-                            </div>
-                        ))
-                    ) : upcomingBirthdays.length > 0 ? upcomingBirthdays.map(({ attendant, daysUntil, years, date }) => (
-                         <div key={attendant.id} className="flex items-center justify-between p-2 rounded-md border">
-                            <Link href={`/dashboard/rh/atendentes/${attendant.id}`} className="flex items-center gap-3 group">
-                                <Avatar className="h-10 w-10">
-                                    <AvatarImage src={attendant.avatarUrl} alt={attendant.name} />
-                                    <AvatarFallback>{getInitials(attendant.name)}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                    <p className="font-medium group-hover:underline">{attendant.name}</p>
-                                    <p className="text-sm text-muted-foreground flex items-center gap-1.5"><Cake size={14}/> {format(date, 'dd/MM')} ({years} anos)</p>
-                                </div>
-                            </Link>
-                            <Badge variant="outline">{daysUntil === 0 ? 'Hoje!' : `em ${daysUntil}d`}</Badge>
-                        </div>
-                    )) : <p className="text-sm text-muted-foreground">Nenhum aniversário próximo.</p>}
-                </CardContent>
-            </Card>
-             <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Building2 className="text-blue-500" /> Aniversários de Admissão</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                     {isDataLoading ? (
-                         Array.from({ length: 2 }).map((_, i) => (
-                            <div key={i} className="flex items-center justify-between p-2">
-                                <div className="flex items-center gap-3">
-                                    <Skeleton className="h-10 w-10 rounded-full" />
-                                    <div className="space-y-1">
-                                        <Skeleton className="h-4 w-32" />
-                                        <Skeleton className="h-3 w-24" />
-                                    </div>
-                                </div>
-                                <Skeleton className="h-6 w-16 rounded-full" />
-                            </div>
-                        ))
-                    ) : upcomingWorkAnniversaries.length > 0 ? upcomingWorkAnniversaries.map(({ attendant, daysUntil, years, date }) => (
-                         <div key={attendant.id} className="flex items-center justify-between p-2 rounded-md border">
-                             <Link href={`/dashboard/rh/atendentes/${attendant.id}`} className="flex items-center gap-3 group">
-                                <Avatar className="h-10 w-10">
-                                    <AvatarImage src={attendant.avatarUrl} alt={attendant.name} />
-                                    <AvatarFallback>{getInitials(attendant.name)}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                    <p className="font-medium group-hover:underline">{attendant.name}</p>
-                                    <p className="text-sm text-muted-foreground flex items-center gap-1.5"><CalendarDays size={14}/> {format(date, 'dd/MM')} ({years} anos)</p>
-                                </div>
-                            </Link>
-                            <Badge variant="outline">{daysUntil === 0 ? 'Hoje!' : `em ${daysUntil}d`}</Badge>
-                        </div>
-                    )) : <p className="text-sm text-muted-foreground">Nenhum aniversário de admissão próximo.</p>}
-                </CardContent>
-            </Card>
-        </div>
-
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Seus Módulos de Acesso</CardTitle>
-          <CardDescription>Estes são os módulos do sistema que você pode acessar.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            <div className="flex gap-2 mt-2 flex-wrap">
-                {userModules.length > 0 ? (
-                    userModules.map(moduleName => <Badge key={moduleName} className="capitalize">{moduleName}</Badge>)
-                ) : (
-                    <p className="text-sm text-muted-foreground">Nenhum módulo atribuído.</p>
-                )}
-            </div>
-        </CardContent>
-      </Card>
-      
-      {canManageSystem && (
-        <div>
-           <h2 className="text-2xl font-bold font-heading mb-4">Área Administrativa</h2>
-            <div className="grid md:grid-cols-2 gap-8">
-                <Card>
-                    <CardHeader>
-                      <CardTitle>Gerenciamento de Usuários</CardTitle>
-                      <CardDescription>Adicione, edite ou remova usuários do sistema.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-sm text-muted-foreground mb-4">
-                            Controle os níveis de acesso e as permissões de cada usuário.
-                        </p>
-                        <Button asChild>
-                            <Link href="/dashboard/usuarios">
-                                <Users className="mr-2 h-4 w-4" />
-                                Gerenciar Usuários
-                            </Link>
-                        </Button>
-                    </CardContent>
-                </Card>
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>Gerenciamento de Módulos</CardTitle>
-                        <CardDescription>Adicione ou edite os módulos do sistema.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-sm text-muted-foreground mb-4">
-                            Os módulos definem as áreas do sistema que os usuários podem acessar.
-                        </p>
-                        <Button asChild>
-                            <Link href="/dashboard/modulos">
-                                <Wrench className="mr-2 h-4 w-4" />
-                                Gerenciar Módulos
-                            </Link>
-                        </Button>
-                    </CardContent>
-                </Card>
-            </div>
-        </div>
-      )}
-       {(user.role === ROLES.SUPERVISOR) && (
-        <Card>
-            <CardHeader>
-                <CardTitle>Visão do Supervisor</CardTitle>
-                <CardDescription>Você tem permissões de supervisão.</CardDescription>
-            </CardHeader>
-             <CardContent>
-                <p>Aqui você pode ver relatórios e dados relevantes para sua função.</p>
-            </CardContent>
-        </Card>
-      )}
-       {(user.role === ROLES.USER) && (
-        <Card>
-            <CardHeader>
-                <CardTitle>Painel do Usuário</CardTitle>
-                <CardDescription>Bem-vindo à sua área pessoal.</CardDescription>
-            </CardHeader>
-             <CardContent>
-                <p>Você pode visualizar e editar seu perfil na página de perfil.</p>
-            </CardContent>
-        </Card>
-      )}
-    </div>
+      <PerformanceStatusBar 
+        dataLoadingTime={dataLoadingTime}
+        renderTime={renderTime}
+        itemCount={attendants.length}
+        collectionName="atendentes"
+      />
+    </>
   );
 }
