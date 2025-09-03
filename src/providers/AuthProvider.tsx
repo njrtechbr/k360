@@ -106,14 +106,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Hooks
   const modulesData = useModulesData();
-  const usersData = useUsersData({ user, setUser, fetchAllUsers: modulesData.fetchModules } as any);
+  const usersData = useUsersData({ user, setUser });
   const attendantsData = useAttendantsData();
   const gamificationData = useGamificationData();
   const evaluationsData = useEvaluationsData({ gamificationConfig: gamificationData.gamificationConfig, seasons: gamificationData.seasons });
   const rhConfigData = useRhConfigData();
 
-  const { fetchAllUsers } = usersData;
+  const { fetchAllUsers, setAllUsers } = usersData;
   const { fetchModules } = modulesData;
+  const { fetchAttendants } = attendantsData;
+  const { fetchEvaluations } = evaluationsData;
   const { fetchFuncoes, fetchSetores } = rhConfigData;
 
   useEffect(() => {
@@ -121,12 +123,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.log("AUTH: Iniciando inicialização do App...");
         setLoading(true);
 
-        await Promise.all([
-          fetchModules(),
-          fetchFuncoes(),
-          fetchSetores(),
-        ]);
-        
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
                 const userDocRef = doc(db, "users", firebaseUser.uid);
@@ -141,7 +137,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                         name: firebaseUser.displayName || "Novo Usuário",
                         email: firebaseUser.email!,
                         role: ROLES.USER,
-                        modules: [] // Start with no modules, admin should assign
+                        modules: []
                     };
                     await setDoc(userDocRef, newUser);
                     const createdUserData = { id: firebaseUser.uid, ...newUser };
@@ -150,6 +146,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             } else {
                  console.log("AUTH: Nenhum usuário autenticado.");
                  setUser(null);
+                 setAllUsers([]);
             }
              console.log("AUTH: Inicialização concluída.");
              setLoading(false);
@@ -162,7 +159,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     initializeApp();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const login = async (email: string, password: string) => {
