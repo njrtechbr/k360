@@ -52,6 +52,7 @@ export default function GamificacaoPage() {
     const leaderboard = useMemo(() => {
         const xpByAttendant = new Map<string, number>();
 
+        // 1. Filter XP events for the active season
         const seasonXpEvents = activeSeason 
             ? xpEvents.filter(e => {
                 const eventDate = new Date(e.date);
@@ -59,11 +60,13 @@ export default function GamificacaoPage() {
             })
             : [];
         
+        // 2. Sum points from those events
         seasonXpEvents.forEach(event => {
             const currentXp = xpByAttendant.get(event.attendantId) || 0;
             xpByAttendant.set(event.attendantId, currentXp + event.points);
         });
 
+        // 3. Filter evaluations for the active season to get the count
         const evalsInSeason = activeSeason
             ? evaluations.filter(e => {
                 const eventDate = new Date(e.data);
@@ -71,6 +74,7 @@ export default function GamificacaoPage() {
             })
             : [];
 
+        // 4. Map attendants to their calculated score and evaluation count
         return attendants
             .map(attendant => {
                 const totalScore = xpByAttendant.get(attendant.id) || 0;

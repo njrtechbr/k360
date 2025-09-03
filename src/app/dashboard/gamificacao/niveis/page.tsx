@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useAuth } from "@/providers/AuthProvider";
@@ -36,6 +35,7 @@ export default function NiveisPage() {
     const leaderboard = useMemo(() => {
         const xpByAttendant = new Map<string, number>();
 
+        // 1. Filter XP events for the active season
         const seasonXpEvents = activeSeason 
             ? xpEvents.filter(e => {
                 const eventDate = new Date(e.date);
@@ -43,11 +43,13 @@ export default function NiveisPage() {
             })
             : [];
         
+        // 2. Sum points from those events
         seasonXpEvents.forEach(event => {
             const currentXp = xpByAttendant.get(event.attendantId) || 0;
             xpByAttendant.set(event.attendantId, currentXp + event.points);
         });
 
+        // 3. Map attendants to their calculated score
         return attendants
             .map(attendant => {
                 const totalScore = xpByAttendant.get(attendant.id) || 0;

@@ -10,7 +10,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserCircle, Shield } from "lucide-react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { getLevelFromXp, MAX_LEVEL } from '@/lib/xp';
-import { achievements } from "@/lib/achievements";
 import RewardTrack from "@/components/RewardTrack";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
@@ -24,7 +23,7 @@ const getMedal = (rank: number) => {
 };
 
 export default function NiveisPage() {
-    const { user, isAuthenticated, loading, evaluations, attendants, aiAnalysisResults, gamificationConfig } = useAuth();
+    const { user, isAuthenticated, loading, evaluations, attendants, aiAnalysisResults, gamificationConfig, xpEvents, activeSeason } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
@@ -34,16 +33,26 @@ export default function NiveisPage() {
     }, [isAuthenticated, loading, router]);
     
     const leaderboard = useMemo(() => {
+        const xpByAttendant = new Map<string, number>();
+
+        // 1. Filter XP events for the active season
+        const seasonXpEvents = activeSeason 
+            ? xpEvents.filter(e => {
+                const eventDate = new Date(e.date);
+                return eventDate >= new Date(activeSeason.startDate) && eventDate <= new Date(activeSeason.endDate);
+            })
+            : [];
+        
+        // 2. Sum points from those events
+        seasonXpEvents.forEach(event => {
+            const currentXp = xpByAttendant.get(event.attendantId) || 0;
+            xpByAttendant.set(event.attendantId, currentXp + event.points);
+        });
+        
+        // 3. Map attendants to their calculated score
         return attendants
             .map(attendant => {
-                const attendantEvaluations = evaluations.filter(ev => ev.attendantId === attendant.id);
-                
-                const scoreFromRatings = attendantEvaluations.reduce((acc, ev) => acc + getScoreFromRating(ev.nota, gamificationConfig.ratingScores), 0);
-                
-                const unlockedAchievements = achievements.filter(ach => ach.isUnlocked(attendant, attendantEvaluations, evaluations, attendants, aiAnalysisResults));
-                const scoreFromAchievements = unlockedAchievements.reduce((acc, ach) => acc + ach.xp, 0);
-
-                const totalScore = scoreFromRatings + scoreFromAchievements;
+                const totalScore = xpByAttendant.get(attendant.id) || 0;
                 const levelData = getLevelFromXp(totalScore);
 
                 return {
@@ -56,7 +65,7 @@ export default function NiveisPage() {
             })
             .sort((a, b) => b.score - a.score);
 
-    }, [evaluations, attendants, aiAnalysisResults, gamificationConfig]);
+    }, [attendants, xpEvents, activeSeason]);
 
 
     if (loading || !user) {
