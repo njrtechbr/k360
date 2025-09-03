@@ -24,6 +24,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const RatingStars = ({ rating }: { rating: number }) => {
     const totalStars = 5;
@@ -41,18 +42,28 @@ const RatingStars = ({ rating }: { rating: number }) => {
 
 
 export default function HistoricoImportacoesPage() {
-    const { user, isAuthenticated, loading, evaluationImports, allUsers, revertEvaluationImport, evaluations, attendants } = useAuth();
+    const { user, isAuthenticated, loading, evaluationImports, allUsers, revertEvaluationImport, evaluations, attendants, deleteEvaluations } = useAuth();
     const router = useRouter();
 
     const [isRevertDialogOpen, setIsRevertDialogOpen] = useState(false);
     const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+    const [isDeleteSelectedOpen, setIsDeleteSelectedOpen] = useState(false);
+
     const [selectedImport, setSelectedImport] = useState<EvaluationImport | null>(null);
+    const [selectedEvaluationIds, setSelectedEvaluationIds] = useState<string[]>([]);
+
 
     useEffect(() => {
         if (!loading && !isAuthenticated) {
             router.push("/login");
         }
     }, [isAuthenticated, loading, router]);
+
+    useEffect(() => {
+        if (!isDetailsDialogOpen) {
+            setSelectedEvaluationIds([]);
+        }
+    }, [isDetailsDialogOpen]);
 
     const userMap = useMemo(() => {
         return allUsers.reduce((acc, u) => {
@@ -83,15 +94,36 @@ export default function HistoricoImportacoesPage() {
         setSelectedImport(importRecord);
         setIsDetailsDialogOpen(true);
     }
+    
+    const handleDeleteSelectedClick = () => {
+        if (selectedEvaluationIds.length > 0) {
+            setIsDeleteSelectedOpen(true);
+        }
+    };
 
     const handleRevertConfirm = async () => {
         if (!selectedImport) return;
-        revertEvaluationImport(selectedImport.id);
+        await revertEvaluationImport(selectedImport.id);
         setIsRevertDialogOpen(false);
         setSelectedImport(null);
     };
     
-    const formatDateSafe = (dateStr: string) => {
+    const handleDeleteSelectedConfirm = async () => {
+        await deleteEvaluations(selectedEvaluationIds);
+        setIsDeleteSelectedOpen(false);
+        setSelectedEvaluationIds([]);
+        // Optimistically update the view
+        if (selectedImport) {
+            const updatedImport = {
+                ...selectedImport,
+                evaluationIds: selectedImport.evaluationIds.filter(id => !selectedEvaluationIds.includes(id))
+            };
+            setSelectedImport(updatedImport);
+        }
+    };
+    
+    const formatDateSafe = (dateStr: string | null) => {
+        if (!dateStr) return "Data inválida";
         try {
             const date = new Date(dateStr);
             if (isNaN(date.getTime())) {
@@ -100,6 +132,22 @@ export default function HistoricoImportacoesPage() {
             return format(date, "dd/MM/yy HH:mm", { locale: ptBR });
         } catch (error) {
             return "Data inválida";
+        }
+    };
+    
+    const handleSelectAll = (checked: boolean) => {
+        if (checked) {
+            setSelectedEvaluationIds(evaluationsForSelectedImport.map(e => e.id));
+        } else {
+            setSelectedEvaluationIds([]);
+        }
+    };
+    
+    const handleSelectRow = (id: string, checked: boolean) => {
+        if (checked) {
+            setSelectedEvaluationIds(prev => [...prev, id]);
+        } else {
+            setSelectedEvaluationIds(prev => prev.filter(rowId => rowId !== id));
         }
     };
 
@@ -112,12 +160,12 @@ export default function HistoricoImportacoesPage() {
     return (
         <>
             <div className="space-y-8">
-                <h1 className="text-3xl font-bold">Histórico de Importações de Avaliações</h1>
+                <h1 className="text-3xl font-bold">Gerenciar Importações de Avaliações</h1>
                 <Card>
                     <CardHeader>
                         <CardTitle>Lotes Importados</CardTitle>
                         <CardDescription>
-                            Aqui está a lista de todas as importações de avaliações via CSV. Você pode ver os detalhes ou reverter uma importação.
+                            Gerencie os lotes de avaliações importados. Você pode ver os detalhes de cada lote, reverter uma importação inteira ou excluir avaliações específicas.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -162,7 +210,7 @@ export default function HistoricoImportacoesPage() {
                                                     <Eye className="mr-2 h-4 w-4" /> Detalhes
                                                 </Button>
                                                 <Button variant="destructive" size="sm" onClick={() => handleRevertClick(importRecord)}>
-                                                    <Trash2 className="mr-2 h-4 w-4" /> Reverter
+                                                    <Trash2 className="mr-2 h-4 w-4" /> Reverter Lote
                                                 </Button>
                                             </TableCell>
                                         </TableRow>
@@ -182,18 +230,23 @@ export default function HistoricoImportacoesPage() {
 
             {/* Details Dialog */}
             <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-                <DialogContent className="max-w-3xl">
+                <DialogContent className="max-w-4xl">
                     <DialogHeader>
                         <DialogTitle>Detalhes da Importação</DialogTitle>
                         <DialogDescription>
-                           Arquivo: <span className="font-semibold">{selectedImport?.fileName}</span> <br/>
-                           Data: <span className="font-semibold">{selectedImport ? formatDateSafe(selectedImport.importedAt) : ''}</span>
+                           Arquivo: <span className="font-semibold">{selectedImport?.fileName}</span>. Visualize e gerencie as avaliações deste lote.
                         </DialogDescription>
                     </DialogHeader>
                     <ScrollArea className="h-96">
                         <Table>
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead className="w-[50px]">
+                                        <Checkbox
+                                            checked={selectedEvaluationIds.length > 0 && selectedEvaluationIds.length === evaluationsForSelectedImport.length}
+                                            onCheckedChange={handleSelectAll}
+                                        />
+                                    </TableHead>
                                     <TableHead>Atendente</TableHead>
                                     <TableHead>Nota</TableHead>
                                     <TableHead>Comentário</TableHead>
@@ -203,6 +256,12 @@ export default function HistoricoImportacoesPage() {
                             <TableBody>
                                 {evaluationsForSelectedImport.map(ev => (
                                     <TableRow key={ev.id}>
+                                         <TableCell>
+                                            <Checkbox
+                                                checked={selectedEvaluationIds.includes(ev.id)}
+                                                onCheckedChange={(checked) => handleSelectRow(ev.id, !!checked)}
+                                            />
+                                        </TableCell>
                                         <TableCell>
                                             <Badge variant="outline">{attendantMap[ev.attendantId] || 'Desconhecido'}</Badge>
                                         </TableCell>
@@ -214,7 +273,10 @@ export default function HistoricoImportacoesPage() {
                             </TableBody>
                         </Table>
                     </ScrollArea>
-                    <DialogFooter>
+                    <DialogFooter className="justify-between sm:justify-between">
+                         <Button variant="destructive" onClick={handleDeleteSelectedClick} disabled={selectedEvaluationIds.length === 0}>
+                            <Trash2 className="mr-2 h-4 w-4" /> Excluir {selectedEvaluationIds.length} Selecionadas
+                        </Button>
                         <Button variant="outline" onClick={() => setIsDetailsDialogOpen(false)}>Fechar</Button>
                     </DialogFooter>
                 </DialogContent>
@@ -224,18 +286,34 @@ export default function HistoricoImportacoesPage() {
             <AlertDialog open={isRevertDialogOpen} onOpenChange={setIsRevertDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center gap-2"><AlertCircle className="text-destructive"/>Reverter Importação?</AlertDialogTitle>
+                        <AlertDialogTitle className="flex items-center gap-2"><AlertCircle className="text-destructive"/>Reverter Importação Completa?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Você tem certeza que deseja reverter esta importação? Esta ação não pode ser desfeita.
-                            Todas as <strong>{selectedImport?.evaluationIds.length}</strong> avaliações associadas
-                            a este lote (arquivo: <strong>{selectedImport?.fileName}</strong>) serão permanentemente excluídas.
-                            Os pontos de gamificação e conquistas relacionados também serão recalculados.
+                            Você tem certeza que deseja reverter este lote de importação? Todas as <strong>{selectedImport?.evaluationIds.length}</strong> avaliações associadas
+                            ao arquivo <strong>{selectedImport?.fileName}</strong> serão permanentemente excluídas. Esta ação não pode ser desfeita.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
                         <AlertDialogAction onClick={handleRevertConfirm} className="bg-destructive hover:bg-destructive/90">
-                           Sim, reverter importação
+                           Sim, reverter lote
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+            
+            {/* Delete Selected Evaluations Dialog */}
+             <AlertDialog open={isDeleteSelectedOpen} onOpenChange={setIsDeleteSelectedOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2"><AlertCircle className="text-destructive"/>Excluir Avaliações Selecionadas?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                           Tem certeza que deseja excluir as <strong>{selectedEvaluationIds.length}</strong> avaliações selecionadas deste lote? Esta ação é irreversível.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteSelectedConfirm} className="bg-destructive hover:bg-destructive/90">
+                           Sim, excluir selecionadas
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
