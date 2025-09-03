@@ -13,10 +13,10 @@ import { FileUp, Check, Wand2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ATTENDANT_STATUS, type Attendant } from "@/lib/types";
 import { Checkbox } from "@/components/ui/checkbox";
+import ImportProgressModal from "@/components/ImportProgressModal";
 
 type CsvRow = {
     id: string;
@@ -43,14 +43,13 @@ type ImportConfig = {
 };
 
 export default function ImportarAtendentesPage() {
-    const { user, isAuthenticated, loading, attendants, funcoes, setores, importAttendants } = useAuth();
+    const { user, isAuthenticated, loading, attendants, funcoes, setores, importAttendants, isProcessing } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
 
     const [file, setFile] = useState<File | null>(null);
     const [importConfig, setImportConfig] = useState<ImportConfig[]>([]);
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [importProgress, setImportProgress] = useState(0);
+    const [isParsing, setIsParsing] = useState(false);
 
     const existingEmails = useMemo(() => new Set(attendants.map(a => a.email.toLowerCase())), [attendants]);
     const existingCpfs = useMemo(() => new Set(attendants.map(a => a.cpf)), [attendants]);
@@ -71,7 +70,7 @@ export default function ImportarAtendentesPage() {
 
     const handleParseFile = () => {
         if (!file) return;
-        setIsProcessing(true);
+        setIsParsing(true);
         Papa.parse<CsvRow>(file, {
             header: true,
             skipEmptyLines: true,
@@ -90,12 +89,12 @@ export default function ImportarAtendentesPage() {
                     }
                 });
                 setImportConfig(config);
-                setIsProcessing(false);
+                setIsParsing(false);
             },
             error: (error) => {
                 console.error("CSV Parsing Error:", error);
                 toast({ variant: "destructive", title: "Erro ao ler o arquivo", description: "Verifique o formato do CSV." });
-                setIsProcessing(false);
+                setIsParsing(false);
             }
         });
     };
@@ -133,9 +132,6 @@ export default function ImportarAtendentesPage() {
             return;
         }
 
-        setIsProcessing(true);
-        setImportProgress(0);
-
         let importedCount = 0;
 
         const newAttendantsData = attendantsToImport.map(config => {
@@ -161,19 +157,12 @@ export default function ImportarAtendentesPage() {
 
         try {
             await importAttendants(newAttendantsData, file?.name || "Arquivo Desconhecido", user.id);
-             toast({
-                title: "Importação Concluída!",
-                description: `${newAttendantsData.length} novos atendentes foram importados.`,
-            });
             setFile(null);
             setImportConfig([]);
         } catch (error) {
             console.error("Erro durante a importação de atendentes:", error);
-            toast({ variant: "destructive", title: "Erro na Importação", description: "Ocorreu um erro ao salvar os dados."})
-        } finally {
-            setIsProcessing(false);
+            // Toast handled in provider
         }
-
     };
     
     if (loading) {
@@ -186,6 +175,7 @@ export default function ImportarAtendentesPage() {
 
     return (
         <div className="space-y-8">
+            <ImportProgressModal />
             <h1 className="text-3xl font-bold">Importar Atendentes de CSV</h1>
             
             <div className="grid lg:grid-cols-3 gap-8 items-start">
@@ -199,8 +189,8 @@ export default function ImportarAtendentesPage() {
                             <Label htmlFor="csv-file">Arquivo CSV</Label>
                             <Input id="csv-file" type="file" accept=".csv" onChange={handleFileChange} />
                         </div>
-                        <Button onClick={handleParseFile} disabled={!file || isProcessing} className="w-full">
-                            {isProcessing ? "Processando..." : "Ler Arquivo"}
+                        <Button onClick={handleParseFile} disabled={!file || isParsing} className="w-full">
+                            {isParsing ? "Processando..." : "Ler Arquivo"}
                         </Button>
                     </CardContent>
                 </Card>
@@ -276,10 +266,9 @@ export default function ImportarAtendentesPage() {
                             </div>
                         </CardContent>
                         <CardFooter className="flex-col items-stretch gap-4 pt-6">
-                            {isProcessing && <Progress value={importProgress} />}
                             <Button onClick={handleImport} disabled={!isReadyToImport || isProcessing} size="lg" className="w-full">
                                 <Wand2 className="mr-2 h-4 w-4" />
-                                {isProcessing ? `Importando... ${Math.round(importProgress)}%` : `Importar ${attendantsToImport.length} Atendentes`}
+                                {isProcessing ? `Importando...` : `Importar ${attendantsToImport.length} Atendentes`}
                             </Button>
                             {!isReadyToImport && selectedCount > 0 &&
                                 <p className="text-sm text-center text-muted-foreground">Preencha a função e o setor para todos os atendentes selecionados para habilitar a importação.</p>

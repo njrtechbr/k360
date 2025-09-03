@@ -13,9 +13,8 @@ import { FileUp, Check, Wand2, AlertTriangle, CheckCircle } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
-import type { Evaluation } from "@/lib/types";
+import ImportProgressModal from "@/components/ImportProgressModal";
 
 type CsvRow = {
     id: string;
@@ -36,14 +35,13 @@ type MappedReview = {
 }
 
 export default function ImportarLegadoPage() {
-    const { user, isAuthenticated, loading, attendants, evaluations, importLegacyEvaluations } = useAuth();
+    const { user, isAuthenticated, loading, attendants, evaluations, importLegacyEvaluations, isProcessing } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
 
     const [file, setFile] = useState<File | null>(null);
     const [mappedReviews, setMappedReviews] = useState<MappedReview[]>([]);
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [importProgress, setImportProgress] = useState(0);
+    const [isParsing, setIsParsing] = useState(false);
 
     const attendantMap = useMemo(() => new Map(attendants.map(a => [a.id, a.name])), [attendants]);
     const evaluationMap = useMemo(() => new Set(evaluations.map(e => e.id)), [evaluations]);
@@ -64,7 +62,7 @@ export default function ImportarLegadoPage() {
 
     const handleParseFile = () => {
         if (!file) return;
-        setIsProcessing(true);
+        setIsParsing(true);
         Papa.parse<CsvRow>(file, {
             header: true,
             skipEmptyLines: true,
@@ -83,12 +81,12 @@ export default function ImportarLegadoPage() {
                     }
                 }).filter(r => r.id && r.attendantId && !isNaN(r.rating) && r.date);
                 setMappedReviews(mapped);
-                setIsProcessing(false);
+                setIsParsing(false);
             },
             error: (error) => {
                 console.error("CSV Parsing Error:", error);
                 toast({ variant: "destructive", title: "Erro ao ler o arquivo", description: "Verifique o formato do CSV." });
-                setIsProcessing(false);
+                setIsParsing(false);
             }
         });
     };
@@ -105,9 +103,6 @@ export default function ImportarLegadoPage() {
              return;
         }
 
-        setIsProcessing(true);
-        setImportProgress(0);
-
         const newEvaluationsData = validReviews.map(review => ({
             id: review.id,
             attendantId: review.attendantId,
@@ -118,17 +113,11 @@ export default function ImportarLegadoPage() {
 
         try {
             await importLegacyEvaluations(newEvaluationsData, file?.name || "Arquivo Desconhecido", user.id);
-            toast({
-                title: "Importação Concluída!",
-                description: `${newEvaluationsData.length} avaliações foram importadas e a gamificação foi atualizada.`,
-            });
             setFile(null);
             setMappedReviews([]);
         } catch (error) {
             console.error("Erro durante a importação legada:", error);
-            toast({ variant: "destructive", title: "Erro na Importação", description: "Ocorreu um erro ao salvar os dados."})
-        } finally {
-            setIsProcessing(false);
+            // Toast handled in provider
         }
 
     }, [user, toast, mappedReviews, file?.name, importLegacyEvaluations]);
@@ -150,6 +139,7 @@ export default function ImportarLegadoPage() {
 
     return (
         <div className="space-y-8">
+            <ImportProgressModal />
             <h1 className="text-3xl font-bold">Importar Avaliações (Sistema Antigo)</h1>
             
             <Card className="shadow-lg">
@@ -162,8 +152,8 @@ export default function ImportarLegadoPage() {
                         <Label htmlFor="csv-file">Arquivo CSV</Label>
                         <Input id="csv-file" type="file" accept=".csv" onChange={handleFileChange} />
                     </div>
-                    <Button onClick={handleParseFile} disabled={!file || isProcessing} className="self-end">
-                        {isProcessing ? "Processando..." : "Ler Arquivo"}
+                    <Button onClick={handleParseFile} disabled={!file || isParsing} className="self-end">
+                        {isParsing ? "Processando..." : "Ler Arquivo"}
                     </Button>
                 </CardContent>
             </Card>
@@ -214,10 +204,9 @@ export default function ImportarLegadoPage() {
                         </div>
                     </CardContent>
                     <CardFooter className="flex-col items-stretch gap-4">
-                        {isProcessing && <Progress value={importProgress} />}
                         <Button onClick={handleImport} disabled={validCount === 0 || isProcessing} size="lg" className="w-full">
                             <Wand2 className="mr-2 h-4 w-4" />
-                            {isProcessing ? `Importando... ${Math.round(importProgress)}%` : `Importar ${validCount} Avaliações Válidas`}
+                            {isProcessing ? `Importando...` : `Importar ${validCount} Avaliações Válidas`}
                         </Button>
                     </CardFooter>
                 </Card>

@@ -3,7 +3,7 @@
 
 import type { ReactNode } from "react";
 import React, { useCallback, useEffect, useState } from "react";
-import type { User, Role, Module, Attendant, Evaluation, EvaluationImport, AttendantImport, Funcao, Setor, GamificationConfig, Achievement, LevelReward, GamificationSeason, UnlockedAchievement, EvaluationAnalysis, XpEvent } from "@/lib/types";
+import type { User, Role, Module, Attendant, Evaluation, EvaluationImport, AttendantImport, Funcao, Setor, GamificationConfig, Achievement, LevelReward, GamificationSeason, XpEvent } from "@/lib/types";
 import { ROLES } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 
@@ -20,7 +20,7 @@ import {
 import { collection, doc, getDoc, getDocs, setDoc, updateDoc, writeBatch, deleteDoc, query, where } from 'firebase/firestore';
 import { INITIAL_ACHIEVEMENTS, INITIAL_LEVEL_REWARDS } from "@/lib/achievements";
 import { getScoreFromRating } from "@/lib/gamification";
-import { analyzeEvaluation } from "@/ai/flows/analyze-evaluation-flow";
+import { analyzeEvaluation, type EvaluationAnalysis } from '@/ai/flows/analyze-evaluation-flow';
 
 
 const AI_ANALYSIS_STORAGE_KEY = "controle_acesso_ai_analysis";
@@ -43,11 +43,20 @@ type AnalysisProgress = {
     lastResult: EvaluationAnalysis | null;
 };
 
+type ImportStatus = {
+    isOpen: boolean;
+    logs: string[];
+    progress: number;
+    title: string;
+    status: 'idle' | 'processing' | 'done' | 'error';
+}
+
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   authLoading: boolean;
   appLoading: boolean;
+  isProcessing: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   register: (userData: Omit<User, "id">) => Promise<void>;
@@ -95,6 +104,9 @@ interface AuthContextType {
   importAttendants: (attendantsData: Omit<Attendant, 'importId'>[], fileName: string, userId: string) => Promise<void>;
   revertEvaluationImport: (importId: string) => Promise<void>;
   revertAttendantImport: (importId: string) => Promise<void>;
+  importStatus: ImportStatus;
+  setImportStatus: React.Dispatch<React.SetStateAction<ImportStatus>>;
+
 
   // Gamification
   xpEvents: XpEvent[];
@@ -104,14 +116,12 @@ interface AuthContextType {
   seasons: GamificationSeason[];
   activeSeason: GamificationSeason | null;
   nextSeason: GamificationSeason | null;
-  unlockedAchievements: UnlockedAchievement[];
   updateGamificationConfig: (newConfig: Partial<Pick<GamificationConfig, 'ratingScores' | 'globalXpMultiplier'>>) => Promise<void>;
   updateAchievement: (id: string, data: Partial<Omit<Achievement, 'id' | 'icon' | 'color' | 'isUnlocked'>>) => Promise<void>;
   updateLevelReward: (level: number, data: Partial<Omit<LevelReward, 'level' | 'icon' | 'color'>>) => Promise<void>;
   addSeason: (seasonData: Omit<GamificationSeason, 'id'>) => void;
   updateSeason: (id: string, seasonData: Partial<Omit<GamificationSeason, 'id'>>) => void;
   deleteSeason: (id: string) => void;
-  recalculateAllGamificationData: (currentAttendants: Attendant[], currentEvaluations: Evaluation[]) => Promise<void>;
 
   // AI Analysis
   aiAnalysisResults: EvaluationAnalysis[];
@@ -137,6 +147,14 @@ const mergeWithDefaults = <T extends { id?: string; level?: number }>(
   }));
 };
 
+const INITIAL_IMPORT_STATUS: ImportStatus = {
+    isOpen: false,
+    logs: [],
+    progress: 0,
+    title: 'Aguardando Importação',
+    status: 'idle'
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
   
@@ -144,6 +162,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [appLoading, setAppLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Data State
   const [allUsers, setAllUsers] = useState<User[]>([]);
@@ -160,7 +179,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [seasons, setSeasons] = useState<GamificationSeason[]>([]);
   const [activeSeason, setActiveSeason] = useState<GamificationSeason | null>(null);
   const [nextSeason, setNextSeason] = useState<GamificationSeason | null>(null);
-  const [unlockedAchievements, setUnlockedAchievements] = useState<UnlockedAchievement[]>([]);
   const [xpEvents, setXpEvents] = useState<XpEvent[]>([]);
 
   // AI Analysis State
@@ -170,6 +188,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState<AnalysisProgress>({ current: 0, total: 0, evaluation: null, status: 'idle', countdown: 0, lastResult: null });
 
+  // Import State
+  const [importStatus, setImportStatus] = useState<ImportStatus>(INITIAL_IMPORT_STATUS);
 
   // --- Data Fetching Callbacks ---
   const fetchAllData = useCallback(async () => {
@@ -178,7 +198,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
         const [
             usersData, modulesData, attendantsData, evaluationsData, 
-            evaluationImportsData, attendantImportsData, unlockedAchievementsData, 
+            evaluationImportsData, attendantImportsData, 
             gamificationConfigData, funcoesData, setoresData, xpEventsData
         ] = await Promise.all([
             getDocs(collection(db, "users")).then(snap => snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as User))),
@@ -187,7 +207,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             getDocs(collection(db, "evaluations")).then(snap => snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Evaluation))),
             getDocs(collection(db, "evaluationImports")).then(snap => snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as EvaluationImport))),
             getDocs(collection(db, "attendantImports")).then(snap => snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendantImport))),
-            getDocs(collection(db, "unlockedAchievements")).then(snap => snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as UnlockedAchievement))),
             getDoc(doc(db, "gamification", "config")).then(async (configDoc) => {
                 if (configDoc.exists()) {
                     const data = configDoc.data();
@@ -208,7 +227,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setEvaluations(evaluationsData);
         setEvaluationImports(evaluationImportsData);
         setAttendantImports(attendantImportsData);
-        setUnlockedAchievements(unlockedAchievementsData);
         setGamificationConfig(gamificationConfigData);
         setAchievements(gamificationConfigData.achievements);
         setLevelRewards(gamificationConfigData.levelRewards);
@@ -460,8 +478,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const finalEvaluation = { ...evaluationData, id: docRef.id, relatedId: docRef.id };
     await setDoc(docRef, finalEvaluation);
     setEvaluations(prev => [...prev, finalEvaluation]);
+    
+    // Also create the XP event
+    const baseScore = getScoreFromRating(finalEvaluation.nota, gamificationConfig.ratingScores);
+    const seasonMultiplier = activeSeason?.xpMultiplier ?? 1;
+    const totalMultiplier = gamificationConfig.globalXpMultiplier * seasonMultiplier;
+    const finalXp = baseScore * totalMultiplier;
+    
+    const xpEventRef = doc(collection(db, "xp_events"));
+    const newXpEvent: XpEvent = {
+        id: xpEventRef.id,
+        attendantId: finalEvaluation.attendantId,
+        points: finalXp,
+        reason: `Avaliação de ${finalEvaluation.nota} estrela(s)`,
+        date: finalEvaluation.data,
+        type: 'evaluation',
+        relatedId: finalEvaluation.id,
+    }
+    await setDoc(xpEventRef, newXpEvent);
+    setXpEvents(prev => [...prev, newXpEvent]);
+    
     return finalEvaluation;
-  }, []);
+  }, [activeSeason, gamificationConfig]);
 
   const deleteEvaluations = useCallback(async (evaluationIds: string[]) => {
      const batch = writeBatch(db);
@@ -477,8 +515,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
   
   // --- Gamification Actions ---
-  const recalculateAllGamificationData = useCallback(async (currentAttendants: Attendant[], currentEvaluations: Evaluation[]) => {
-    console.log("GAMIFICATION: Iniciando recalculo geral...");
+  const recalculateAllGamificationData = useCallback(async () => {
+    const currentAttendants = await getDocs(collection(db, "attendants")).then(snap => snap.docs.map(d => ({id: d.id, ...d.data()}) as Attendant));
+    const currentEvaluations = await getDocs(collection(db, "evaluations")).then(snap => snap.docs.map(d => ({id: d.id, ...d.data()}) as Evaluation));
+
+    setImportStatus(prev => ({...prev, progress: 50, logs: [...prev.logs, 'Recalculando todos os eventos de XP...'] }));
 
     const configDoc = await getDoc(doc(db, "gamification", "config"));
     const loadedConfigData = configDoc.exists() ? configDoc.data() : {};
@@ -511,12 +552,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
     }
 
+    setImportStatus(prev => ({...prev, progress: 75, logs: [...prev.logs, 'Verificando troféus e conquistas...'] }));
+
     for (const attendant of currentAttendants) {
         const attendantEvaluations = currentEvaluations.filter(e => e.attendantId === attendant.id);
         for (const achievement of currentConfig.achievements) {
-            if (achievement.active && achievement.isUnlocked(attendant, attendantEvaluations, currentEvaluations, currentAttendants, allAiAnalysis)) {
-                const seasonForAchievement = currentConfig.seasons.find(s => s.active);
-                if (seasonForAchievement) {
+            const seasonForAchievement = currentConfig.seasons.find(s => s.active);
+            if (achievement.active && seasonForAchievement) {
+                if (achievement.isUnlocked(attendant, attendantEvaluations, currentEvaluations, currentAttendants, allAiAnalysis)) {
                     const totalMultiplier = currentConfig.globalXpMultiplier * (seasonForAchievement.xpMultiplier || 1);
                     const xpEventRef = doc(collection(db, "xp_events"));
                     xpEventsBatch.set(xpEventRef, {
@@ -531,76 +574,119 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
         }
     }
-
+    
     await xpEventsBatch.commit();
-    console.log("GAMIFICATION: Recálculo de eventos de XP concluído.");
+    setImportStatus(prev => ({...prev, progress: 100, logs: [...prev.logs, 'Recálculo completo!'] }));
     await fetchAllData();
   }, [fetchAllData]);
 
   // --- Import Actions ---
   const importLegacyEvaluations = useCallback(async (evaluationsData: Omit<Evaluation, 'xpGained' | 'relatedId'>[], fileName: string, userId: string) => {
-    const batch = writeBatch(db);
-    const newEvaluationIds: string[] = [];
-
-    evaluationsData.forEach(evData => {
-        const docRef = doc(db, "evaluations", evData.id);
-        batch.set(docRef, evData);
-        newEvaluationIds.push(evData.id);
-    });
-
-    const importDocRef = doc(collection(db, "evaluationImports"));
-    batch.set(importDocRef, { fileName, evaluationIds: newEvaluationIds, attendantMap: {}, importedBy: userId, importedAt: new Date().toISOString() });
+    setIsProcessing(true);
+    setImportStatus({ isOpen: true, logs: [], progress: 0, title: 'Importando Avaliações (Legado)', status: 'processing' });
     
-    await batch.commit();
-    
-    const allAttendants = await getDocs(collection(db, "attendants")).then(snap => snap.docs.map(d => ({id: d.id, ...d.data()}) as Attendant));
-    const allEvaluations = await getDocs(collection(db, "evaluations")).then(snap => snap.docs.map(d => ({id: d.id, ...d.data()}) as Evaluation));
+    try {
+        setImportStatus(prev => ({...prev, logs: [...prev.logs, `Iniciando importação do arquivo: ${fileName}`]}));
+        const batch = writeBatch(db);
+        evaluationsData.forEach(evData => {
+            const docRef = doc(db, "evaluations", evData.id);
+            batch.set(docRef, evData);
+        });
+        
+        const importDocRef = doc(collection(db, "evaluationImports"));
+        batch.set(importDocRef, { fileName, evaluationIds: evaluationsData.map(e => e.id), attendantMap: {}, importedBy: userId, importedAt: new Date().toISOString() });
+        setImportStatus(prev => ({...prev, progress: 25, logs: [...prev.logs, `Lote com ${evaluationsData.length} avaliações preparado.`]}));
+        
+        await batch.commit();
+        setImportStatus(prev => ({...prev, progress: 50, logs: [...prev.logs, 'Avaliações salvas no banco de dados.']}));
 
-    await recalculateAllGamificationData(allAttendants, allEvaluations);
+        await recalculateAllGamificationData();
+        
+        setImportStatus(prev => ({...prev, status: 'done', title: 'Importação Concluída!', logs: [...prev.logs, 'Processo finalizado com sucesso.'] }));
+        toast({ title: "Importação Concluída!", description: `${evaluationsData.length} avaliações importadas.` });
+        setTimeout(() => setImportStatus(INITIAL_IMPORT_STATUS), 3000);
 
-  }, [recalculateAllGamificationData]);
+    } catch (e) {
+        console.error(e);
+        setImportStatus(prev => ({...prev, status: 'error', title: 'Erro na Importação', logs: [...prev.logs, 'Ocorreu um erro. Verifique o console.'] }));
+        toast({ variant: 'destructive', title: "Erro na Importação", description: "Não foi possível concluir a importação." });
+    } finally {
+         setIsProcessing(false);
+    }
+  }, [recalculateAllGamificationData, toast]);
 
   const importWhatsAppEvaluations = useCallback(async (evaluationsData: Omit<Evaluation, 'id' | 'xpGained' | 'relatedId'>[], agentMap: Record<string, string>, fileName: string, userId: string) => {
-      const batch = writeBatch(db);
-      const newEvaluationIds: string[] = [];
-      
-      evaluationsData.forEach(evData => {
-          const docRef = doc(collection(db, "evaluations"));
-          batch.set(docRef, evData);
-          newEvaluationIds.push(docRef.id);
-      });
+      setIsProcessing(true);
+      setImportStatus({ isOpen: true, logs: [], progress: 0, title: 'Importando Avaliações (WhatsApp)', status: 'processing' });
 
-      const importDocRef = doc(collection(db, "evaluationImports"));
-      batch.set(importDocRef, { fileName, evaluationIds: newEvaluationIds, attendantMap: agentMap, importedBy: userId, importedAt: new Date().toISOString() });
+      try {
+          setImportStatus(prev => ({...prev, logs: [...prev.logs, `Iniciando importação de ${fileName}`]}));
+          const batch = writeBatch(db);
+          const newEvaluationIds: string[] = [];
+          
+          evaluationsData.forEach(evData => {
+              const docRef = doc(collection(db, "evaluations"));
+              batch.set(docRef, evData);
+              newEvaluationIds.push(docRef.id);
+          });
+          
+          const importDocRef = doc(collection(db, "evaluationImports"));
+          batch.set(importDocRef, { fileName, evaluationIds: newEvaluationIds, attendantMap: agentMap, importedBy: userId, importedAt: new Date().toISOString() });
+          setImportStatus(prev => ({...prev, progress: 25, logs: [...prev.logs, `${evaluationsData.length} avaliações preparadas.`]}));
+          
+          await batch.commit();
+          setImportStatus(prev => ({...prev, progress: 50, logs: [...prev.logs, 'Avaliações salvas com sucesso.']}));
 
-      await batch.commit();
+          await recalculateAllGamificationData();
+          
+          setImportStatus(prev => ({...prev, status: 'done', title: 'Importação Concluída!', logs: [...prev.logs, 'Processo finalizado.'] }));
+          toast({ title: "Importação Concluída!" });
+          setTimeout(() => setImportStatus(INITIAL_IMPORT_STATUS), 3000);
 
-      const allAttendants = await getDocs(collection(db, "attendants")).then(snap => snap.docs.map(d => ({id: d.id, ...d.data()}) as Attendant));
-      const allEvaluations = await getDocs(collection(db, "evaluations")).then(snap => snap.docs.map(d => ({id: d.id, ...d.data()}) as Evaluation));
-
-      await recalculateAllGamificationData(allAttendants, allEvaluations);
-  }, [recalculateAllGamificationData]);
+      } catch (e) {
+          console.error(e);
+          setImportStatus(prev => ({...prev, status: 'error', title: 'Erro na Importação', logs: [...prev.logs, 'Ocorreu um erro grave.'] }));
+          toast({ variant: 'destructive', title: "Erro na Importação" });
+      } finally {
+          setIsProcessing(false);
+      }
+  }, [recalculateAllGamificationData, toast]);
 
   const importAttendants = useCallback(async (attendantsData: Omit<Attendant, 'importId'>[], fileName: string, userId: string) => {
-      const batch = writeBatch(db);
-      const newAttendantIds: string[] = [];
+      setIsProcessing(true);
+      setImportStatus({ isOpen: true, logs: [], progress: 0, title: 'Importando Atendentes', status: 'processing' });
+      try {
+          setImportStatus(prev => ({...prev, logs: [...prev.logs, `Iniciando importação de ${fileName}`]}));
+          const batch = writeBatch(db);
+          const newAttendantIds: string[] = [];
 
-      attendantsData.forEach(attData => {
-          const docRef = doc(db, "attendants", attData.id);
-          batch.set(docRef, attData);
-          newAttendantIds.push(attData.id);
-      });
-      
-      const importDocRef = doc(collection(db, "attendantImports"));
-      batch.set(importDocRef, { fileName, attendantIds: newAttendantIds, importedBy: userId, importedAt: new Date().toISOString() });
-      
-      await batch.commit();
-      
-      const allAttendants = await getDocs(collection(db, "attendants")).then(snap => snap.docs.map(d => ({id: d.id, ...d.data()}) as Attendant));
-      const allEvaluations = await getDocs(collection(db, "evaluations")).then(snap => snap.docs.map(d => ({id: d.id, ...d.data()}) as Evaluation));
+          attendantsData.forEach(attData => {
+              const docRef = doc(db, "attendants", attData.id);
+              batch.set(docRef, attData);
+              newAttendantIds.push(attData.id);
+          });
+          
+          const importDocRef = doc(collection(db, "attendantImports"));
+          batch.set(importDocRef, { fileName, attendantIds: newAttendantIds, importedBy: userId, importedAt: new Date().toISOString() });
+           setImportStatus(prev => ({...prev, progress: 50, logs: [...prev.logs, `${attendantsData.length} atendentes salvos no banco.`]}));
+          
+          await batch.commit();
+          
+          setImportStatus(prev => ({...prev, progress: 100, logs: [...prev.logs, 'Finalizando...']}));
+          await fetchAllData();
 
-      await recalculateAllGamificationData(allAttendants, allEvaluations);
-  }, [recalculateAllGamificationData]);
+          setImportStatus(prev => ({...prev, status: 'done', title: 'Importação Concluída!', logs: [...prev.logs, 'Processo finalizado.'] }));
+          toast({ title: "Importação de Atendentes Concluída!" });
+          setTimeout(() => setImportStatus(INITIAL_IMPORT_STATUS), 3000);
+
+      } catch (e) {
+          console.error(e);
+          setImportStatus(prev => ({...prev, status: 'error', title: 'Erro na Importação', logs: [...prev.logs, 'Ocorreu um erro.'] }));
+          toast({ variant: 'destructive', title: "Erro na Importação" });
+      } finally {
+          setIsProcessing(false);
+      }
+  }, [fetchAllData, toast]);
 
 
   const revertEvaluationImport = useCallback(async (importId: string) => {
@@ -724,6 +810,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     isAuthenticated: !!user,
     authLoading,
     appLoading,
+    isProcessing,
     login,
     logout,
     register,
@@ -759,6 +846,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     importAttendants,
     revertEvaluationImport,
     revertAttendantImport,
+    importStatus,
+    setImportStatus,
     xpEvents,
     gamificationConfig,
     achievements,
@@ -766,7 +855,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     seasons,
     activeSeason,
     nextSeason,
-    unlockedAchievements,
     updateGamificationConfig,
     updateAchievement,
     updateLevelReward,

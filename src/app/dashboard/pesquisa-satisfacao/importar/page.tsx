@@ -14,12 +14,10 @@ import { FileUp, Users, Check, Wand2, ArrowRight, Sparkles } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
-import type { Evaluation } from "@/lib/types";
 import { suggestAttendants, type SuggestAttendantOutput } from "@/ai/flows/suggest-attendant-flow";
 import { Combobox } from "@/components/ui/combobox";
-
+import ImportProgressModal from "@/components/ImportProgressModal";
 
 type CsvRow = {
     Data: string;
@@ -35,16 +33,15 @@ type MappedReview = {
 }
 
 export default function ImportarAvaliacoesPage() {
-    const { user, isAuthenticated, loading, attendants, importWhatsAppEvaluations } = useAuth();
+    const { user, isAuthenticated, loading, attendants, importWhatsAppEvaluations, isProcessing } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
 
     const [file, setFile] = useState<File | null>(null);
     const [parsedData, setParsedData] = useState<CsvRow[]>([]);
     const [agentMap, setAgentMap] = useState<Record<string, string>>({});
-    const [isProcessing, setIsProcessing] = useState(false);
+    const [isParsing, setIsParsing] = useState(false);
     const [isSuggesting, setIsSuggesting] = useState(false);
-    const [importProgress, setImportProgress] = useState(0);
 
     const uniqueAgents = useMemo(() => {
         const agents = new Set(parsedData.map(row => row.Agente));
@@ -67,19 +64,19 @@ export default function ImportarAvaliacoesPage() {
 
     const handleParseFile = () => {
         if (!file) return;
-        setIsProcessing(true);
+        setIsParsing(true);
         Papa.parse<CsvRow>(file, {
             header: true,
             skipEmptyLines: true,
             complete: (results) => {
                 const validData = results.data.filter(row => row.Data && row.Agente && row.Nota);
                 setParsedData(validData);
-                setIsProcessing(false);
+                setIsParsing(false);
             },
             error: (error) => {
                 console.error("CSV Parsing Error:", error);
                 toast({ variant: "destructive", title: "Erro ao ler o arquivo", description: "Verifique o formato do CSV." });
-                setIsProcessing(false);
+                setIsParsing(false);
             }
         });
     };
@@ -148,9 +145,6 @@ export default function ImportarAvaliacoesPage() {
             return;
         }
 
-        setIsProcessing(true);
-        setImportProgress(0);
-
         const newEvaluationsData = mappedReviews.map(review => ({
             attendantId: review.attendantId,
             nota: review.rating,
@@ -161,19 +155,12 @@ export default function ImportarAvaliacoesPage() {
         try {
             await importWhatsAppEvaluations(newEvaluationsData, agentMap, file?.name || "Arquivo Desconhecido", user.id);
 
-            toast({
-                title: "Importação Concluída!",
-                description: `${newEvaluationsData.length} avaliações foram importadas e a gamificação foi atualizada.`,
-            });
-            
             setFile(null);
             setParsedData([]);
             setAgentMap({});
         } catch (error) {
             console.error("Erro durante a importação do WhatsApp:", error);
-            toast({ variant: "destructive", title: "Erro na Importação", description: "Ocorreu um erro ao salvar os dados."})
-        } finally {
-            setIsProcessing(false);
+            // Toast is handled in provider
         }
 
     }, [user, toast, mappedReviews, agentMap, file?.name, importWhatsAppEvaluations]);
@@ -194,6 +181,7 @@ export default function ImportarAvaliacoesPage() {
 
     return (
         <div className="space-y-8">
+            <ImportProgressModal />
             <h1 className="text-3xl font-bold">Importar Avaliações de CSV</h1>
             
             <Card className="shadow-lg">
@@ -206,8 +194,8 @@ export default function ImportarAvaliacoesPage() {
                         <Label htmlFor="csv-file">Arquivo CSV</Label>
                         <Input id="csv-file" type="file" accept=".csv" onChange={handleFileChange} />
                     </div>
-                    <Button onClick={handleParseFile} disabled={!file || isProcessing} className="self-end">
-                        {isProcessing ? "Processando..." : "Ler Arquivo"}
+                    <Button onClick={handleParseFile} disabled={!file || isParsing} className="self-end">
+                        {isParsing ? "Processando..." : "Ler Arquivo"}
                     </Button>
                 </CardContent>
             </Card>
@@ -275,10 +263,9 @@ export default function ImportarAvaliacoesPage() {
                         </div>
                     </CardContent>
                     <CardFooter className="flex-col items-stretch gap-4">
-                        {isProcessing && <Progress value={importProgress} />}
                         <Button onClick={handleImport} disabled={!allAgentsMapped || isProcessing} size="lg" className="w-full">
                             <Wand2 className="mr-2 h-4 w-4" />
-                            {isProcessing ? `Importando... ${Math.round(importProgress)}%` : `Importar ${mappedReviews.length} Avaliações`}
+                            {isProcessing ? `Importando...` : `Importar ${mappedReviews.length} Avaliações`}
                         </Button>
                     </CardFooter>
                 </Card>
