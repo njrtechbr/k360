@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import type { ReactNode } from "react";
@@ -157,6 +156,15 @@ const INITIAL_IMPORT_STATUS: ImportStatus = {
     status: 'idle'
 };
 
+const getUniqueEvaluations = (evals: Evaluation[]): Evaluation[] => {
+    const seen = new Set();
+    return evals.filter(el => {
+        const duplicate = seen.has(el.id);
+        seen.add(el.id);
+        return !duplicate;
+    });
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
   
@@ -226,7 +234,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setAllUsers(usersData);
         setModules(modulesData.length > 0 ? modulesData : []);
         setAttendants(attendantsData);
-        setEvaluations(evaluationsData);
+        setEvaluations(getUniqueEvaluations(evaluationsData));
         setEvaluationImports(evaluationImportsData);
         setAttendantImports(attendantImportsData);
         setGamificationConfig(gamificationConfigData);

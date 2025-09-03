@@ -150,8 +150,8 @@ export default function GerenciarAvaliacoesPage() {
                             </TableHeader>
                             <TableBody>
                                 {sortedEvaluations.length > 0 ? (
-                                    sortedEvaluations.map((evaluation) => (
-                                        <TableRow key={evaluation.id} data-state={selectedIds.includes(evaluation.id) && "selected"}>
+                                    sortedEvaluations.map((evaluation, index) => (
+                                        <TableRow key={`${evaluation.id}-${index}`} data-state={selectedIds.includes(evaluation.id) && "selected"}>
                                              <TableCell>
                                                 <Checkbox
                                                     checked={selectedIds.includes(evaluation.id)}
