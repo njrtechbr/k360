@@ -194,7 +194,9 @@ export interface AttendantImport {
 export type XpEvent = {
     id: string;
     attendantId: string;
-    points: number;
+    points: number; // This will be final points (base * multiplier)
+    basePoints: number; // The score before any multiplier
+    multiplier: number; // The total multiplier used
     reason: string;
     date: string; // ISO String
     type: 'evaluation' | 'achievement';
