@@ -7,7 +7,7 @@ import SiteHeader from '@/components/SiteHeader';
 import { cn } from '@/lib/utils';
 import type { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
-import { useAuth } from '@/providers/AuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
     const { state } = useSidebar();

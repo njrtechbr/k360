@@ -3,14 +3,14 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from "@/providers/AuthProvider";
-import { Users, Upload, Settings, History, Trash2 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { Users, Upload, Settings, History, Database, BarChart3 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 export default function RHPage() {
-    const { user, isAuthenticated, loading } = useAuth();
+    const { user, isAuthenticated, loading, attendants } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
@@ -23,91 +23,121 @@ export default function RHPage() {
         return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
     }
 
+    const activeAttendants = attendants.filter(a => a.status === 'Ativo').length;
+    const totalAttendants = attendants.length;
+
     return (
         <div className="space-y-8">
-            <h1 className="text-3xl font-bold">Módulo de Recursos Humanos</h1>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <Card>
+            <div className="flex flex-col gap-4">
+                <h1 className="text-3xl font-bold">Recursos Humanos</h1>
+                <div className="flex gap-4 text-sm text-muted-foreground">
+                    <span className="flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        {totalAttendants} atendentes cadastrados
+                    </span>
+                    <span className="flex items-center gap-2">
+                        <BarChart3 className="h-4 w-4" />
+                        {activeAttendants} ativos
+                    </span>
+                </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <Card className="hover:shadow-md transition-shadow">
                     <CardHeader>
-                        <CardTitle>Gerenciar Atendentes</CardTitle>
-                        <CardDescription>Adicione, edite ou remova os atendentes.</CardDescription>
+                        <CardTitle className="flex items-center gap-2">
+                            <Users className="h-5 w-5 text-blue-600" />
+                            Atendentes
+                        </CardTitle>
+                        <CardDescription>Gerencie o cadastro de atendentes e funcionários</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <p className="text-sm text-muted-foreground mb-4">
-                            Mantenha a lista de atendentes e funcionários sempre atualizada.
+                            Adicione, edite ou visualize informações dos atendentes cadastrados no sistema.
                         </p>
-                        <Button asChild>
+                        <Button asChild className="w-full">
                             <Link href="/dashboard/rh/atendentes">
-                                <Users className="mr-2 h-4 w-4" />
                                 Gerenciar Atendentes
                             </Link>
                         </Button>
                     </CardContent>
                 </Card>
-                 <Card>
+
+                <Card className="hover:shadow-md transition-shadow">
                     <CardHeader>
-                        <CardTitle>Importar Atendentes</CardTitle>
-                        <CardDescription>Importe múltiplos atendentes de um arquivo CSV.</CardDescription>
+                        <CardTitle className="flex items-center gap-2">
+                            <Upload className="h-5 w-5 text-green-600" />
+                            Importação
+                        </CardTitle>
+                        <CardDescription>Importe dados em lote via arquivo CSV</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <p className="text-sm text-muted-foreground mb-4">
-                           Faça o upload de dados de outras plataformas para um cadastro em massa.
+                            Faça upload de múltiplos atendentes de uma só vez usando arquivos CSV.
                         </p>
-                        <Button asChild>
+                        <Button asChild className="w-full">
                             <Link href="/dashboard/rh/importar">
-                                <Upload className="mr-2 h-4 w-4" />
                                 Importar Dados
                             </Link>
                         </Button>
                     </CardContent>
                 </Card>
-                <Card>
+
+                <Card className="hover:shadow-md transition-shadow">
                     <CardHeader>
-                        <CardTitle>Histórico de Importações</CardTitle>
-                        <CardDescription>Veja e reverta importações de dados de atendentes.</CardDescription>
+                        <CardTitle className="flex items-center gap-2">
+                            <History className="h-5 w-5 text-orange-600" />
+                            Histórico
+                        </CardTitle>
+                        <CardDescription>Acompanhe importações realizadas</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <p className="text-sm text-muted-foreground mb-4">
-                           Gerencie todos os lotes de atendentes importados para o sistema.
+                            Visualize e gerencie todas as importações de dados já realizadas.
                         </p>
-                        <Button asChild>
+                        <Button asChild variant="outline" className="w-full">
                             <Link href="/dashboard/rh/historico-importacoes">
-                                <History className="mr-2 h-4 w-4" />
                                 Ver Histórico
                             </Link>
                         </Button>
                     </CardContent>
                 </Card>
-                 <Card>
+
+                <Card className="hover:shadow-md transition-shadow">
                     <CardHeader>
-                        <CardTitle>Gerenciar Atendentes</CardTitle>
-                        <CardDescription>Exclua atendentes específicos ou todos de uma vez.</CardDescription>
+                        <CardTitle className="flex items-center gap-2">
+                            <Database className="h-5 w-5 text-red-600" />
+                            Gerenciar Dados
+                        </CardTitle>
+                        <CardDescription>Ferramentas de limpeza e manutenção</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <p className="text-sm text-muted-foreground mb-4">
-                           Ferramenta para limpeza de dados e gerenciamento de registros de atendentes.
+                            Exclua registros específicos ou realize limpeza em massa dos dados.
                         </p>
-                        <Button asChild variant="destructive">
+                        <Button asChild variant="destructive" className="w-full">
                             <Link href="/dashboard/rh/gerenciar">
-                                <Trash2 className="mr-2 h-4 w-4" />
                                 Gerenciar Dados
                             </Link>
                         </Button>
                     </CardContent>
                 </Card>
-                 <Card>
+
+                <Card className="hover:shadow-md transition-shadow">
                     <CardHeader>
-                        <CardTitle>Configurações de RH</CardTitle>
-                        <CardDescription>Gerencie as Funções e Setores disponíveis.</CardDescription>
+                        <CardTitle className="flex items-center gap-2">
+                            <Settings className="h-5 w-5 text-purple-600" />
+                            Configurações
+                        </CardTitle>
+                        <CardDescription>Funções, setores e parâmetros</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <p className="text-sm text-muted-foreground mb-4">
-                           Personalize as listas de funções e setores para o cadastro de atendentes.
+                            Configure as listas de funções e setores disponíveis no sistema.
                         </p>
-                        <Button asChild>
+                        <Button asChild variant="outline" className="w-full">
                             <Link href="/dashboard/rh/configuracoes">
-                                <Settings className="mr-2 h-4 w-4" />
-                                Ajustar Configurações
+                                Configurar
                             </Link>
                         </Button>
                     </CardContent>

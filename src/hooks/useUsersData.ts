@@ -4,12 +4,8 @@
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import type { User, Role } from '@/lib/types';
-import { useAuth } from '@/providers/AuthProvider';
-
-// Firebase Imports
-import { db } from "@/lib/firebase";
-import { doc, updateDoc, collection, getDocs, deleteDoc } from "firebase/firestore";
-
+import { useAuth } from '@/hooks/useAuth';
+// Removido import do prisma - agora usando APIs
 
 export function useUsersData() {
     const [allUsers, setAllUsers] = useState<User[]>([]);
@@ -18,27 +14,43 @@ export function useUsersData() {
     
     const fetchAllUsers = useCallback(async (): Promise<User[]> => {
         const startTime = performance.now();
-        console.log("AUTH: Buscando todos os usuários do Firestore...");
+        console.log("AUTH: Buscando todos os usuários via API...");
         try {
-            const usersCollection = collection(db, "users");
-            const usersSnapshot = await getDocs(usersCollection);
-            const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+            const response = await fetch('/api/users');
+            if (!response.ok) {
+                throw new Error('Erro ao buscar usuários');
+            }
+            const usersList = await response.json();
             setAllUsers(usersList);
             const endTime = performance.now();
             console.log(`PERF: fetchAllUsers (${usersList.length} items) took ${(endTime - startTime).toFixed(2)}ms`);
             return usersList;
         } catch (error) {
-            console.error("AUTH: Erro ao buscar usuários do Firestore:", error);
+            console.error("AUTH: Erro ao buscar usuários:", error);
             toast({ variant: "destructive", title: "Erro Crítico", description: "Não foi possível carregar os usuários do sistema."})
             return [];
         }
     }, [toast]);
 
 
-    const updateUser = async (userId: string, userData: { name: string; role: Role; modules: string[] }) => {
+    const updateUser = useCallback(async (userId: string, userData: { name: string; role: Role; modules: string[] }) => {
         try {
-            const userDocRef = doc(db, "users", userId);
-            await updateDoc(userDocRef, userData);
+            const response = await fetch('/api/users', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    userId,
+                    ...userData
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Erro ao atualizar usuário');
+            }
+
+            const updatedUser = await response.json();
 
             if (user && user.id === userId) {
                 const updatedSessionUser = { ...user, ...userData };
@@ -56,9 +68,9 @@ export function useUsersData() {
              toast({ variant: "destructive", title: "Erro", description: "Não foi possível atualizar o usuário."});
              throw error;
         }
-    };
+    }, [user, setUser, fetchAllUsers, toast]);
 
-    const deleteUser = async (userId: string) => {
+    const deleteUser = useCallback(async (userId: string) => {
         if (user?.id === userId) {
             toast({
                 variant: "destructive",
@@ -69,9 +81,18 @@ export function useUsersData() {
         }
         
         try {
-            // Note: This only deletes the Firestore record, not the Firebase Auth user.
-            // That must be done manually in the Firebase Console for security reasons.
-            await deleteDoc(doc(db, "users", userId));
+            const response = await fetch('/api/users', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ userId })
+            });
+
+            if (!response.ok) {
+                throw new Error('Erro ao deletar usuário');
+            }
+            
             await fetchAllUsers();
             toast({
                 title: "Usuário Removido!",
@@ -82,7 +103,7 @@ export function useUsersData() {
              toast({ variant: "destructive", title: "Erro", description: "Não foi possível remover o usuário."});
              throw error;
         }
-    };
+    }, [user?.id, fetchAllUsers, toast]);
 
     return { allUsers, setAllUsers, fetchAllUsers, updateUser, deleteUser };
 }

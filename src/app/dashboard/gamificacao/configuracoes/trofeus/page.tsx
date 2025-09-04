@@ -1,6 +1,7 @@
 "use client";
 
-import { useAuth } from "@/providers/AuthProvider";
+import { useAuth } from "@/hooks/useAuth";
+import { useGamificationData } from "@/hooks/useGamificationData";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -21,9 +22,18 @@ import { ROLES, type Achievement } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { MoreHorizontal, Pencil } from "lucide-react";
+import { MoreHorizontal, Pencil, Award, BarChart, BadgeCent, Crown, Sparkles, Target, Trophy, Zap, Rocket, StarHalf, Users, Smile, HeartHandshake, Gem, Medal, MessageSquareQuote, MessageSquarePlus, MessageSquareHeart, MessageSquareWarning, TrendingUp, ShieldCheck, Star, Component, Braces, UserCheck, BookOpen, RefreshCw } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
+
+// Mapeamento de ícones para achievements
+const iconMap: Record<string, any> = {
+    Award, BarChart, BadgeCent, Crown, Sparkles, Target, Trophy, Zap, Rocket, StarHalf, Users, Smile, HeartHandshake, Gem, Medal, MessageSquareQuote, MessageSquarePlus, MessageSquareHeart, MessageSquareWarning, TrendingUp, ShieldCheck, Star, Component, Braces, UserCheck, BookOpen
+};
+
+const getIconComponent = (iconName: string) => {
+    return iconMap[iconName] || Trophy; // Trophy como fallback
+};
 
 const formSchema = z.object({
   title: z.string().min(3, "O título deve ter pelo menos 3 caracteres."),
@@ -33,7 +43,8 @@ const formSchema = z.object({
 });
 
 export default function ConfigurarTrofeusPage() {
-    const { user, isAuthenticated, loading, achievements, updateAchievement } = useAuth();
+    const { user, isAuthenticated, loading } = useAuth();
+    const { achievements, updateAchievement, isLoading: gamificationLoading, refreshData } = useGamificationData();
     const router = useRouter();
 
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -70,11 +81,11 @@ export default function ConfigurarTrofeusPage() {
         setIsEditDialogOpen(true);
     };
 
-    if (loading || !user) {
+    if (loading || gamificationLoading || !user) {
         return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
     }
 
-    const sortedAchievements = [...achievements].sort((a, b) => a.xp - b.xp);
+    const sortedAchievements = Array.isArray(achievements) ? [...achievements].sort((a, b) => a.xp - b.xp) : [];
 
     return (
         <div className="space-y-8">
@@ -87,8 +98,22 @@ export default function ConfigurarTrofeusPage() {
 
             <Card className="shadow-lg">
                 <CardHeader>
-                    <CardTitle>Troféus Disponíveis</CardTitle>
-                    <CardDescription>Ative, desative e edite o nome, descrição e XP de cada troféu.</CardDescription>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle>Troféus Disponíveis</CardTitle>
+                            <CardDescription>Ative, desative e edite o nome, descrição e XP de cada troféu.</CardDescription>
+                        </div>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={refreshData}
+                            disabled={gamificationLoading}
+                            className="flex items-center gap-2"
+                        >
+                            <RefreshCw className={`h-4 w-4 ${gamificationLoading ? 'animate-spin' : ''}`} />
+                            Atualizar
+                        </Button>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <Table>
@@ -106,7 +131,7 @@ export default function ConfigurarTrofeusPage() {
                                 <TableRow key={ach.id}>
                                     <TableCell>
                                         <div className={`p-2 bg-muted rounded-full w-fit ${ach.color}`}>
-                                            <ach.icon className="h-5 w-5" />
+                                            {React.createElement(getIconComponent(ach.icon), { className: "h-5 w-5" })}
                                         </div>
                                     </TableCell>
                                     <TableCell>

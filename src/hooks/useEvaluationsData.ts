@@ -5,8 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import type { Evaluation, EvaluationAnalysis, GamificationConfig, GamificationSeason, Attendant, EvaluationImport } from '@/lib/types';
 import { analyzeEvaluation } from '@/ai/flows/analyze-evaluation-flow';
-import { db } from '@/lib/firebase';
-import { collection, doc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+// Removido import do prisma - agora usando APIs
 import { getScoreFromRating } from '@/lib/gamification';
 
 
@@ -40,10 +39,13 @@ export function useEvaluationsData({ gamificationConfig, activeSeason }: UseEval
 
     const fetchEvaluations = useCallback(async () => {
         const startTime = performance.now();
-        console.log("EVALUATIONS: Buscando avaliações do Firestore...");
+        console.log("EVALUATIONS: Buscando avaliações via API...");
         try {
-            const snapshot = await getDocs(collection(db, "evaluations"));
-            const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Evaluation));
+            const response = await fetch('/api/evaluations');
+            if (!response.ok) {
+                throw new Error('Erro ao buscar avaliações');
+            }
+            const list = await response.json();
             setEvaluations(list);
             const endTime = performance.now();
             console.log(`PERF: fetchEvaluations (${list.length} items) took ${(endTime - startTime).toFixed(2)}ms`);
@@ -56,10 +58,13 @@ export function useEvaluationsData({ gamificationConfig, activeSeason }: UseEval
 
     const fetchEvaluationImports = useCallback(async () => {
         const startTime = performance.now();
-        console.log("EVALUATIONS: Buscando histórico de importação...");
+        console.log("EVALUATIONS: Buscando histórico de importação via API...");
          try {
-            const snapshot = await getDocs(collection(db, "evaluationImports"));
-            const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as EvaluationImport));
+            const response = await fetch('/api/evaluations/imports');
+            if (!response.ok) {
+                throw new Error('Erro ao buscar histórico de importações');
+            }
+            const list = await response.json();
             setEvaluationImports(list);
             const endTime = performance.now();
             console.log(`PERF: fetchEvaluationImports (${list.length} items) took ${(endTime - startTime).toFixed(2)}ms`);
@@ -103,36 +108,47 @@ export function useEvaluationsData({ gamificationConfig, activeSeason }: UseEval
         setLastAiAnalysis(date);
     };
 
-    const addEvaluation = async (evaluationData: Omit<Evaluation, 'id' | 'xpGained'>): Promise<Evaluation> => {
-        const evaluationDate = new Date(evaluationData.data);
-        const baseScore = getScoreFromRating(evaluationData.nota, gamificationConfig.ratingScores);
-        
-        let xpGained = baseScore;
-        if (activeSeason && evaluationDate >= new Date(activeSeason.startDate) && evaluationDate <= new Date(activeSeason.endDate)) {
-            const totalMultiplier = gamificationConfig.globalXpMultiplier * activeSeason.xpMultiplier;
-            xpGained = baseScore * totalMultiplier;
-        }
-        
-        const newEvaluation: Omit<Evaluation, 'id'> = {
-            ...evaluationData,
-            data: evaluationData.data || new Date().toISOString(),
-            xpGained,
-        };
-
-        const docRef = doc(collection(db, "evaluations"));
-        await setDoc(docRef, newEvaluation);
-        const finalEvaluation = { ...newEvaluation, id: docRef.id };
-        await fetchEvaluations();
-        return finalEvaluation;
-    };
-
-    const deleteEvaluations = async (evaluationIds: string[]) => {
-         try {
-            const batch = writeBatch(db);
-            evaluationIds.forEach(id => {
-                batch.delete(doc(db, "evaluations", id));
+    const addEvaluation = useCallback(async (evaluationData: Omit<Evaluation, 'id' | 'xpGained'>): Promise<Evaluation> => {
+        try {
+            const response = await fetch('/api/evaluations/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    evaluationData,
+                    gamificationConfig,
+                    activeSeason
+                })
             });
-            await batch.commit();
+
+            if (!response.ok) {
+                throw new Error('Erro ao criar avaliação');
+            }
+
+            const finalEvaluation = await response.json();
+            await fetchEvaluations();
+            return finalEvaluation;
+        } catch (error) {
+            console.error("EVALUATIONS: Erro ao adicionar avaliação:", error);
+            throw error;
+        }
+    }, [gamificationConfig, activeSeason, fetchEvaluations]);
+
+    const deleteEvaluations = useCallback(async (evaluationIds: string[]) => {
+        try {
+            const response = await fetch('/api/evaluations', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ evaluationIds })
+            });
+
+            if (!response.ok) {
+                throw new Error('Erro ao deletar avaliações');
+            }
+
             await fetchEvaluations();
 
             // Also delete AI analysis associated with these evaluations
@@ -144,37 +160,64 @@ export function useEvaluationsData({ gamificationConfig, activeSeason }: UseEval
             console.error("EVALUATIONS: Erro ao remover avaliações:", error);
             throw error;
         }
-    };
+    }, [fetchEvaluations, getAiAnalysisFromStorage, saveAiAnalysisToStorage]);
 
-     const addImportRecord = async (importData: Omit<EvaluationImport, 'id'>): Promise<EvaluationImport> => {
+     const addImportRecord = useCallback(async (importData: Omit<EvaluationImport, 'id'>): Promise<EvaluationImport> => {
         try {
-            const docRef = doc(collection(db, "evaluationImports"));
-            const newImport = { ...importData, id: docRef.id };
-            await setDoc(docRef, newImport);
+            const response = await fetch('/api/evaluations/imports/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(importData)
+            });
+
+            if (!response.ok) {
+                throw new Error('Erro ao criar registro de importação');
+            }
+
+            const newImport = await response.json();
             await fetchEvaluationImports();
             return newImport;
         } catch (error) {
             console.error("EVALUATIONS: Erro ao salvar histórico de importação:", error);
             throw error;
         }
-    };
+    }, [fetchEvaluationImports]);
 
-    const revertImport = async (importId: string) => {
-        const importToRevert = evaluationImports.find(i => i.id === importId);
-        if (!importToRevert) {
-            toast({ variant: 'destructive', title: 'Erro', description: 'Importação não encontrada.' });
-            return;
+    const revertImport = useCallback(async (importId: string) => {
+        try {
+            const response = await fetch(`/api/evaluations/imports/${importId}/revert`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) {
+                throw new Error('Erro ao reverter importação');
+            }
+
+            const result = await response.json();
+
+            // Atualizar os estados
+            await fetchEvaluations();
+            await fetchEvaluationImports();
+
+            // Remove AI analysis for deleted evaluations
+            const currentAiAnalysis = getAiAnalysisFromStorage();
+            const aiAnalysisToKeep = currentAiAnalysis.filter(ar => !result.deletedEvaluationIds.includes(ar.evaluationId));
+            saveAiAnalysisToStorage(aiAnalysisToKeep);
+            
+            toast({
+                title: "Importação Revertida!",
+                description: "As avaliações da importação selecionada foram removidas.",
+            });
+
+            return result;
+        } catch (error) {
+            console.error("EVALUATIONS: Erro ao reverter importação:", error);
+            toast({ variant: 'destructive', title: 'Erro', description: 'Erro ao reverter importação.' });
+            throw error;
         }
-
-        await deleteEvaluations(importToRevert.evaluationIds);
-        await deleteDoc(doc(db, "evaluationImports", importId));
-        await fetchEvaluationImports();
-        
-        toast({
-            title: "Importação Revertida!",
-            description: "As avaliações da importação selecionada foram removidas.",
-        });
-    };
+    }, [fetchEvaluations, fetchEvaluationImports, getAiAnalysisFromStorage, saveAiAnalysisToStorage, toast]);
 
     const runAiAnalysis = async () => {
         setIsAiAnalysisRunning(true);

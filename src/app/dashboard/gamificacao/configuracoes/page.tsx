@@ -4,7 +4,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { ChevronRight, Star, Trophy, GitBranch, Hourglass, Percent, AlertCircle } from "lucide-react";
-import { useAuth } from "@/providers/AuthProvider";
+import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ROLES } from "@/lib/types";

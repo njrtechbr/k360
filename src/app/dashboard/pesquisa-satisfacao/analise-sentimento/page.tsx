@@ -1,51 +1,31 @@
 
 "use client";
 
-import { useAuth } from "@/providers/AuthProvider";
+import React, { useState, useEffect, useMemo } from 'react';
+import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Star, Sparkles, AlertTriangle, CheckCircle, MinusCircle, Bot, MessageSquareText, Hourglass, Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Sparkles, Bot, MessageSquareText, Hourglass, Check, BarChart3, Filter } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Button } from "@/components/ui/button";
-import type { Evaluation, EvaluationAnalysis } from "@/lib/types";
+import type { EvaluationAnalysis } from "@/lib/types";
 import { ROLES } from "@/lib/types";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Progress } from "@/components/ui/progress";
-
-const RatingStars = ({ rating, className = 'h-4 w-4' }: { rating: number, className?: string }) => {
-    const totalStars = 5;
-    return (
-        <div className="flex items-center">
-            {[...Array(totalStars)].map((_, index) => (
-                <Star
-                    key={index}
-                    className={`${className} ${index < rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}
-                />
-            ))}
-        </div>
-    );
-};
-
-const SentimentBadge = ({ sentiment }: { sentiment: EvaluationAnalysis['sentiment'] }) => {
-    switch (sentiment) {
-        case "Positivo":
-            return <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"><CheckCircle className="mr-1 h-3 w-3"/>Positivo</Badge>;
-        case "Negativo":
-            return <Badge variant="destructive"><AlertTriangle className="mr-1 h-3 w-3"/>Negativo</Badge>;
-        case "Neutro":
-            return <Badge variant="outline"><MinusCircle className="mr-1 h-3 w-3"/>Neutro</Badge>;
-        default:
-            return <Badge variant="outline">N/A</Badge>;
-    }
-};
+import { RatingStars, SentimentBadge, AnalysisProgress } from "@/components/survey";
+import SentimentAnalysisPanel from '@/components/survey/SentimentAnalysisPanel';
+import SentimentInsights from '@/components/survey/SentimentInsights';
+import SentimentFilters, { SentimentFilterOptions, AttendantOption } from '@/components/survey/SentimentFilters';
 
 export default function AnaliseSentimentoPage() {
     const { user, isAuthenticated, loading, evaluations, attendants, runAiAnalysis, aiAnalysisResults, lastAiAnalysis, isAiAnalysisRunning, analysisProgress, isProgressModalOpen, setIsProgressModalOpen } = useAuth();
     const router = useRouter();
+    const [filters, setFilters] = useState<SentimentFilterOptions>({});
+    const [activeTab, setActiveTab] = useState('overview');
 
     useEffect(() => {
         if (!loading && !isAuthenticated) {
@@ -67,12 +47,115 @@ export default function AnaliseSentimentoPage() {
         }, {} as Record<string, typeof evaluations[0]>);
     }, [evaluations]);
     
-    const analysisWithDetails = useMemo(() => {
+    const allAnalysisWithDetails = useMemo(() => {
         return aiAnalysisResults.map(analysis => ({
             ...analysis,
             evaluation: evaluationMap[analysis.evaluationId],
         })).filter(item => item.evaluation);
     }, [aiAnalysisResults, evaluationMap]);
+
+    // Filtrar análises baseado nos filtros aplicados
+    const filteredAnalyses = useMemo(() => {
+        let filtered = [...allAnalysisWithDetails];
+
+        // Filtro por termo de busca
+        if (filters.searchTerm) {
+            const searchLower = filters.searchTerm.toLowerCase();
+            filtered = filtered.filter(analysis => 
+                analysis.evaluation.comentario.toLowerCase().includes(searchLower) ||
+                analysis.summary.toLowerCase().includes(searchLower) ||
+                (attendantMap[analysis.evaluation.attendantId] || '').toLowerCase().includes(searchLower)
+            );
+        }
+
+        // Filtro por sentimentos
+        if (filters.sentiments?.length) {
+            filtered = filtered.filter(analysis => 
+                filters.sentiments!.includes(analysis.sentiment)
+            );
+        }
+
+        // Filtro por confiança
+        if (filters.confidenceRange) {
+            const [min, max] = filters.confidenceRange;
+            filtered = filtered.filter(analysis => 
+                analysis.confidence >= min && analysis.confidence <= max
+            );
+        }
+
+        // Filtro por nota
+        if (filters.ratingRange) {
+            const [min, max] = filters.ratingRange;
+            filtered = filtered.filter(analysis => 
+                analysis.evaluation.nota >= min && analysis.evaluation.nota <= max
+            );
+        }
+
+        // Filtro por atendentes
+        if (filters.attendants?.length) {
+            filtered = filtered.filter(analysis => 
+                filters.attendants!.includes(analysis.evaluation.attendantId)
+            );
+        }
+
+        // Filtro por análises conflitantes
+        if (filters.hasConflicts) {
+            filtered = filtered.filter(analysis => 
+                (analysis.sentiment === 'Negativo' && analysis.evaluation.nota >= 4) ||
+                (analysis.sentiment === 'Positivo' && analysis.evaluation.nota <= 2)
+            );
+        }
+
+        // Filtro por tamanho mínimo do comentário
+        if (filters.minAnalysisLength) {
+            filtered = filtered.filter(analysis => 
+                analysis.evaluation.comentario.length >= filters.minAnalysisLength!
+            );
+        }
+
+        // Ordenação
+        const sortBy = filters.sortBy || 'date';
+        const sortOrder = filters.sortOrder || 'desc';
+        
+        filtered.sort((a, b) => {
+            let comparison = 0;
+            
+            switch (sortBy) {
+                case 'confidence':
+                    comparison = a.confidence - b.confidence;
+                    break;
+                case 'rating':
+                    comparison = a.evaluation.nota - b.evaluation.nota;
+                    break;
+                case 'sentiment':
+                    comparison = a.sentiment.localeCompare(b.sentiment);
+                    break;
+                case 'date':
+                default:
+                    comparison = new Date(a.evaluation.data).getTime() - new Date(b.evaluation.data).getTime();
+                    break;
+            }
+            
+            return sortOrder === 'asc' ? comparison : -comparison;
+        });
+
+        return filtered;
+    }, [allAnalysisWithDetails, filters, attendantMap]);
+
+    // Preparar opções de atendentes para o filtro
+    const attendantOptions: AttendantOption[] = useMemo(() => {
+        return attendants.map(attendant => {
+            const totalAnalyses = allAnalysisWithDetails.filter(a => 
+                a.evaluation.attendantId === attendant.id
+            ).length;
+            
+            return {
+                id: attendant.id,
+                name: attendant.name,
+                totalAnalyses
+            };
+        }).filter(option => option.totalAnalyses > 0);
+    }, [attendants, allAnalysisWithDetails]);
 
     if (loading || !user) {
         return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
@@ -80,7 +163,7 @@ export default function AnaliseSentimentoPage() {
     
     const canRunAnalysis = user.role === ROLES.SUPERVISOR || user.role === ROLES.ADMIN || user.role === ROLES.SUPERADMIN;
     
-    const sortedAnalysis = [...analysisWithDetails].sort((a, b) => new Date(b.evaluation.data).getTime() - new Date(a.evaluation.data).getTime());
+    const sortedAnalysis = [...filteredAnalyses].sort((a, b) => new Date(b.evaluation.data).getTime() - new Date(a.evaluation.data).getTime());
 
     const progressPercentage = analysisProgress.total > 0 ? (analysisProgress.current / analysisProgress.total) * 100 : 0;
     const lastResult = analysisProgress.lastResult;
@@ -94,77 +177,133 @@ export default function AnaliseSentimentoPage() {
                         <h1 className="text-3xl font-bold">Análise de Sentimento com IA</h1>
                         <p className="text-muted-foreground">Analise os comentários das avaliações para extrair insights.</p>
                     </div>
-                    {canRunAnalysis && (
-                        <Card className="p-4 flex flex-col items-start gap-2">
-                            <Button onClick={runAiAnalysis} disabled={isAiAnalysisRunning}>
-                                {isAiAnalysisRunning ? (
-                                    <>
-                                        <Bot className="mr-2 h-4 w-4 animate-spin" /> Análise em Andamento...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Sparkles className="mr-2 h-4 w-4" /> Executar Análise de IA Agora
-                                    </>
-                                )}
-                            </Button>
-                            <p className="text-xs text-muted-foreground">
-                                Última análise: {lastAiAnalysis ? format(new Date(lastAiAnalysis), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR }) : 'Nunca'}
-                            </p>
-                        </Card>
-                    )}
                 </div>
+                
+                {/* Componente de progresso da análise */}
+                <AnalysisProgress
+                    totalEvaluations={evaluations.length}
+                    analyzedCount={aiAnalysisResults.length}
+                    pendingCount={evaluations.length - aiAnalysisResults.length}
+                    sentimentDistribution={{
+                        positive: filteredAnalyses.filter(a => a.sentiment === 'Positivo').length,
+                        negative: filteredAnalyses.filter(a => a.sentiment === 'Negativo').length,
+                        neutral: filteredAnalyses.filter(a => a.sentiment === 'Neutro').length
+                    }}
+                    recentAnalyses={sortedAnalysis.slice(0, 3)}
+                    onStartAnalysis={canRunAnalysis ? runAiAnalysis : undefined}
+                    isRunning={isAiAnalysisRunning}
+                    lastAnalysis={lastAiAnalysis}
+                />
 
-                <Card className="shadow-lg">
-                    <CardHeader>
-                        <CardTitle>Resultados da Análise</CardTitle>
-                        <CardDescription>Lista de todas as avaliações analisadas pela inteligência artificial.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Atendente</TableHead>
-                                    <TableHead>Nota</TableHead>
-                                    <TableHead>Comentário Original</TableHead>
-                                    <TableHead>Sentimento (IA)</TableHead>
-                                    <TableHead>Resumo (IA)</TableHead>
-                                    <TableHead className="text-right">Data</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {sortedAnalysis.map((item) => (
-                                    <TableRow key={item.evaluationId}>
-                                        <TableCell className="font-medium">
-                                            <Badge variant="outline">{attendantMap[item.evaluation.attendantId] || "Desconhecido"}</Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            <RatingStars rating={item.evaluation.nota} />
-                                        </TableCell>
-                                        <TableCell className="text-muted-foreground max-w-xs truncate">
-                                            {item.evaluation.comentario}
-                                        </TableCell>
-                                        <TableCell>
-                                            <SentimentBadge sentiment={item.sentiment} />
-                                        </TableCell>
-                                        <TableCell className="max-w-xs truncate">
-                                            {item.summary}
-                                        </TableCell>
-                                        <TableCell className="text-right text-muted-foreground">
-                                            {format(new Date(item.evaluation.data), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                                {sortedAnalysis.length === 0 && (
-                                    <TableRow>
-                                        <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
-                                            Nenhuma análise de IA foi executada ainda.
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+                    <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="overview" className="flex items-center gap-2">
+                            <BarChart3 className="h-4 w-4" />
+                            Visão Geral
+                        </TabsTrigger>
+                        <TabsTrigger value="analysis" className="flex items-center gap-2">
+                            <Bot className="h-4 w-4" />
+                            Análises Detalhadas
+                        </TabsTrigger>
+                        <TabsTrigger value="insights" className="flex items-center gap-2">
+                            <Sparkles className="h-4 w-4" />
+                            Insights
+                        </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="overview" className="space-y-6">
+                        <SentimentAnalysisPanel 
+                            analyses={filteredAnalyses}
+                            attendantMap={attendantMap}
+                        />
+                    </TabsContent>
+
+                    <TabsContent value="analysis" className="space-y-6">
+                        <div className="flex flex-col lg:flex-row gap-6">
+                            <div className="lg:w-80 flex-shrink-0">
+                                <SentimentFilters
+                                    filters={filters}
+                                    onFiltersChange={setFilters}
+                                    attendantOptions={attendantOptions}
+                                    totalResults={filteredAnalyses.length}
+                                />
+                            </div>
+                            
+                            <div className="flex-1">
+                                <Card className="shadow-lg">
+                                    <CardHeader>
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <CardTitle className="flex items-center gap-2">
+                                                    <Filter className="h-5 w-5" />
+                                                    Resultados da Análise
+                                                </CardTitle>
+                                                <CardDescription>
+                                                    {filteredAnalyses.length} de {allAnalysisWithDetails.length} análises encontradas
+                                                </CardDescription>
+                                            </div>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Atendente</TableHead>
+                                                    <TableHead>Nota</TableHead>
+                                                    <TableHead>Comentário Original</TableHead>
+                                                    <TableHead>Sentimento (IA)</TableHead>
+                                                    <TableHead>Resumo (IA)</TableHead>
+                                                    <TableHead className="text-right">Data</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {sortedAnalysis.map((item) => (
+                                                    <TableRow key={item.evaluationId}>
+                                                        <TableCell className="font-medium">
+                                                            <Badge variant="outline">{attendantMap[item.evaluation.attendantId] || "Desconhecido"}</Badge>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <RatingStars rating={item.evaluation.nota} />
+                                                        </TableCell>
+                                                        <TableCell className="text-muted-foreground max-w-xs truncate">
+                                                            {item.evaluation.comentario}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <SentimentBadge sentiment={item.sentiment} />
+                                                        </TableCell>
+                                                        <TableCell className="max-w-xs truncate">
+                                                            {item.summary}
+                                                        </TableCell>
+                                                        <TableCell className="text-right text-muted-foreground">
+                                                            {format(new Date(item.evaluation.data), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                                {sortedAnalysis.length === 0 && (
+                                                    <TableRow>
+                                                        <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
+                                                            {allAnalysisWithDetails.length === 0 
+                                                                ? "Nenhuma análise de IA foi executada ainda."
+                                                                : "Nenhuma análise encontrada com os filtros aplicados."
+                                                            }
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )}
+                                            </TableBody>
+                                        </Table>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </div>
+                    </TabsContent>
+
+                    <TabsContent value="insights" className="space-y-6">
+                        <SentimentInsights 
+                            analyses={filteredAnalyses}
+                            attendantMap={attendantMap}
+                        />
+                    </TabsContent>
+                </Tabs>
             </div>
 
             {/* Analysis Progress Modal */}

@@ -4,8 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import type { Funcao, Setor } from '@/lib/types';
-import { db } from '@/lib/firebase';
-import { collection, doc, getDocs, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+// Removido import do prisma - agora usando APIs
 
 export function useRhConfigData() {
     const [funcoes, setFuncoes] = useState<Funcao[]>([]);
@@ -14,11 +13,14 @@ export function useRhConfigData() {
 
     const fetchCollection = useCallback(async (collectionName: 'funcoes' | 'setores') => {
         const startTime = performance.now();
-        console.log(`RH_CONFIG: Buscando ${collectionName} do Firestore...`);
+        console.log(`RH_CONFIG: Buscando ${collectionName} via API...`);
         try {
-            const col = collection(db, collectionName);
-            const snapshot = await getDocs(col);
-            const list = snapshot.docs.map(doc => doc.id);
+            const response = await fetch(`/api/${collectionName}`);
+            if (!response.ok) {
+                throw new Error(`Erro ao buscar ${collectionName}`);
+            }
+            const list = await response.json();
+            
             const endTime = performance.now();
             console.log(`PERF: fetchCollection for ${collectionName} (${list.length} items) took ${(endTime - startTime).toFixed(2)}ms`);
             return list;
@@ -44,38 +46,72 @@ export function useRhConfigData() {
     // --- Funções ---
     const addFuncao = async (funcao: string) => {
         try {
-            await setDoc(doc(db, "funcoes", funcao), { name: funcao });
+            const response = await fetch('/api/funcoes', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name: funcao })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Erro ao adicionar função');
+            }
+            
             await fetchFuncoes();
             toast({ title: "Sucesso!", description: `A função "${funcao}" foi adicionada.` });
         } catch (error) {
              console.error("Erro ao adicionar função:", error);
-             toast({ variant: "destructive", title: "Erro", description: "Não foi possível adicionar a função." });
+             toast({ variant: "destructive", title: "Erro", description: error instanceof Error ? error.message : "Não foi possível adicionar a função." });
              throw error;
         }
     };
     
     const updateFuncao = async (oldFuncao: string, newFuncao: string) => {
         try {
-            await deleteDoc(doc(db, "funcoes", oldFuncao));
-            await setDoc(doc(db, "funcoes", newFuncao), { name: newFuncao });
+            const response = await fetch('/api/funcoes', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ oldName: oldFuncao, newName: newFuncao })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Erro ao atualizar função');
+            }
+            
             await fetchFuncoes();
-            // Here you might need to update all attendants using the old function
             toast({ title: "Sucesso!", description: "Função atualizada. Lembre-se de atualizar os atendentes, se necessário." });
         } catch (error) {
              console.error("Erro ao atualizar função:", error);
-             toast({ variant: "destructive", title: "Erro", description: "Não foi possível atualizar a função." });
+             toast({ variant: "destructive", title: "Erro", description: error instanceof Error ? error.message : "Não foi possível atualizar a função." });
              throw error;
         }
     };
 
     const deleteFuncao = async (funcao: string) => {
         try {
-            await deleteDoc(doc(db, "funcoes", funcao));
+            const response = await fetch('/api/funcoes', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name: funcao })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Erro ao remover função');
+            }
+            
             await fetchFuncoes();
             toast({ title: "Sucesso!", description: "A função foi removida." });
         } catch (error) {
              console.error("Erro ao remover função:", error);
-             toast({ variant: "destructive", title: "Erro", description: "Não foi possível remover a função." });
+             toast({ variant: "destructive", title: "Erro", description: error instanceof Error ? error.message : "Não foi possível remover a função." });
              throw error;
         }
     };
@@ -83,37 +119,72 @@ export function useRhConfigData() {
     // --- Setores ---
     const addSetor = async (setor: string) => {
         try {
-            await setDoc(doc(db, "setores", setor), { name: setor });
+            const response = await fetch('/api/setores', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name: setor })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Erro ao adicionar setor');
+            }
+            
             await fetchSetores();
             toast({ title: "Sucesso!", description: `O setor "${setor}" foi adicionado.` });
         } catch (error) {
              console.error("Erro ao adicionar setor:", error);
-             toast({ variant: "destructive", title: "Erro", description: "Não foi possível adicionar o setor." });
+             toast({ variant: "destructive", title: "Erro", description: error instanceof Error ? error.message : "Não foi possível adicionar o setor." });
              throw error;
         }
     };
     
     const updateSetor = async (oldSetor: string, newSetor: string) => {
         try {
-            await deleteDoc(doc(db, "setores", oldSetor));
-            await setDoc(doc(db, "setores", newSetor), { name: newSetor });
+            const response = await fetch('/api/setores', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ oldName: oldSetor, newName: newSetor })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Erro ao atualizar setor');
+            }
+            
             await fetchSetores();
             toast({ title: "Sucesso!", description: "Setor atualizado. Lembre-se de atualizar os atendentes, se necessário." });
         } catch (error) {
              console.error("Erro ao atualizar setor:", error);
-             toast({ variant: "destructive", title: "Erro", description: "Não foi possível atualizar o setor." });
+             toast({ variant: "destructive", title: "Erro", description: error instanceof Error ? error.message : "Não foi possível atualizar o setor." });
              throw error;
         }
     };
 
     const deleteSetor = async (setor: string) => {
         try {
-            await deleteDoc(doc(db, "setores", setor));
+            const response = await fetch('/api/setores', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name: setor })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Erro ao remover setor');
+            }
+            
             await fetchSetores();
             toast({ title: "Sucesso!", description: "O setor foi removido." });
         } catch (error) {
              console.error("Erro ao remover setor:", error);
-             toast({ variant: "destructive", title: "Erro", description: "Não foi possível remover o setor." });
+             toast({ variant: "destructive", title: "Erro", description: error instanceof Error ? error.message : "Não foi possível remover o setor." });
              throw error;
         }
     };

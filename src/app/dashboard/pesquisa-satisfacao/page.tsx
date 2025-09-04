@@ -3,14 +3,18 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from "@/providers/AuthProvider";
-import { Users, LayoutDashboard, ListChecks, Star, Sparkles, Upload, History, Trash2 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useEvaluations, useEvaluationAnalytics } from "@/hooks/survey";
+import { SurveyStats } from "@/components/survey";
+import { Users, LayoutDashboard, ListChecks, Star, Sparkles, Upload, History, Trash2, BarChart3, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 export default function PesquisaSatisfacaoPage() {
-    const { user, isAuthenticated, loading } = useAuth();
+    const { user, isAuthenticated, loading, attendants } = useAuth();
+    const { evaluations, loading: evaluationsLoading } = useEvaluations();
+    const analytics = useEvaluationAnalytics({ evaluations, attendants });
     const router = useRouter();
 
     useEffect(() => {
@@ -25,8 +29,23 @@ export default function PesquisaSatisfacaoPage() {
 
     return (
         <div className="space-y-8">
-            <h1 className="text-3xl font-bold">Módulo de Pesquisa de Satisfação</h1>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="flex items-center justify-between">
+                <h1 className="text-3xl font-bold">Módulo de Pesquisa de Satisfação</h1>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <BarChart3 className="h-4 w-4" />
+                    {analytics.totalEvaluations} avaliações • {analytics.evaluatedAttendants} atendentes
+                </div>
+            </div>
+            
+            {/* Estatísticas Rápidas */}
+            <SurveyStats 
+                analytics={analytics}
+                loading={evaluationsLoading}
+                className="mb-8"
+            />
+            
+            {/* Cards de Navegação */}
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                  <Card>
                     <CardHeader>
                         <CardTitle>Dashboard de Avaliações</CardTitle>

@@ -1,0 +1,22 @@
+{
+  "enabled": true,
+  "name": "MCP Context & Memory Hook",
+  "description": "Automatically triggers when code files are modified to ensure MCP context7, sequential thinking and memory are always applied when necessary",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/**/*.ts",
+      "src/**/*.tsx",
+      "src/**/*.js",
+      "src/**/*.jsx",
+      "prisma/schema.prisma",
+      "*.ts",
+      "*.js"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Sempre usar os MCP context7, sequential thinking e memory sempre que necessário. Analise o código modificado e garanta que essas práticas estejam sendo aplicadas adequadamente. Verifique se o contexto está sendo mantido, se o pensamento sequencial está sendo seguido e se a memória está sendo utilizada quando apropriado."
+  }
+}

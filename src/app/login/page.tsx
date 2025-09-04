@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
-import { useAuth } from "@/providers/AuthProvider";
+import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -26,7 +26,7 @@ const formSchema = z.object({
 });
 
 export default function LoginPage() {
-  const { login, isAuthenticated, authLoading } = useAuth();
+  const { login, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -38,10 +38,10 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
+    if (!isLoading && isAuthenticated) {
       router.push("/dashboard");
     }
-  }, [isAuthenticated, authLoading, router]);
+  }, [isAuthenticated, isLoading, router]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
@@ -53,7 +53,7 @@ export default function LoginPage() {
 
   // The AppLayout now handles the global loading state, so we can remove it from here.
   // We just need to prevent rendering the form while loading or if already authenticated.
-  if (authLoading || isAuthenticated) {
+  if (isLoading || isAuthenticated) {
      return null; // Render nothing, AppLayout will show the loader or redirect.
   }
 

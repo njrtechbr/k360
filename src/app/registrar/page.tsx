@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
-import { useAuth } from "@/providers/AuthProvider";
+import { useAuth } from "@/hooks/useAuth";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useRouter } from "next/navigation";
 

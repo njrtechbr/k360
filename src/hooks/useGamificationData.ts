@@ -3,10 +3,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import type { GamificationConfig, Achievement, LevelReward, GamificationSeason, Attendant, Evaluation, EvaluationAnalysis, UnlockedAchievement } from '@/lib/types';
+import type { GamificationConfig, Achievement, LevelReward, GamificationSeason, Attendant, Evaluation, EvaluationAnalysis, UnlockedAchievement, AchievementConfig, LevelTrackConfig } from '@/lib/types';
 import { INITIAL_ACHIEVEMENTS, INITIAL_LEVEL_REWARDS } from '@/lib/achievements';
-import { db } from '@/lib/firebase';
-import { collection, doc, getDoc, setDoc, updateDoc, getDocs, deleteDoc, writeBatch } from 'firebase/firestore';
 import { getScoreFromRating } from '@/lib/gamification';
 
 
@@ -48,63 +46,56 @@ export function useGamificationData() {
     const [activeSeason, setActiveSeason] = useState<GamificationSeason | null>(null);
     const [nextSeason, setNextSeason] = useState<GamificationSeason | null>(null);
     const [unlockedAchievements, setUnlockedAchievements] = useState<UnlockedAchievement[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const { toast } = useToast();
 
     const fetchGamificationConfig = useCallback(async () => {
         const startTime = performance.now();
-        console.log("GAMIFICATION: Buscando configurações do Firestore...");
+        console.log("GAMIFICATION: Buscando configurações via API...");
+        setIsLoading(true);
         try {
-            const configDocRef = doc(db, "gamification", "config");
-            const configDoc = await getDoc(configDocRef);
-            if (configDoc.exists()) {
-                const data = configDoc.data();
-                const mergedAchievements = data.achievements ? mergeAchievementsWithDefaults(data.achievements) : INITIAL_ACHIEVEMENTS;
-                const mergedLevelRewards = data.levelRewards ? mergeLevelRewardsWithDefaults(data.levelRewards) : INITIAL_LEVEL_REWARDS;
-
-                const loadedConfig = {
-                    ...INITIAL_GAMIFICATION_CONFIG,
-                    ...data,
-                    achievements: mergedAchievements,
-                    levelRewards: mergedLevelRewards,
-                };
-                setGamificationConfig(loadedConfig);
-                setAchievements(mergedAchievements);
-                setLevelRewards(mergedLevelRewards);
-                setSeasons(data.seasons || []);
-                const endTime = performance.now();
-                console.log(`PERF: fetchGamificationConfig took ${(endTime - startTime).toFixed(2)}ms`);
-                return loadedConfig;
-            } else {
-                console.log("GAMIFICATION: Nenhuma configuração encontrada, usando e salvando defaults.");
-                await setDoc(configDocRef, {
-                     ...INITIAL_GAMIFICATION_CONFIG,
-                    achievements: INITIAL_GAMIFICATION_CONFIG.achievements.map(({ isUnlocked, icon, ...ach }) => ach),
-                    levelRewards: INITIAL_LEVEL_REWARDS.map(({ icon, ...reward }) => reward),
-                });
-                setGamificationConfig(INITIAL_GAMIFICATION_CONFIG);
-                 return INITIAL_GAMIFICATION_CONFIG;
+            const response = await fetch('/api/gamification');
+            if (!response.ok) {
+                throw new Error(`Erro na API: ${response.status}`);
             }
+            const data = await response.json();
+            console.log("GAMIFICATION: Dados carregados via API", { achievements: data.achievements?.length, levelRewards: data.levelRewards?.length });
+            
+            const loadedConfig = {
+                ...INITIAL_GAMIFICATION_CONFIG,
+                ...data,
+            };
+            
+            setGamificationConfig(loadedConfig);
+            setAchievements(data.achievements || INITIAL_ACHIEVEMENTS);
+            setLevelRewards(data.levelRewards || INITIAL_LEVEL_REWARDS);
+            setSeasons(data.seasons || []);
+            setIsLoading(false);
+            
+            const endTime = performance.now();
+            console.log(`PERF: fetchGamificationConfig took ${(endTime - startTime).toFixed(2)}ms`);
+            return loadedConfig;
         } catch (error) {
             console.error("GAMIFICATION: Erro ao buscar config:", error);
+            setGamificationConfig(INITIAL_GAMIFICATION_CONFIG);
+            setAchievements(INITIAL_ACHIEVEMENTS);
+            setLevelRewards(INITIAL_LEVEL_REWARDS);
+            setSeasons([]);
+            setIsLoading(false);
             toast({ variant: "destructive", title: "Erro", description: "Não foi possível carregar as configurações de gamificação." });
             return INITIAL_GAMIFICATION_CONFIG;
         }
     }, [toast]);
+
+    // Carregar dados automaticamente na inicialização
+    useEffect(() => {
+        fetchGamificationConfig();
+    }, [fetchGamificationConfig]);
     
     const fetchUnlockedAchievements = useCallback(async () => {
-        const startTime = performance.now();
-        console.log("GAMIFICATION: Buscando conquistas desbloqueadas...");
-        try {
-            const snapshot = await getDocs(collection(db, "unlockedAchievements"));
-            const unlockedList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UnlockedAchievement));
-            setUnlockedAchievements(unlockedList);
-            const endTime = performance.now();
-            console.log(`PERF: fetchUnlockedAchievements (${unlockedList.length} items) took ${(endTime - startTime).toFixed(2)}ms`);
-            return unlockedList;
-        } catch (error) {
-            console.error("GAMIFICATION: Erro ao buscar conquistas desbloqueadas:", error);
-            return [];
-        }
+        console.log("GAMIFICATION: fetchUnlockedAchievements não implementado para frontend");
+        // Esta função não deve ser usada no frontend - usar API específica se necessário
+        return [];
     }, []);
 
     const calculateActiveAndNextSeason = useCallback((allSeasons: GamificationSeason[]) => {
@@ -126,8 +117,21 @@ export function useGamificationData() {
 
     const updateGamificationConfig = async (newConfig: Partial<Pick<GamificationConfig, 'ratingScores' | 'globalXpMultiplier'>>) => {
         try {
-            const configDocRef = doc(db, "gamification", "config");
-            await updateDoc(configDocRef, newConfig);
+            const response = await fetch('/api/gamification', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    ratingScores: newConfig.ratingScores,
+                    globalXpMultiplier: newConfig.globalXpMultiplier
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Falha ao atualizar configurações');
+            }
+
             await fetchGamificationConfig();
             toast({ title: "Configurações Salvas!", description: "As regras de pontuação foram atualizadas." });
         } catch (error) {
@@ -138,8 +142,20 @@ export function useGamificationData() {
     
     const saveSeasons = async (newSeasons: GamificationSeason[]) => {
          try {
-            const configDocRef = doc(db, "gamification", "config");
-            await updateDoc(configDocRef, { seasons: newSeasons });
+            const response = await fetch('/api/gamification', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    seasons: newSeasons
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Falha ao salvar temporadas');
+            }
+
             await fetchGamificationConfig();
         } catch (error) {
              console.error("Erro ao salvar temporadas:", error);
@@ -165,89 +181,78 @@ export function useGamificationData() {
         toast({ title: "Sessão Removida!", description: "A sessão de gamificação foi removida." });
     };
     
-    const updateFullConfig = async (config: GamificationConfig) => {
-        try {
-            const configToSave = {
-                ...config,
-                achievements: config.achievements.map(({ isUnlocked, icon, ...ach }) => ach),
-                levelRewards: config.levelRewards.map(({ icon, ...reward }) => reward),
-            };
-            await setDoc(doc(db, "gamification", "config"), configToSave);
-            await fetchGamificationConfig();
-        } catch (error) {
-            console.error("Erro ao salvar config completa:", error);
-        }
-    };
+
     
     const updateAchievement = async (id: string, data: Partial<Omit<Achievement, 'id' | 'icon' | 'color' | 'isUnlocked'>>) => {
-        const updatedAchievements = achievements.map(ach => ach.id === id ? { ...ach, ...data } : ach);
-        await updateFullConfig({ ...gamificationConfig, achievements: updatedAchievements });
-        toast({ title: "Troféu Atualizado!", description: "As informações do troféu foram salvas." });
+        console.log("GAMIFICATION: Atualizando achievement via API", { id, data });
+        try {
+            const response = await fetch('/api/gamification/achievements', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    id,
+                    title: data.title,
+                    description: data.description,
+                    xp: data.xp,
+                    active: data.active
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Erro na API: ${response.status}`);
+            }
+
+            const result = await response.json();
+            console.log("GAMIFICATION: Achievement atualizado com sucesso via API", result);
+            
+            await fetchGamificationConfig();
+            toast({ title: "Troféu Atualizado!", description: "As informações do troféu foram salvas." });
+        } catch (error) {
+            console.error("GAMIFICATION: Erro ao atualizar achievement via API:", error);
+            toast({ variant: "destructive", title: "Erro", description: "Não foi possível salvar o troféu." });
+        }
     };
 
     const updateLevelReward = async (level: number, data: Partial<Omit<LevelReward, 'level' | 'icon' | 'color'>>) => {
-        const updatedLevelRewards = levelRewards.map(reward => reward.level === level ? { ...reward, ...data } : reward);
-        await updateFullConfig({ ...gamificationConfig, levelRewards: updatedLevelRewards });
-        toast({ title: "Recompensa Atualizada!", description: "A recompensa do nível foi salva." });
+        try {
+            const response = await fetch('/api/gamification/level-rewards', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    level,
+                    title: data.title,
+                    description: data.description,
+                    active: data.active
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Falha ao atualizar recompensa do nível');
+            }
+
+            await fetchGamificationConfig();
+            toast({ title: "Recompensa Atualizada!", description: "A recompensa do nível foi salva." });
+        } catch (error) {
+            console.error("Erro ao atualizar level reward:", error);
+            toast({ variant: "destructive", title: "Erro", description: "Não foi possível salvar a recompensa." });
+        }
     };
 
     const recalculateAllGamificationData = useCallback(async (allAttendants: Attendant[], allEvaluations: Evaluation[], allAiAnalysis: EvaluationAnalysis[]) => {
-        console.log("GAMIFICATION: Iniciando recalculo geral...");
-        
-        const currentConfig = await fetchGamificationConfig();
-        
-        const evBatch = writeBatch(db);
-        allEvaluations.forEach(ev => {
-             const evaluationDate = new Date(ev.data);
-             const seasonForEvaluation = currentConfig.seasons.find(s => s.active && evaluationDate >= new Date(s.startDate) && evaluationDate <= new Date(s.endDate));
-             const baseScore = getScoreFromRating(ev.nota, currentConfig.ratingScores);
-             const seasonMultiplier = seasonForEvaluation?.xpMultiplier ?? 1;
-             const totalMultiplier = currentConfig.globalXpMultiplier * seasonMultiplier;
-             evBatch.update(doc(db, "evaluations", ev.id), { xpGained: baseScore * totalMultiplier });
-        });
-        await evBatch.commit();
-        console.log(`GAMIFICATION: XP de ${allEvaluations.length} avaliações recalculado.`);
+        console.log("GAMIFICATION: recalculateAllGamificationData não implementado para frontend");
+        // Esta função não deve ser usada no frontend - usar API específica se necessário
+        throw new Error("Recálculo de gamificação deve ser feito no backend");
+    }, []);
 
-        const currentUnlocked = await fetchUnlockedAchievements();
-        const deleteBatch = writeBatch(db);
-        currentUnlocked.forEach(ua => deleteBatch.delete(doc(db, "unlockedAchievements", ua.id)));
-        await deleteBatch.commit();
-        console.log(`GAMIFICATION: ${currentUnlocked.length} conquistas desbloqueadas antigas removidas.`);
-
-        const addBatch = writeBatch(db);
-        let newUnlockCount = 0;
-
-        for (const attendant of allAttendants) {
-            const now = new Date();
-            const attendantEvaluations = allEvaluations.filter(ev => ev.attendantId === attendant.id);
-
-            for (const achievement of currentConfig.achievements) {
-                const evaluationDateForAchievement = attendantEvaluations.length > 0 ? new Date(attendantEvaluations[attendantEvaluations.length - 1].data) : now;
-                const seasonForAchievement = currentConfig.seasons.find(s => s.active && evaluationDateForAchievement >= new Date(s.startDate) && evaluationDateForAchievement <= new Date(s.endDate));
-
-                if (achievement.active && seasonForAchievement) {
-                    if (achievement.isUnlocked(attendant, attendantEvaluations, allEvaluations, allAttendants, allAiAnalysis)) {
-                        const seasonMultiplier = seasonForAchievement.xpMultiplier || 1;
-                        const totalMultiplier = currentConfig.globalXpMultiplier * seasonMultiplier;
-                        
-                        const newUnlock: Omit<UnlockedAchievement, 'id'> = {
-                            attendantId: attendant.id,
-                            achievementId: achievement.id,
-                            unlockedAt: now.toISOString(),
-                            xpGained: achievement.xp * totalMultiplier,
-                        };
-                        const newDocRef = doc(collection(db, "unlockedAchievements"));
-                        addBatch.set(newDocRef, newUnlock);
-                        newUnlockCount++;
-                    }
-                }
-            }
-        }
-
-        await addBatch.commit();
-        console.log(`GAMIFICATION: Recálculo concluído. ${newUnlockCount} novas conquistas registradas.`);
-        await fetchUnlockedAchievements(); // Refresh state
-
+    // Função para refresh manual dos dados
+    const refreshData = useCallback(async () => {
+        console.log("GAMIFICATION: Refresh manual dos dados solicitado");
+        await fetchGamificationConfig();
+        await fetchUnlockedAchievements();
     }, [fetchGamificationConfig, fetchUnlockedAchievements]);
 
     return { 
@@ -267,6 +272,8 @@ export function useGamificationData() {
         unlockedAchievements,
         fetchUnlockedAchievements,
         recalculateAllGamificationData,
+        isLoading,
+        refreshData,
     };
 }
 

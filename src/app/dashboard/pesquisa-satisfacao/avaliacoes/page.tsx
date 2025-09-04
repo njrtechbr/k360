@@ -1,92 +1,86 @@
 
 "use client";
 
-import { useAuth } from "@/providers/AuthProvider";
+import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
+import { useEvaluations } from "@/hooks/survey";
+import { EvaluationsList } from "@/components/survey";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Star } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-
-const RatingStars = ({ rating }: { rating: number }) => {
-    const totalStars = 5;
-    return (
-        <div className="flex items-center">
-            {[...Array(totalStars)].map((_, index) => (
-                <Star
-                    key={index}
-                    className={`h-4 w-4 ${index < rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}
-                />
-            ))}
-        </div>
-    );
-};
-
+import { Loader2 } from "lucide-react";
 
 export default function AvaliacoesPage() {
-    const { user, isAuthenticated, loading, evaluations, attendants } = useAuth();
+    const { user, isAuthenticated, loading: authLoading, attendants } = useAuth();
     const router = useRouter();
+    const { 
+        evaluations, 
+        loading, 
+        updateEvaluation, 
+        deleteEvaluation 
+    } = useEvaluations();
 
     useEffect(() => {
-        if (!loading && !isAuthenticated) {
+        if (!authLoading && !isAuthenticated) {
             router.push("/login");
         }
-    }, [isAuthenticated, loading, router]);
+    }, [isAuthenticated, authLoading, router]);
 
-    const attendantMap = useMemo(() => {
-        return attendants.reduce((acc, attendant) => {
-            acc[attendant.id] = attendant.name;
-            return acc;
-        }, {} as Record<string, string>);
-    }, [attendants]);
-
-    if (loading || !user) {
-        return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
+    if (authLoading || !user) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <Loader2 className="h-8 w-8 animate-spin" />
+                <p className="ml-2">Carregando...</p>
+            </div>
+        );
     }
 
-    const sortedEvaluations = [...evaluations].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+    const handleEditEvaluation = async (evaluation: any) => {
+        // TODO: Implementar modal de edição
+        console.log('Editar avaliação:', evaluation);
+    };
+
+    const handleDeleteEvaluation = async (evaluation: any) => {
+        if (confirm('Tem certeza que deseja excluir esta avaliação?')) {
+            await deleteEvaluation(evaluation.id);
+        }
+    };
+
+    const handleViewEvaluation = (evaluation: any) => {
+        // TODO: Implementar modal de visualização detalhada
+        console.log('Visualizar avaliação:', evaluation);
+    };
 
     return (
         <div className="space-y-8">
-            <h1 className="text-3xl font-bold">Todas as Avaliações</h1>
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold">Todas as Avaliações</h1>
+                    <p className="text-muted-foreground mt-2">
+                        Gerencie e visualize todas as avaliações de satisfação
+                    </p>
+                </div>
+            </div>
 
             <Card className="shadow-lg">
                 <CardHeader>
                     <CardTitle>Histórico Completo</CardTitle>
-                    <CardDescription>Lista de todas as avaliações de satisfação registradas no sistema.</CardDescription>
+                    <CardDescription>
+                        Lista de todas as avaliações de satisfação registradas no sistema.
+                        Total: {evaluations.length} avaliações
+                    </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Atendente</TableHead>
-                                <TableHead>Nota</TableHead>
-                                <TableHead>Comentário</TableHead>
-                                <TableHead className="text-right">Data</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {sortedEvaluations.map((evaluation) => (
-                                <TableRow key={evaluation.id}>
-                                    <TableCell className="font-medium">
-                                        <Badge variant="outline">{attendantMap[evaluation.attendantId] || "Desconhecido"}</Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        <RatingStars rating={evaluation.nota} />
-                                    </TableCell>
-                                    <TableCell className="text-muted-foreground max-w-sm truncate">
-                                        {evaluation.comentario}
-                                    </TableCell>
-                                    <TableCell className="text-right text-muted-foreground">
-                                        {format(new Date(evaluation.data), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                    <EvaluationsList
+                        evaluations={evaluations}
+                        attendants={attendants}
+                        loading={loading}
+                        onEdit={handleEditEvaluation}
+                        onDelete={handleDeleteEvaluation}
+                        onView={handleViewEvaluation}
+                        showActions={true}
+                        showFilters={true}
+                        pageSize={20}
+                    />
                 </CardContent>
             </Card>
         </div>

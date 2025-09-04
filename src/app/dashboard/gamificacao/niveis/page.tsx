@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useAuth } from "@/providers/AuthProvider";
+import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,10 +11,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserCircle, Shield } from "lucide-react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { getLevelFromXp, MAX_LEVEL } from '@/lib/xp';
-import RewardTrack from "@/components/RewardTrack";
+import { RewardTrack, SeasonStatus } from "@/components/gamification";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
-import GamificationSeasonStatus from "@/components/GamificationSeasonStatus";
 
 const getMedal = (rank: number) => {
     if (rank === 1) return <span className="text-2xl" title="1º Lugar">🥇</span>;
@@ -24,7 +23,7 @@ const getMedal = (rank: number) => {
 };
 
 export default function NiveisPage() {
-    const { user, isAuthenticated, loading, attendants, seasonXpEvents } = useAuth();
+    const { user, isAuthenticated, loading, attendants, seasonXpEvents, activeSeason, nextSeason } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
@@ -70,7 +69,7 @@ export default function NiveisPage() {
                 <p className="text-muted-foreground">Acompanhe a trilha de recompensas e o progresso de cada atendente.</p>
             </div>
             
-            <GamificationSeasonStatus />
+            <SeasonStatus activeSeason={activeSeason} nextSeason={nextSeason} />
 
             <Card>
                 <CardHeader>

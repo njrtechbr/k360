@@ -1,9 +1,9 @@
 
 "use client";
 
-import { useAuth } from "@/providers/AuthProvider";
+import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ShieldAlert, ShieldCheck, ShieldHalf, UserIcon, Wrench, Users, PlusCircle, Gift, Building2, Cake, CalendarDays, PartyPopper } from "lucide-react";

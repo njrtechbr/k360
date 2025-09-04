@@ -31,25 +31,42 @@ export function useAuthData() {
     }, []);
 
     const login = async (email: string, password: string): Promise<void> => {
-        const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
-        const users = usersJson ? JSON.parse(usersJson) : [];
-        const foundUser = users.find((u: User) => u.email === email);
-
-        if (foundUser && foundUser.password === password) {
-            setUser(foundUser);
-            localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(foundUser));
-            toast({
-                title: "Login bem-sucedido!",
-                description: `Bem-vindo de volta, ${foundUser.name}.`,
+        try {
+            const response = await fetch('/api/users/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password }),
             });
-            router.push("/dashboard");
-        } else {
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                const foundUser = data.user;
+                setUser(foundUser as User);
+                localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(foundUser));
+                toast({
+                    title: "Login bem-sucedido!",
+                    description: `Bem-vindo de volta, ${foundUser.name}.`,
+                });
+                router.push("/dashboard");
+            } else {
+                toast({
+                    variant: "destructive",
+                    title: "Erro de autenticação",
+                    description: data.error || "Email ou senha incorretos.",
+                });
+                throw new Error(data.error || "Credenciais inválidas");
+            }
+        } catch (error: any) {
+            console.error("Erro ao fazer login:", error);
             toast({
                 variant: "destructive",
                 title: "Erro de autenticação",
-                description: "Email ou senha incorretos.",
+                description: error.message || "Ocorreu um erro ao tentar fazer login.",
             });
-            throw new Error("Credenciais inválidas");
+            throw error;
         }
     };
 

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useAuth } from "@/providers/AuthProvider";
+import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -19,7 +19,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import ImportProgressModal from "@/components/ImportProgressModal";
 
 type CsvRow = {
-    id: string;
     name: string;
     email: string;
     role: string;
@@ -53,7 +52,6 @@ export default function ImportarAtendentesPage() {
 
     const existingEmails = useMemo(() => new Set(attendants.map(a => a.email.toLowerCase())), [attendants]);
     const existingCpfs = useMemo(() => new Set(attendants.map(a => a.cpf)), [attendants]);
-    const existingIds = useMemo(() => new Set(attendants.map(a => a.id)), [attendants]);
 
     useEffect(() => {
         if (!loading && !isAuthenticated) {
@@ -75,9 +73,9 @@ export default function ImportarAtendentesPage() {
             header: true,
             skipEmptyLines: true,
             complete: (results) => {
-                const validData = results.data.filter(row => row.name && row.email && row.cpf && row.id);
+                const validData = results.data.filter(row => row.name && row.email && row.cpf);
                 const config: ImportConfig[] = validData.map(row => {
-                    const isDuplicate = existingIds.has(row.id) || existingEmails.has(row.email.toLowerCase()) || existingCpfs.has(row.cpf);
+                    const isDuplicate = existingEmails.has(row.email.toLowerCase()) || existingCpfs.has(row.cpf);
                     const preSelectedFuncao = funcoes.find(f => f.toLowerCase() === row.role?.toLowerCase());
 
                     return {
@@ -123,7 +121,7 @@ export default function ImportarAtendentesPage() {
     };
 
     const attendantsToImport = useMemo(() => {
-        return importConfig.filter(config => config.isSelected && !config.isDuplicate && config.setor && config.funcao);
+        return importConfig.filter(config => config.isSelected && !config.isDuplicate);
     }, [importConfig]);
     
     const handleImport = async () => {
@@ -138,11 +136,11 @@ export default function ImportarAtendentesPage() {
             const { csvRow, setor, funcao } = config;
             importedCount++;
             return {
-                id: csvRow.id,
+                // Remove the id field - let Prisma auto-generate it
                 name: csvRow.name || "Nome não informado",
                 email: csvRow.email || `sem-email-${importedCount}@invalido.com`,
-                funcao: funcao!,
-                setor: setor!,
+                funcao: funcao || "Sem Função",
+                setor: setor || "Sem Setor",
                 status: csvRow.status?.toLowerCase() === 'ativo' ? ATTENDANT_STATUS.ACTIVE : ATTENDANT_STATUS.INACTIVE,
                 avatarUrl: csvRow.avatarUrl || "",
                 telefone: csvRow.telefone || "00000000000",
@@ -152,7 +150,7 @@ export default function ImportarAtendentesPage() {
                 dataNascimento: csvRow.dataNascimento ? new Date(csvRow.dataNascimento).toISOString() : new Date().toISOString(),
                 rg: csvRow.rg || "000000000",
                 cpf: csvRow.cpf || `00000000000${importedCount}`,
-            } as Omit<Attendant, 'importId'>;
+            } as Omit<Attendant, 'id' | 'importId'>;
         });
 
         try {
@@ -161,7 +159,25 @@ export default function ImportarAtendentesPage() {
             setImportConfig([]);
         } catch (error) {
             console.error("Erro durante a importação de atendentes:", error);
-            // Toast handled in provider
+            
+            // Verificar se é erro de sessão
+            if (error instanceof Error && error.message.includes('Usuário da sessão não encontrado')) {
+                toast({ 
+                    variant: "destructive", 
+                    title: "Erro de Sessão", 
+                    description: "Sua sessão expirou ou está inválida. Faça logout e login novamente para continuar.",
+                    action: (
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => window.location.href = '/api/auth/signout'}
+                        >
+                            Fazer Logout
+                        </Button>
+                    )
+                });
+            }
+            // Toast handled in provider for other errors
         }
     };
     
@@ -170,7 +186,7 @@ export default function ImportarAtendentesPage() {
     }
     
     const hasDataToConfigure = importConfig.length > 0;
-    const isReadyToImport = attendantsToImport.length > 0 && attendantsToImport.length === importConfig.filter(c => c.isSelected).length;
+    const isReadyToImport = attendantsToImport.length > 0;
     const selectedCount = importConfig.filter(c => c.isSelected && !c.isDuplicate).length;
 
     return (
@@ -243,6 +259,7 @@ export default function ImportarAtendentesPage() {
                                                     >
                                                         <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                                                         <SelectContent>
+                                                            <SelectItem value="Sem Função">Sem Função</SelectItem>
                                                             {funcoes.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
                                                         </SelectContent>
                                                     </Select>
@@ -255,6 +272,7 @@ export default function ImportarAtendentesPage() {
                                                     >
                                                         <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                                                         <SelectContent>
+                                                            <SelectItem value="Sem Setor">Sem Setor</SelectItem>
                                                             {setores.map(s => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}
                                                         </SelectContent>
                                                     </Select>
@@ -271,7 +289,7 @@ export default function ImportarAtendentesPage() {
                                 {isProcessing ? `Importando...` : `Importar ${attendantsToImport.length} Atendentes`}
                             </Button>
                             {!isReadyToImport && selectedCount > 0 &&
-                                <p className="text-sm text-center text-muted-foreground">Preencha a função e o setor para todos os atendentes selecionados para habilitar a importação.</p>
+                                <p className="text-sm text-center text-muted-foreground">Selecione pelo menos um atendente para importar.</p>
                             }
                         </CardFooter>
                     </Card>

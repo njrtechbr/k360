@@ -1,0 +1,1 @@
+SELECT * FROM "AchievementConfig" LIMIT 5;

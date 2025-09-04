@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useAuth } from "@/providers/AuthProvider";
+import { useAuth } from "@/hooks/useAuth";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";

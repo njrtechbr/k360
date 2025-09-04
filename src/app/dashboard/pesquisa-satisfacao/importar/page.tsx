@@ -1,7 +1,8 @@
 
 "use client";
 
-import { useAuth } from "@/providers/AuthProvider";
+import { useAuth } from "@/hooks/useAuth";
+import { usePrisma } from "@/providers/PrismaProvider";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -16,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { suggestAttendants, type SuggestAttendantOutput } from "@/ai/flows/suggest-attendant-flow";
-import { Combobox } from "@/components/ui/combobox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ImportProgressModal from "@/components/ImportProgressModal";
 
 type CsvRow = {
@@ -33,7 +34,8 @@ type MappedReview = {
 }
 
 export default function ImportarAvaliacoesPage() {
-    const { user, isAuthenticated, loading, attendants, importWhatsAppEvaluations, isProcessing } = useAuth();
+    const { user, isAuthenticated, loading } = useAuth();
+    const { attendants, importWhatsAppEvaluations, isProcessing } = usePrisma();
     const router = useRouter();
     const { toast } = useToast();
 
@@ -152,8 +154,15 @@ export default function ImportarAvaliacoesPage() {
             data: review.date,
         }));
 
+        // Filtrar agentMap para incluir apenas mapeamentos válidos
+        const validAgentMap = Object.fromEntries(
+            Object.entries(agentMap).filter(([_, attendantId]) => 
+                attendantId && attendantId !== 'null' && attendantId !== 'undefined' && attendantId.trim() !== ''
+            )
+        );
+
         try {
-            await importWhatsAppEvaluations(newEvaluationsData, agentMap, file?.name || "Arquivo Desconhecido", user.id);
+            await importWhatsAppEvaluations(newEvaluationsData, validAgentMap, file?.name || "Arquivo Desconhecido", user.id);
 
             setFile(null);
             setParsedData([]);
@@ -219,13 +228,21 @@ export default function ImportarAvaliacoesPage() {
                             <div key={agent} className="flex items-center gap-4 justify-between p-2 border rounded-md">
                                 <span className="font-medium">{agent}</span>
                                 <ArrowRight className="text-muted-foreground" />
-                                <Combobox
-                                    options={attendantOptions}
+                                <Select
                                     value={agentMap[agent]}
-                                    onSelect={(attendantId) => handleMappingChange(agent, attendantId)}
-                                    placeholder="Selecione um atendente"
-                                    searchPlaceholder="Buscar atendente..."
-                                />
+                                    onValueChange={(attendantId) => handleMappingChange(agent, attendantId)}
+                                >
+                                    <SelectTrigger className="w-[250px]">
+                                        <SelectValue placeholder="Selecione um atendente" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {attendantOptions.map((option) => (
+                                            <SelectItem key={option.value} value={option.value}>
+                                                {option.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                         ))}
                     </CardContent>

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useAuth } from "@/providers/AuthProvider";
+import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -35,7 +35,7 @@ type MappedReview = {
 }
 
 export default function ImportarLegadoPage() {
-    const { user, isAuthenticated, loading, attendants, evaluations, importLegacyEvaluations, isProcessing } = useAuth();
+    const { user, isAuthenticated, loading, attendants, evaluations, importEvaluations, isProcessing } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
 
@@ -112,7 +112,7 @@ export default function ImportarLegadoPage() {
         }));
 
         try {
-            await importLegacyEvaluations(newEvaluationsData, file?.name || "Arquivo Desconhecido", user.id);
+            await importEvaluations(newEvaluationsData, file?.name || "Arquivo Desconhecido");
             setFile(null);
             setMappedReviews([]);
         } catch (error) {
@@ -120,7 +120,7 @@ export default function ImportarLegadoPage() {
             // Toast handled in provider
         }
 
-    }, [user, toast, mappedReviews, file?.name, importLegacyEvaluations]);
+    }, [user, toast, mappedReviews, file?.name, importEvaluations]);
     
     const formatDate = (dateStr: string) => {
         try {

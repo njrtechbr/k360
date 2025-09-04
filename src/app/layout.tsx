@@ -1,12 +1,13 @@
 
 import type { Metadata } from 'next';
 import './globals.css';
-import { AuthProvider } from '@/providers/AuthProvider';
+import { PrismaProvider } from '@/providers/PrismaProvider';
 import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import AppLayout from '@/components/AppLayout';
 import { PerformanceProvider } from '@/providers/PerformanceProvider';
+import { SessionProvider } from '@/providers/SessionProvider';
 
 
 export const metadata: Metadata = {
@@ -30,14 +31,16 @@ export default function RootLayout({
       </head>
       <body className={cn('font-sans antialiased')}>
         <PerformanceProvider>
-            <AuthProvider>
-                <SidebarProvider>
-                  <AppLayout>
-                    {children}
-                  </AppLayout>
-                  <Toaster />
-                </SidebarProvider>
-            </AuthProvider>
+            <SessionProvider>
+              <PrismaProvider>
+                  <SidebarProvider>
+                    <AppLayout>
+                      {children}
+                    </AppLayout>
+                    <Toaster />
+                  </SidebarProvider>
+              </PrismaProvider>
+            </SessionProvider>
         </PerformanceProvider>
       </body>
     </html>

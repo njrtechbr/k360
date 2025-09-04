@@ -2,13 +2,14 @@
 
 "use client";
 
-import { useAuth } from "@/providers/AuthProvider";
+import { usePrisma } from "@/providers/PrismaProvider";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Crown, Star as StarIcon, TrendingUp, TrendingDown, UserCircle, Shield, ChevronRight, BookOpen, BarChartHorizontal, Settings, History } from "lucide-react";
+import { Crown, Star as StarIcon, TrendingUp, TrendingDown, UserCircle, Shield, ChevronRight, BookOpen, BarChartHorizontal, Settings, History, Award, BarChart, BadgeCent, Sparkles, Target, Trophy, Zap, Rocket, StarHalf, Users, Smile, HeartHandshake, Gem, Medal, MessageSquareQuote, MessageSquarePlus, MessageSquareHeart, MessageSquareWarning, ShieldCheck, Star, Component, Braces, UserCheck } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Attendant, Achievement } from "@/lib/types";
@@ -16,8 +17,26 @@ import { getLevelFromXp } from '@/lib/xp';
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ROLES } from "@/lib/types";
-import GamificationSeasonStatus from "@/components/GamificationSeasonStatus";
+import { SeasonStatus } from "@/components/gamification";
 import { getScoreFromRating } from "@/lib/gamification";
+
+// Mapeamento de ícones para achievements
+const iconMap: Record<string, any> = {
+    Award, BarChart, BadgeCent, Crown, Sparkles, Target, Trophy, Zap, Rocket, StarHalf, Users, Smile, HeartHandshake, Gem, Medal, MessageSquareQuote, MessageSquarePlus, MessageSquareHeart, MessageSquareWarning, TrendingUp, ShieldCheck, Star, Component, Braces, UserCheck, BookOpen
+};
+
+const getIconComponent = (iconName: string | React.ElementType) => {
+    // Se já é um componente React, retorna diretamente
+    if (typeof iconName === 'function') {
+        return iconName;
+    }
+    // Se é uma string, busca no mapeamento
+    if (typeof iconName === 'string') {
+        return iconMap[iconName] || Trophy;
+    }
+    // Fallback para Trophy
+    return Trophy;
+};
 
 const getMedal = (rank: number) => {
     if (rank === 1) return <span className="text-2xl" title="1º Lugar">🥇</span>;
@@ -34,8 +53,13 @@ type AchievementStat = Achievement & {
 };
 
 export default function GamificacaoPage() {
-    const { user, isAuthenticated, loading, attendants, seasonXpEvents, gamificationConfig, achievements, activeSeason } = useAuth();
+    const { data: session, status } = useSession();
+    const { attendants, seasonXpEvents, gamificationConfig, achievements, activeSeason, nextSeason, appLoading } = usePrisma();
     const router = useRouter();
+    
+    const user = session?.user;
+    const isAuthenticated = !!session;
+    const loading = status === "loading" || appLoading;
     const [isAchievementDialogOpen, setIsAchievementDialogOpen] = useState(false);
     const [selectedAchievement, setSelectedAchievement] = useState<AchievementStat | null>(null);
 
@@ -52,19 +76,27 @@ export default function GamificacaoPage() {
     const leaderboard = useMemo(() => {
         const statsByAttendant = new Map<string, { score: number; evaluationCount: number }>();
 
-        seasonXpEvents.forEach(event => {
-            let currentStats = statsByAttendant.get(event.attendantId);
-            if (!currentStats) {
-                currentStats = { score: 0, evaluationCount: 0 };
-            }
-            
-            currentStats.score += event.points;
-            if (event.type === 'evaluation') {
-                currentStats.evaluationCount++;
-            }
-            
-            statsByAttendant.set(event.attendantId, currentStats);
-        });
+        // Verificação de segurança para seasonXpEvents
+        if (seasonXpEvents && Array.isArray(seasonXpEvents)) {
+            seasonXpEvents.forEach(event => {
+                let currentStats = statsByAttendant.get(event.attendantId);
+                if (!currentStats) {
+                    currentStats = { score: 0, evaluationCount: 0 };
+                }
+                
+                currentStats.score += event.points;
+                if (event.type === 'evaluation') {
+                    currentStats.evaluationCount++;
+                }
+                
+                statsByAttendant.set(event.attendantId, currentStats);
+            });
+        }
+
+        // Verificação de segurança para attendants
+        if (!attendants || !Array.isArray(attendants)) {
+            return [];
+        }
 
         return attendants
             .map(attendant => {
@@ -81,6 +113,17 @@ export default function GamificacaoPage() {
     }, [attendants, seasonXpEvents]);
 
      const achievementStats: AchievementStat[] = useMemo(() => {
+        // Verificações de segurança para arrays
+        if (!achievements || !Array.isArray(achievements)) {
+            return [];
+        }
+        if (!attendants || !Array.isArray(attendants)) {
+            return [];
+        }
+        if (!seasonXpEvents || !Array.isArray(seasonXpEvents)) {
+            return [];
+        }
+
         return achievements
             .filter(ach => ach.active)
             .map(achievement => {
@@ -123,7 +166,7 @@ export default function GamificacaoPage() {
                 </div>
             </div>
 
-            <GamificationSeasonStatus />
+            <SeasonStatus activeSeason={activeSeason} nextSeason={nextSeason} />
 
              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                 <Card>
@@ -285,7 +328,7 @@ export default function GamificacaoPage() {
                         <div className="p-4 flex items-center justify-between">
                             <div className="flex items-center gap-4">
                                 <div className={`p-3 bg-muted rounded-full ${ach.unlockedCount > 0 ? ach.color : 'text-muted-foreground'}`}>
-                                <ach.icon className="h-6 w-6" />
+                                {React.createElement(getIconComponent(ach.icon), { className: "h-6 w-6" })}
                                 </div>
                                 <div>
                                 <p className="font-semibold">{ach.title}</p>
@@ -310,7 +353,7 @@ export default function GamificacaoPage() {
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                              <div className={`p-2 bg-muted rounded-full ${selectedAchievement?.color}`}>
-                                {selectedAchievement && <selectedAchievement.icon className="h-5 w-5" />}
+                                {selectedAchievement && React.createElement(getIconComponent(selectedAchievement.icon), { className: "h-5 w-5" })}
                             </div>
                             {selectedAchievement?.title}
                         </DialogTitle>

@@ -1,6 +1,7 @@
 "use client";
 
-import { useAuth } from "@/providers/AuthProvider";
+import { useAuth } from "@/hooks/useAuth";
+import { useGamificationData } from "@/hooks/useGamificationData";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -21,9 +22,39 @@ import { ROLES, type LevelReward } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { MoreHorizontal, Pencil } from "lucide-react";
+import { 
+    MoreHorizontal, 
+    Pencil, 
+    Trophy, 
+    Star, 
+    Crown, 
+    Award, 
+    Medal, 
+    Target, 
+    Zap, 
+    Gem, 
+    Shield,
+    RefreshCw 
+} from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
+
+// Mapeamento de ícones
+const iconMap: Record<string, React.ComponentType<any>> = {
+    Trophy,
+    Star,
+    Crown,
+    Award,
+    Medal,
+    Target,
+    Zap,
+    Gem,
+    Shield
+};
+
+const getIconComponent = (iconName: string) => {
+    return iconMap[iconName] || Trophy; // Trophy como fallback
+};
 
 const formSchema = z.object({
   title: z.string().min(3, "O título deve ter pelo menos 3 caracteres."),
@@ -32,7 +63,8 @@ const formSchema = z.object({
 });
 
 export default function ConfigurarNiveisPage() {
-    const { user, isAuthenticated, loading, levelRewards, updateLevelReward } = useAuth();
+    const { user, isAuthenticated, loading } = useAuth();
+    const { levelRewards, updateLevelReward, isLoading: gamificationLoading, refreshData } = useGamificationData();
     const router = useRouter();
 
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -69,7 +101,7 @@ export default function ConfigurarNiveisPage() {
         setIsEditDialogOpen(true);
     };
 
-    if (loading || !user) {
+    if (loading || gamificationLoading || !user) {
         return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
     }
 
@@ -86,8 +118,22 @@ export default function ConfigurarNiveisPage() {
 
             <Card className="shadow-lg">
                 <CardHeader>
-                    <CardTitle>Recompensas por Nível</CardTitle>
-                    <CardDescription>Ative, desative e edite as recompensas para cada marco de nível.</CardDescription>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle>Recompensas por Nível</CardTitle>
+                            <CardDescription>Ative, desative e edite as recompensas para cada marco de nível.</CardDescription>
+                        </div>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={refreshData}
+                            disabled={gamificationLoading}
+                            className="flex items-center gap-2"
+                        >
+                            <RefreshCw className={`h-4 w-4 ${gamificationLoading ? 'animate-spin' : ''}`} />
+                            Atualizar
+                        </Button>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <Table>
@@ -106,7 +152,7 @@ export default function ConfigurarNiveisPage() {
                                     <TableCell className="font-bold">{reward.level}</TableCell>
                                     <TableCell>
                                         <div className={`p-2 bg-muted rounded-full w-fit ${reward.color}`}>
-                                            <reward.icon className="h-5 w-5" />
+                                            {React.createElement(getIconComponent(reward.icon), { className: "h-5 w-5" })}
                                         </div>
                                     </TableCell>
                                     <TableCell>

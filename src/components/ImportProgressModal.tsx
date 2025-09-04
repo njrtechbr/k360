@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useAuth } from "@/providers/AuthProvider";
+import { useAuth } from "@/hooks/useAuth";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { Check, Hourglass, Loader, X } from "lucide-react";

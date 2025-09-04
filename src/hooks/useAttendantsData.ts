@@ -4,8 +4,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import type { Attendant, AttendantImport } from '@/lib/types';
-import { db } from '@/lib/firebase';
-import { collection, doc, getDocs, setDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 
 export function useAttendantsData() {
     const [attendants, setAttendants] = useState<Attendant[]>([]);
@@ -13,18 +11,20 @@ export function useAttendantsData() {
 
     const fetchAttendants = useCallback(async () => {
         const startTime = performance.now();
-        console.log("ATTENDANTS: Buscando atendentes do Firestore...");
+        console.log("ATTENDANTS: Buscando atendentes da API...");
         try {
-            const attendantsCollection = collection(db, "attendants");
-            const attendantsSnapshot = await getDocs(attendantsCollection);
-            const attendantsList = attendantsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Attendant));
+            const response = await fetch('/api/attendants');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const attendantsList = await response.json();
             setAttendants(attendantsList);
             const endTime = performance.now();
             console.log(`PERF: fetchAttendants (${attendantsList.length} items) took ${(endTime - startTime).toFixed(2)}ms`);
             return attendantsList;
         } catch (error) {
-            console.error("Error fetching attendants from Firestore: ", error);
-            toast({ variant: "destructive", title: "Erro ao carregar atendentes", description: "Não foi possível buscar os dados do Firestore." });
+            console.error("Error fetching attendants from API: ", error);
+            toast({ variant: "destructive", title: "Erro ao carregar atendentes", description: "Não foi possível buscar os dados da API." });
             return [];
         }
     }, [toast]);
@@ -32,10 +32,13 @@ export function useAttendantsData() {
 
      const fetchAttendantImports = useCallback(async (): Promise<AttendantImport[]> => {
         const startTime = performance.now();
-        console.log("ATTENDANTS: Buscando histórico de importações do Firestore...");
+        console.log("ATTENDANTS: Buscando histórico de importações da API...");
         try {
-            const snapshot = await getDocs(collection(db, "attendantImports"));
-            const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendantImport));
+            const response = await fetch('/api/attendants/imports');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const list = await response.json();
             const endTime = performance.now();
             console.log(`PERF: fetchAttendantImports (${list.length} items) took ${(endTime - startTime).toFixed(2)}ms`);
             return list;
@@ -47,13 +50,26 @@ export function useAttendantsData() {
 
     const addAttendant = async (attendantData: Omit<Attendant, 'id'>): Promise<Attendant> => {
         try {
-            const newId = attendantData.id || doc(collection(db, "attendants")).id;
-            const finalAttendantData = { ...attendantData, id: newId };
-            const attendantDocRef = doc(db, "attendants", newId);
-            await setDoc(attendantDocRef, finalAttendantData);
+            const response = await fetch('/api/attendants', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(attendantData),
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const finalAttendantData = await response.json();
             await fetchAttendants(); // Refresh the list
+            toast({
+                title: "Atendente Adicionado!",
+                description: "O novo atendente foi adicionado com sucesso."
+            });
             return finalAttendantData;
-        } catch(error) {
+        } catch (error) {
             console.error("Error adding attendant: ", error);
             toast({ variant: "destructive", title: "Erro ao adicionar atendente" });
             throw error;
@@ -61,16 +77,26 @@ export function useAttendantsData() {
     };
 
     const updateAttendant = async (attendantId: string, attendantData: Partial<Omit<Attendant, 'id'>>) => {
-         try {
-            const attendantDocRef = doc(db, "attendants", attendantId);
-            await updateDoc(attendantDocRef, attendantData);
+        try {
+            const response = await fetch(`/api/attendants/${attendantId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(attendantData),
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             await fetchAttendants(); // Refresh the list
             toast({
                 title: "Atendente Atualizado!",
                 description: "Os dados do atendente foram atualizados."
             });
         } catch (error) {
-             console.error("Error updating attendant: ", error);
+            console.error("Error updating attendant: ", error);
             toast({ variant: "destructive", title: "Erro ao atualizar atendente" });
             throw error;
         }
@@ -79,12 +105,22 @@ export function useAttendantsData() {
     const deleteAttendants = async (attendantIds: string[]) => {
         if(attendantIds.length === 0) return;
         try {
-            const batch = writeBatch(db);
-            attendantIds.forEach(id => {
-                const docRef = doc(db, "attendants", id);
-                batch.delete(docRef);
-            });
-            await batch.commit();
+            // Delete each attendant individually since we don't have a bulk delete endpoint
+            const deletePromises = attendantIds.map(id => 
+                fetch(`/api/attendants/${id}`, {
+                    method: 'DELETE',
+                })
+            );
+            
+            const responses = await Promise.all(deletePromises);
+            
+            // Check if all deletions were successful
+            for (const response of responses) {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+            }
+            
             await fetchAttendants(); // Refresh the list
             toast({
                 title: "Atendentes Removidos!",
@@ -98,10 +134,20 @@ export function useAttendantsData() {
     };
 
     const addAttendantImportRecord = async (importData: Omit<AttendantImport, 'id'>): Promise<AttendantImport> => {
-         try {
-            const docRef = doc(collection(db, "attendantImports"));
-            const newImport = { ...importData, id: docRef.id };
-            await setDoc(docRef, newImport);
+        try {
+            const response = await fetch('/api/attendants/imports', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(importData),
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const newImport = await response.json();
             return newImport;
         } catch (error) {
             console.error("ATTENDANTS: Erro ao salvar histórico de importação:", error);
@@ -110,18 +156,27 @@ export function useAttendantsData() {
     };
 
     const revertAttendantImport = async (importId: string) => {
-        const importToRevert = (await fetchAttendantImports()).find(i => i.id === importId);
-        if (!importToRevert) {
-            toast({ variant: 'destructive', title: 'Erro', description: 'Importação não encontrada.' });
-            return;
+        try {
+            const response = await fetch(`/api/attendants/imports/${importId}`, {
+                method: 'DELETE',
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            await fetchAttendants(); // Refresh the list
+            await fetchAttendantImports(); // Refresh imports list
+            
+            toast({
+                title: "Importação de Atendentes Revertida!",
+                description: "Os atendentes da importação selecionada foram removidos.",
+            });
+        } catch (error) {
+            console.error("Error reverting attendant import: ", error);
+            toast({ variant: "destructive", title: "Erro ao reverter importação" });
+            throw error;
         }
-        await deleteAttendants(importToRevert.attendantIds);
-        await deleteDoc(doc(db, "attendantImports", importId));
-        
-        toast({
-            title: "Importação de Atendentes Revertida!",
-            description: "Os atendentes da importação selecionada foram removidos.",
-        });
     };
     
     return { 

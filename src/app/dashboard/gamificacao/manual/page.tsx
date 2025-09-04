@@ -4,12 +4,33 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Star, TrendingDown, TrendingUp } from "lucide-react";
+import { BookOpen, Star, TrendingDown, TrendingUp, Award, BarChart, BadgeCent, Crown, Sparkles, Target, Trophy, Zap, Rocket, StarHalf, Users, Smile, HeartHandshake, Gem, Medal, MessageSquareQuote, MessageSquarePlus, MessageSquareHeart, MessageSquareWarning, ShieldCheck, Component, Braces, UserCheck } from "lucide-react";
+import React from "react";
 import { INITIAL_ACHIEVEMENTS as achievements } from "@/lib/achievements";
 import Link from "next/link";
-import GamificationSeasonStatus from "@/components/GamificationSeasonStatus";
+import { SeasonStatus } from "@/components/gamification";
+import { useAuth } from "@/hooks/useAuth";
+
+// Mapeamento de ícones para achievements
+const iconMap: Record<string, any> = {
+    Award, BarChart, BadgeCent, Crown, Sparkles, Target, Trophy, Zap, Rocket, StarHalf, Users, Smile, HeartHandshake, Gem, Medal, MessageSquareQuote, MessageSquarePlus, MessageSquareHeart, MessageSquareWarning, TrendingUp, ShieldCheck, Star, Component, Braces, UserCheck, BookOpen
+};
+
+const getIconComponent = (iconName: string | React.ElementType) => {
+    // Se já é um componente React, retorna diretamente
+    if (typeof iconName === 'function') {
+        return iconName;
+    }
+    // Se é uma string, busca no mapeamento
+    if (typeof iconName === 'string') {
+        return iconMap[iconName] || Trophy;
+    }
+    // Fallback para Trophy
+    return Trophy;
+};
 
 export default function ManualGamificacaoPage() {
+    const { activeSeason, nextSeason } = useAuth();
 
     return (
         <div className="space-y-8 max-w-4xl mx-auto">
@@ -21,7 +42,7 @@ export default function ManualGamificacaoPage() {
                 </p>
             </div>
 
-            <GamificationSeasonStatus />
+            <SeasonStatus activeSeason={activeSeason} nextSeason={nextSeason} />
 
             <Card>
                 <CardHeader>
@@ -119,7 +140,7 @@ export default function ManualGamificacaoPage() {
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <div className={`p-2 bg-muted rounded-full ${ach.color}`}>
-                                                <ach.icon className="h-5 w-5" />
+                                                {React.createElement(getIconComponent(ach.icon), { className: "h-5 w-5" })}
                                             </div>
                                             <div>
                                                 <p className="font-semibold">{ach.title}</p>

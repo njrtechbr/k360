@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useAuth } from "@/providers/AuthProvider";
+import { useAuth } from "@/hooks/useAuth";
 import Link from "next/link";
 import { Button } from "./ui/button";
 import { ShieldCheck, LogOut, UserCircle, PanelLeft } from "lucide-react";

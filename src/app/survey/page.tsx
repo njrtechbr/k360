@@ -3,7 +3,7 @@
 "use client";
 
 import { useSearchParams } from 'next/navigation';
-import { useAuth } from '@/providers/AuthProvider';
+import { useAuth } from '@/hooks/useAuth';
 import { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';

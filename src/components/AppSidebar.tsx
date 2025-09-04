@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useAuth } from "@/providers/AuthProvider";
+import { useAuth } from "@/hooks/useAuth";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, useSidebar } from "./ui/sidebar";
 import { usePathname } from "next/navigation";
 import Link from "next/link";

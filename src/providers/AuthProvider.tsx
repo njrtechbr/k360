@@ -247,7 +247,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setSeasons(gamificationConfigData.seasons);
         setFuncoes(funcoesData);
         setSetores(setoresData);
-        setXpEvents(xpEventsData);
+        // Ensure xpEventsData is an array before setting state
+        setXpEvents(Array.isArray(xpEventsData) ? xpEventsData : []);
 
         if (modulesData.length === 0) {
             console.log("AUTH: No modules found, seeding initial modules.");
@@ -317,10 +318,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (currentActiveSeason) {
             const seasonStart = new Date(currentActiveSeason.startDate);
             const seasonEnd = new Date(currentActiveSeason.endDate);
-            const filteredEvents = xpEvents.filter(e => {
+            // Ensure xpEvents is an array before filtering
+            const filteredEvents = Array.isArray(xpEvents) ? xpEvents.filter(e => {
                 const eventDate = new Date(e.date);
                 return eventDate >= seasonStart && eventDate <= seasonEnd;
-            });
+            }) : [];
             setSeasonXpEvents(filteredEvents);
         } else {
             setSeasonXpEvents([]);

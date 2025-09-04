@@ -1,7 +1,8 @@
 
 "use client";
 
-import { useAuth } from "@/providers/AuthProvider";
+import { useAuth } from "@/hooks/useAuth";
+import { usePrisma } from "@/providers/PrismaProvider";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
@@ -50,7 +51,8 @@ const addFormSchema = z.object({
 
 
 export default function UsuariosPage() {
-  const { user, isAuthenticated, authLoading, appLoading, allUsers, modules, updateUser, deleteUser, register } = useAuth();
+  const { user, isAuthenticated, authLoading, appLoading, allUsers, modules, updateUser, deleteUser } = useAuth();
+  const { createUser } = usePrisma();
   const router = useRouter();
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -80,13 +82,19 @@ export default function UsuariosPage() {
     }
   }, [authLoading, isAuthenticated, router]);
 
+  useEffect(() => {
+    if (!authLoading && (!isAuthenticated || (user?.role !== ROLES.ADMIN && user?.role !== ROLES.SUPERADMIN))) {
+      router.push("/dashboard");
+    }
+  }, [authLoading, isAuthenticated, user?.role, router]);
+
 
   useEffect(() => {
     if (selectedUser) {
       editForm.reset({
         name: selectedUser.name,
         role: selectedUser.role,
-        modules: selectedUser.modules,
+        modules: selectedUser.modules?.map(m => m.id) || [],
       });
     }
   }, [selectedUser, editForm]);
@@ -101,7 +109,7 @@ export default function UsuariosPage() {
 
   async function onAddSubmit(values: z.infer<typeof addFormSchema>) {
     try {
-      await register(values);
+      await createUser(values);
       addForm.reset();
       setIsAddDialogOpen(false);
     } catch (error) { /* toast handled */ }
@@ -138,6 +146,18 @@ export default function UsuariosPage() {
 
   if (authLoading || !user) {
     return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
+  }
+
+  // Verificar permissões
+  if (user.role !== ROLES.ADMIN && user.role !== ROLES.SUPERADMIN) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-2">Acesso Negado</h2>
+          <p className="text-muted-foreground">Você não tem permissão para acessar esta página.</p>
+        </div>
+      </div>
+    );
   }
   
   const sortedUsers = [...allUsers].sort((a, b) => a.name.localeCompare(b.name));
@@ -319,6 +339,19 @@ export default function UsuariosPage() {
                                       <TableCell className="text-right"><Skeleton className="h-8 w-8" /></TableCell>
                                   </TableRow>
                             ))
+                          ) : sortedUsers.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={5} className="text-center py-8">
+                                <div className="text-muted-foreground">
+                                  <p className="text-lg mb-2">Nenhum usuário encontrado</p>
+                                  <p className="text-sm">
+                                    {!isAuthenticated 
+                                      ? "Faça login para visualizar os usuários" 
+                                      : "Você pode não ter permissão para visualizar usuários ou não há usuários cadastrados"}
+                                  </p>
+                                </div>
+                              </TableCell>
+                            </TableRow>
                           ) : sortedUsers.map((u) => (
                               <TableRow key={u.id}>
                                   <TableCell className="font-medium">{u.name}</TableCell>
@@ -327,14 +360,21 @@ export default function UsuariosPage() {
                                       <Badge variant="secondary" className="capitalize">{u.role}</Badge>
                                   </TableCell>
                                   <TableCell className="flex gap-1 flex-wrap max-w-xs">
-                                      {u.modules?.map(mId => (
-                                          <Badge key={mId} variant="outline" className="capitalize">{moduleMap[mId] || 'inválido'}</Badge>
+                                      {u.modules?.map(module => (
+                                          <Badge key={module.id} variant="outline" className="capitalize">{module.name}</Badge>
                                       ))}
                                   </TableCell>
                                   <TableCell className="text-right">
                                       <DropdownMenu>
                                           <DropdownMenuTrigger asChild>
-                                              <Button variant="ghost" className="h-8 w-8 p-0" disabled={u.id === user.id || u.role === ROLES.SUPERADMIN}>
+                                              <Button 
+                                                variant="ghost" 
+                                                className="h-8 w-8 p-0" 
+                                                disabled={
+                                                  u.id === user.id || 
+                                                  (u.role === ROLES.SUPERADMIN && user.role !== ROLES.SUPERADMIN)
+                                                }
+                                              >
                                                   <span className="sr-only">Abrir menu</span>
                                                   <MoreHorizontal className="h-4 w-4" />
                                               </Button>

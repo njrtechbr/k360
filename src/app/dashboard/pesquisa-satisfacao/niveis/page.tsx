@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useAuth } from "@/providers/AuthProvider";
+import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserCircle, Shield } from "lucide-react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { getLevelFromXp, MAX_LEVEL } from '@/lib/xp';
-import RewardTrack from "@/components/RewardTrack";
+import { RewardTrack } from "@/components/gamification";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import { getScoreFromRating } from "@/lib/gamification";

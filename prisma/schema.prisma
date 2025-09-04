@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,21 +8,58 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  password  String
-  role      Role     @default(USUARIO)
-  modules   Module[] @relation("UserModules")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  attendantImports   AttendantImport[]
+  id                String             @id @default(cuid())
+  name              String
+  email             String             @unique
+  password          String?
+  role              Role               @default(USUARIO)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  emailVerified     DateTime?
+  image             String?
+  accounts          Account[]
+  attendantImports  AttendantImport[]
   evaluationImports EvaluationImport[]
+  sessions          Session[]
+  modules           Module[]           @relation("UserModules")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
 }
 
 model Module {
-  id          String @id
+  id          String  @id
   name        String
   description String
   path        String
@@ -32,105 +68,138 @@ model Module {
 }
 
 model Attendant {
-  id              String    @id @default(cuid())
-  name            String
-  email           String    @unique
-  funcao          String
-  setor           String
-  status          String
-  avatarUrl       String?
-  telefone        String
-  portaria        String?
-  situacao        String?
-  dataAdmissao    DateTime
-  dataNascimento  DateTime
-  rg              String
-  cpf             String    @unique
-  importId        String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  evaluations Evaluation[]
-  import      AttendantImport? @relation(fields: [importId], references: [id])
+  id                   String                @id @default(cuid())
+  name                 String
+  email                String                @unique
+  funcao               String
+  setor                String
+  status               String
+  avatarUrl            String?
+  telefone             String
+  portaria             String?
+  situacao             String?
+  dataAdmissao         DateTime
+  dataNascimento       DateTime
+  rg                   String
+  cpf                  String                @unique
+  importId             String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  import               AttendantImport?      @relation(fields: [importId], references: [id])
+  evaluations          Evaluation[]
+  unlockedAchievements UnlockedAchievement[]
 }
 
 model Evaluation {
-  id          String   @id @default(cuid())
+  id          String            @id @default(cuid())
   attendantId String
   nota        Int
   comentario  String
   data        DateTime
   xpGained    Float
   importId    String?
-  createdAt   DateTime @default(now())
-
-  attendant Attendant         @relation(fields: [attendantId], references: [id], onDelete: Cascade)
-  import    EvaluationImport? @relation(fields: [importId], references: [id])
+  createdAt   DateTime          @default(now())
+  attendant   Attendant         @relation(fields: [attendantId], references: [id], onDelete: Cascade)
+  import      EvaluationImport? @relation(fields: [importId], references: [id])
 }
 
 model XpEvent {
-  id          String   @id @default(cuid())
+  id          String              @id @default(cuid())
   attendantId String
   points      Float
   basePoints  Float
   multiplier  Float
   reason      String
   date        DateTime
-  type        String // "evaluation" or "achievement"
+  type        String
   relatedId   String
-  createdAt   DateTime @default(now())
+  seasonId    String?
+  season      GamificationSeason? @relation(fields: [seasonId], references: [id], onDelete: SetNull)
+  createdAt   DateTime            @default(now())
 }
 
 model GamificationConfig {
-  id                 String @id @default("main")
-  ratingScore1       Int    @default(-5)
-  ratingScore2       Int    @default(-2)
-  ratingScore3       Int    @default(1)
-  ratingScore4       Int    @default(3)
-  ratingScore5       Int    @default(5)
-  globalXpMultiplier Float  @default(1)
-  achievementsJson   Json   @default("[]")
-  levelRewardsJson   Json   @default("[]")
+  id                 String   @id @default("main")
+  ratingScore1       Int      @default(-5)
+  ratingScore2       Int      @default(-2)
+  ratingScore3       Int      @default(1)
+  ratingScore4       Int      @default(3)
+  ratingScore5       Int      @default(5)
+  globalXpMultiplier Float    @default(1)
   updatedAt          DateTime @updatedAt
+  seasons            Json     @default("[]")
+}
+
+model AchievementConfig {
+  id          String   @id
+  title       String
+  description String
+  xp          Int
+  active      Boolean  @default(true)
+  icon        String
+  color       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model LevelTrackConfig {
+  level       Int      @id
+  title       String
+  description String
+  active      Boolean  @default(true)
+  icon        String
+  color       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model GamificationSeason {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   name         String
   startDate    DateTime
   endDate      DateTime
   active       Boolean
   xpMultiplier Float
-  createdAt    DateTime @default(now())
+  xpEvents     XpEvent[]
+  createdAt    DateTime  @default(now())
+}
+
+model UnlockedAchievement {
+  id            String    @id @default(cuid())
+  attendantId   String
+  achievementId String
+  unlockedAt    DateTime  @default(now())
+  xpGained      Float?    @default(0)
+  attendant     Attendant @relation(fields: [attendantId], references: [id], onDelete: Cascade)
+
+  @@unique([attendantId, achievementId])
 }
 
 model AttendantImport {
-  id          String      @id @default(cuid())
+  id           String      @id @default(cuid())
   importedById String
   importedAt   DateTime
-  fileName    String
-  attendants  Attendant[]
-
-  importedBy User @relation(fields: [importedById], references: [id])
+  fileName     String
+  attendants   Attendant[]
+  importedBy   User        @relation(fields: [importedById], references: [id])
 }
 
 model EvaluationImport {
   id           String       @id @default(cuid())
-  importedById  String
+  importedById String
   importedAt   DateTime
   fileName     String
   attendantMap Json
   evaluations  Evaluation[]
-
-  importedBy User @relation(fields: [importedById], references: [id])
+  importedBy   User         @relation(fields: [importedById], references: [id])
 }
 
 model Funcao {
-    name String @id @unique
+  name String @id @unique
 }
 
 model Setor {
-    name String @id @unique
+  name String @id @unique
 }
 
 enum Role {

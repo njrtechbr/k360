@@ -196,3 +196,34 @@ export type XpEvent = {
     type: 'evaluation' | 'achievement';
     relatedId: string; // ID of the evaluation or achievement
 };
+
+export interface UnlockedAchievement {
+    id: string;
+    attendantId: string;
+    achievementId: string;
+    unlockedAt: string; // ISO String
+    xpGained?: number;
+}
+
+export interface AchievementConfig {
+    id: string;
+    title: string;
+    description: string;
+    xp: number;
+    active: boolean;
+    icon: string;
+    color: string;
+    createdAt: string; // ISO String
+    updatedAt: string; // ISO String
+}
+
+export interface LevelTrackConfig {
+    level: number;
+    title: string;
+    description: string;
+    active: boolean;
+    icon: string;
+    color: string;
+    createdAt: string; // ISO String
+    updatedAt: string; // ISO String
+}
