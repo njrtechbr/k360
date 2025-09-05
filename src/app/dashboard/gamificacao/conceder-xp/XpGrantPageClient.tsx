@@ -60,7 +60,9 @@ export function XpGrantPageClient({ userId }: XpGrantPageClientProps) {
 
       if (xpTypesResponse.ok) {
         const xpTypesData = await xpTypesResponse.json();
-        availableTypes = xpTypesData.filter((type: any) => type.active).length;
+        // O endpoint retorna { success: true, data: xpTypes, stats }
+        const xpTypes = xpTypesData.data || [];
+        availableTypes = Array.isArray(xpTypes) ? xpTypes.filter((type: any) => type.active).length : 0;
       }
 
       if (grantsResponse.ok) {

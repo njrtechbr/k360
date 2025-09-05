@@ -118,7 +118,8 @@ export function XpTypeManager({ userId }: XpTypeManagerProps) {
       
       if (response.ok) {
         const data = await response.json();
-        setXpTypes(data);
+        // O endpoint retorna { success: true, data: xpTypes, stats }
+        setXpTypes(data.data || []);
       } else {
         toast({
           title: "Erro",

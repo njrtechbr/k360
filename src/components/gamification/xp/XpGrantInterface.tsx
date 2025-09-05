@@ -110,8 +110,10 @@ export function XpGrantInterface({ userId, onGrantSuccess, disabled = false, rem
 
       if (xpTypesResponse.ok) {
         const xpTypesData = await xpTypesResponse.json();
+        // O endpoint retorna { success: true, data: xpTypes, stats }
+        const xpTypes = xpTypesData.data || [];
         // Filtrar apenas tipos ativos
-        const activeXpTypes = xpTypesData.filter((type: XpTypeConfig) => type.active);
+        const activeXpTypes = Array.isArray(xpTypes) ? xpTypes.filter((type: XpTypeConfig) => type.active) : [];
         setXpTypes(activeXpTypes);
       }
     } catch (error) {

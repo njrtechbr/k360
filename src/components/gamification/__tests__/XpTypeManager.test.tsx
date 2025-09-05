@@ -179,7 +179,7 @@ describe('XpTypeManager', () => {
 
     (fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
-      json: async () => mockXpTypes,
+      json: async () => ({ success: true, data: mockXpTypes, stats: {} }),
     });
 
     render(<XpTypeManager userId="test-user-id" />);
