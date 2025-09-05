@@ -1,0 +1,22 @@
+{
+  "enabled": true,
+  "name": "Auto Commit PT-BR",
+  "description": "Monitora mudanças nos arquivos do projeto e automaticamente faz commits com comentários descritivos em português brasileiro quando necessário",
+  "version": "1",
+  "when": {
+    "type": "userTriggered",
+    "patterns": [
+      "src/**/*.ts",
+      "src/**/*.tsx",
+      "prisma/schema.prisma",
+      "package.json",
+      "*.md",
+      "*.js",
+      "*.ts"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Analise as mudanças nos arquivos e faça um commit com uma mensagem descritiva em português brasileiro. A mensagem deve ser clara, concisa e explicar o que foi alterado ou implementado. Use o formato: \"feat: descrição da funcionalidade\" ou \"fix: descrição da correção\" ou \"docs: atualização de documentação\" conforme apropriado. Execute o comando git add . && git commit -m \"sua mensagem aqui\""
+  }
+}

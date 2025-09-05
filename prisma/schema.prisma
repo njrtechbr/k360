@@ -22,6 +22,8 @@ model User {
   evaluationImports EvaluationImport[]
   sessions          Session[]
   modules           Module[]           @relation("UserModules")
+  createdXpTypes    XpTypeConfig[]     @relation("XpTypeCreator")
+  grantedXp         XpGrant[]          @relation("XpGranter")
 }
 
 model Account {
@@ -88,6 +90,7 @@ model Attendant {
   import               AttendantImport?      @relation(fields: [importId], references: [id])
   evaluations          Evaluation[]
   unlockedAchievements UnlockedAchievement[]
+  xpGrants             XpGrant[]
 }
 
 model Evaluation {
@@ -115,7 +118,39 @@ model XpEvent {
   relatedId   String
   seasonId    String?
   season      GamificationSeason? @relation(fields: [seasonId], references: [id], onDelete: SetNull)
+  xpGrant     XpGrant?
   createdAt   DateTime            @default(now())
+}
+
+model XpTypeConfig {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  description String
+  points      Int
+  active      Boolean    @default(true)
+  category    String     @default("general")
+  icon        String     @default("star")
+  color       String     @default("#3B82F6")
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  createdBy   String
+  creator     User       @relation("XpTypeCreator", fields: [createdBy], references: [id])
+  xpGrants    XpGrant[]
+}
+
+model XpGrant {
+  id            String       @id @default(cuid())
+  attendantId   String
+  typeId        String
+  points        Int
+  justification String?
+  grantedBy     String
+  grantedAt     DateTime     @default(now())
+  xpEventId     String       @unique
+  attendant     Attendant    @relation(fields: [attendantId], references: [id])
+  type          XpTypeConfig @relation(fields: [typeId], references: [id])
+  granter       User         @relation("XpGranter", fields: [grantedBy], references: [id])
+  xpEvent       XpEvent      @relation(fields: [xpEventId], references: [id])
 }
 
 model GamificationConfig {

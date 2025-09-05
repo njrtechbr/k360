@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ArrowLeft, BarChart3, Calendar, Crown, History, Mail, Phone, Sparkles, Star, TrendingDown, TrendingUp, Trophy, UserCircle, Award, Target, Zap, Medal, Shield } from "lucide-react";
@@ -68,6 +69,44 @@ const AchievementCard = ({ achievement, unlockedAt }: { achievement: Achievement
     </Card>
 );
 
+const AchievementBadge = ({ achievement, unlockedAt }: { achievement: AchievementConfig, unlockedAt?: Date }) => (
+    <TooltipProvider>
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <div className={cn(
+                    "relative flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all cursor-pointer hover:scale-110",
+                    unlockedAt 
+                        ? "border-yellow-400 bg-gradient-to-br from-yellow-50 to-yellow-100 shadow-md hover:shadow-lg" 
+                        : "border-gray-200 bg-gray-50 opacity-40 hover:opacity-60"
+                )}>
+                    <span className={cn("text-lg", unlockedAt ? "grayscale-0" : "grayscale")}>
+                        {achievement.icon}
+                    </span>
+                    {unlockedAt && (
+                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                            <div className="w-2 h-2 bg-white rounded-full" />
+                        </div>
+                    )}
+                </div>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs">
+                <div className="space-y-1">
+                    <p className="font-semibold text-sm">{achievement.title}</p>
+                    <p className="text-xs text-muted-foreground">{achievement.description}</p>
+                    <div className="flex items-center justify-between pt-1">
+                        <Badge variant="outline" className="text-xs">+{achievement.xp} XP</Badge>
+                        {unlockedAt && (
+                            <span className="text-xs text-green-600 font-medium">
+                                Desbloqueado em {format(unlockedAt, "dd/MM/yy", { locale: ptBR })}
+                            </span>
+                        )}
+                    </div>
+                </div>
+            </TooltipContent>
+        </Tooltip>
+    </TooltipProvider>
+);
+
 const StatCard = ({ icon, label, value, description, color = "default" }: { 
     icon: React.ReactNode, 
     label: string, 
@@ -104,6 +143,25 @@ export default function AttendantProfilePage() {
     const [achievements, setAchievements] = useState<AchievementConfig[]>([]);
     const [unlockedAchievements, setUnlockedAchievements] = useState<UnlockedAchievement[]>([]);
 
+    // Função para garantir conquistas únicas
+    const getUniqueUnlockedAchievements = (unlocked: UnlockedAchievement[]) => {
+        const seen = new Set();
+        return unlocked.filter(achievement => {
+            if (seen.has(achievement.achievementId)) {
+                return false;
+            }
+            seen.add(achievement.achievementId);
+            return true;
+        });
+    };
+
+    // Função para calcular porcentagem de forma segura
+    const calculateAchievementPercentage = () => {
+        if (achievements.length === 0) return 0;
+        const percentage = (unlockedAchievements.length / achievements.length) * 100;
+        return Math.min(100, Math.max(0, Math.round(percentage)));
+    };
+
     const attendant = useMemo(() => attendants.find(a => a.id === id), [attendants, id]);
     
     // Buscar conquistas
@@ -122,7 +180,7 @@ export default function AttendantProfilePage() {
                 
                 if (unlockedRes.ok) {
                     const unlockedData = await unlockedRes.json();
-                    setUnlockedAchievements(unlockedData);
+                    setUnlockedAchievements(getUniqueUnlockedAchievements(unlockedData));
                 }
             } catch (error) {
                 console.error('Erro ao buscar conquistas:', error);
@@ -425,6 +483,85 @@ export default function AttendantProfilePage() {
                 </CardContent>
             </Card>
 
+            {/* Conquistas em Destaque */}
+            {unlockedAchievements.length > 0 && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Trophy className="h-5 w-5 text-yellow-500" />
+                            Conquistas Desbloqueadas
+                            <Badge variant="secondary" className="ml-2">
+                                {unlockedAchievements.length}
+                            </Badge>
+                        </CardTitle>
+                        <CardDescription>
+                            Selos e conquistas obtidas pelo atendente
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex flex-wrap gap-3">
+                            {unlockedAchievements
+                                .sort((a, b) => new Date(b.unlockedAt).getTime() - new Date(a.unlockedAt).getTime())
+                                .slice(0, 12)
+                                .map(unlocked => {
+                                    const achievement = achievements.find(a => a.id === unlocked.achievementId);
+                                    if (!achievement) return null;
+                                    
+                                    return (
+                                        <TooltipProvider key={unlocked.id}>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <div className="flex items-center gap-2 bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200 rounded-lg px-3 py-2 hover:shadow-md transition-all cursor-pointer">
+                                                        <span className="text-lg">{achievement.icon}</span>
+                                                        <div className="text-left">
+                                                            <p className="font-medium text-sm text-gray-900">{achievement.title}</p>
+                                                            <p className="text-xs text-gray-600">+{achievement.xp} XP</p>
+                                                        </div>
+                                                    </div>
+                                                </TooltipTrigger>
+                                                <TooltipContent side="top" className="max-w-xs">
+                                                    <div className="space-y-2">
+                                                        <p className="font-semibold">{achievement.title}</p>
+                                                        <p className="text-sm text-muted-foreground">{achievement.description}</p>
+                                                        <div className="flex items-center justify-between pt-1 border-t">
+                                                            <Badge variant="outline" className="text-xs">+{achievement.xp} XP</Badge>
+                                                            <span className="text-xs text-green-600 font-medium">
+                                                                {format(new Date(unlocked.unlockedAt), "dd/MM/yy", { locale: ptBR })}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    );
+                                })}
+                            
+                            {unlockedAchievements.length > 12 && (
+                                <div className="flex items-center justify-center bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600">
+                                    +{unlockedAchievements.length - 12} mais
+                                </div>
+                            )}
+                        </div>
+                        
+                        {achievements.length > 0 && (
+                            <div className="mt-4 pt-4 border-t">
+                                <div className="flex items-center justify-between text-sm mb-2">
+                                    <span className="text-muted-foreground">Progresso geral das conquistas</span>
+                                    <span className="font-medium">
+                                        {calculateAchievementPercentage()}%
+                                    </span>
+                                </div>
+                                <Progress 
+                                    value={calculateAchievementPercentage()} 
+                                    className="h-2" 
+                                />
+
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            )}
+
             {/* Estatísticas principais */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <StatCard 
@@ -542,7 +679,7 @@ export default function AttendantProfilePage() {
                         <StatCard 
                             icon={<Target size={20} />}
                             label="Taxa de Conclusão"
-                            value={`${achievements.length > 0 ? Math.round((unlockedAchievements.length / achievements.length) * 100) : 0}%`}
+                            value={`${calculateAchievementPercentage()}%`}
                             description="Progresso geral"
                             color="default"
                         />
@@ -567,6 +704,73 @@ export default function AttendantProfilePage() {
                             description="Mais recente"
                             color="default"
                         />
+                    </div>
+
+                    {/* Galeria Completa de Conquistas */}
+                    <div>
+                        <div className="flex items-center gap-2 mb-6">
+                            <Award className="h-5 w-5 text-blue-500" />
+                            <h3 className="text-lg font-semibold">Todas as Conquistas</h3>
+                            <Badge variant="outline">
+                                {unlockedAchievements.length} de {achievements.length}
+                            </Badge>
+                        </div>
+                        
+                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                            {achievements.map(achievement => {
+                                const unlocked = unlockedAchievements.find(u => u.achievementId === achievement.id);
+                                const isUnlocked = !!unlocked;
+                                
+                                return (
+                                    <div
+                                        key={achievement.id}
+                                        className={cn(
+                                            "relative p-4 rounded-lg border-2 transition-all hover:shadow-md",
+                                            isUnlocked 
+                                                ? "border-yellow-300 bg-gradient-to-br from-yellow-50 to-amber-50 shadow-sm" 
+                                                : "border-gray-200 bg-gray-50/50 opacity-60"
+                                        )}
+                                    >
+                                        {/* Indicador de desbloqueio */}
+                                        {isUnlocked && (
+                                            <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-md">
+                                                <div className="w-3 h-3 bg-white rounded-full" />
+                                            </div>
+                                        )}
+                                        
+                                        {/* Conteúdo da conquista */}
+                                        <div className="flex items-start gap-3">
+                                            <div className={cn("text-2xl", isUnlocked ? "grayscale-0" : "grayscale opacity-50")}>
+                                                {achievement.icon}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h4 className={cn("font-semibold text-sm mb-1", isUnlocked ? "text-gray-900" : "text-gray-500")}>
+                                                    {achievement.title}
+                                                </h4>
+                                                <p className={cn("text-xs mb-3 line-clamp-2", isUnlocked ? "text-gray-600" : "text-gray-400")}>
+                                                    {achievement.description}
+                                                </p>
+                                                
+                                                {/* Footer com XP e data */}
+                                                <div className="flex items-center justify-between">
+                                                    <Badge 
+                                                        variant={isUnlocked ? "default" : "secondary"} 
+                                                        className="text-xs"
+                                                    >
+                                                        +{achievement.xp} XP
+                                                    </Badge>
+                                                    {unlocked && (
+                                                        <span className="text-xs text-green-600 font-medium">
+                                                            {format(new Date(unlocked.unlockedAt), "dd/MM/yy", { locale: ptBR })}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
 
                     {/* Conquistas Recentes */}

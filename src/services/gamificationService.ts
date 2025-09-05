@@ -484,7 +484,7 @@ export class GamificationService {
 
       if (evaluations.length < requiredStreak) return false;
 
-      return evaluations.every(eval => eval.nota === 5);
+      return evaluations.every(evaluation => evaluation.nota === 5);
     } catch (error) {
       console.error('Erro ao verificar sequência 5 estrelas:', error);
       return false;
@@ -501,7 +501,7 @@ export class GamificationService {
 
       if (evaluations.length < minEvaluations) return false;
 
-      const average = evaluations.reduce((sum, eval) => sum + eval.nota, 0) / evaluations.length;
+      const average = evaluations.reduce((sum, evaluation) => sum + evaluation.nota, 0) / evaluations.length;
       return average >= requiredAverage;
     } catch (error) {
       console.error('Erro ao verificar média alta:', error);

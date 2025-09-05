@@ -1,0 +1,22 @@
+{
+  "enabled": true,
+  "name": "Documentação Completa do Projeto",
+  "description": "Gera documentação completa do projeto em um arquivo .md sempre que arquivos importantes são modificados",
+  "version": "1",
+  "when": {
+    "type": "userTriggered",
+    "patterns": [
+      "src/**/*.ts",
+      "src/**/*.tsx",
+      "prisma/schema.prisma",
+      "package.json",
+      "README.md",
+      "*.config.ts",
+      "*.config.js"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Analise toda a estrutura do projeto e crie uma documentação completa em um arquivo DOCUMENTACAO_PROJETO.md. A documentação deve incluir:\n\n1. **Visão Geral do Sistema**\n   - Descrição do propósito do sistema\n   - Principais funcionalidades\n   - Stack tecnológico utilizado\n\n2. **Arquitetura do Projeto**\n   - Estrutura de pastas detalhada\n   - Padrões arquiteturais utilizados\n   - Fluxo de dados entre componentes\n\n3. **Modelos de Dados**\n   - Schema do banco de dados (Prisma)\n   - Relacionamentos entre entidades\n   - Regras de negócio principais\n\n4. **Funcionalidades Principais**\n   - Sistema de autenticação e autorização\n   - Gestão de atendentes e avaliações\n   - Sistema de gamificação (XP, conquistas, temporadas)\n   - Importação/exportação de dados\n\n5. **APIs e Serviços**\n   - Endpoints principais\n   - Serviços de negócio\n   - Integrações externas\n\n6. **Configuração e Deploy**\n   - Variáveis de ambiente necessárias\n   - Comandos de desenvolvimento\n   - Processo de build e deploy\n\n7. **Guias de Desenvolvimento**\n   - Como configurar o ambiente\n   - Convenções de código\n   - Como executar testes\n\nBaseie-se nos arquivos existentes, especialmente no schema Prisma, estrutura src/, package.json e arquivos de configuração. Use linguagem clara em português brasileiro."
+  }
+}

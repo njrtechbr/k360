@@ -49,6 +49,57 @@ const INITIAL_SETORES = [
   'administrativo'
 ];
 
+const INITIAL_XP_TYPES = [
+  {
+    name: 'Excelência no Atendimento',
+    description: 'Reconhecimento por atendimento excepcional ao cliente',
+    points: 10,
+    category: 'atendimento',
+    icon: 'star',
+    color: '#FFD700'
+  },
+  {
+    name: 'Iniciativa',
+    description: 'Reconhecimento por tomar iniciativa em situações importantes',
+    points: 8,
+    category: 'lideranca',
+    icon: 'lightbulb',
+    color: '#FF6B35'
+  },
+  {
+    name: 'Trabalho em Equipe',
+    description: 'Reconhecimento por colaboração excepcional com colegas',
+    points: 6,
+    category: 'colaboracao',
+    icon: 'users',
+    color: '#4ECDC4'
+  },
+  {
+    name: 'Melhoria de Processo',
+    description: 'Reconhecimento por sugerir ou implementar melhorias',
+    points: 12,
+    category: 'inovacao',
+    icon: 'settings',
+    color: '#45B7D1'
+  },
+  {
+    name: 'Pontualidade Exemplar',
+    description: 'Reconhecimento por pontualidade consistente',
+    points: 5,
+    category: 'disciplina',
+    icon: 'clock',
+    color: '#96CEB4'
+  },
+  {
+    name: 'Resolução de Problemas',
+    description: 'Reconhecimento por resolver problemas complexos',
+    points: 15,
+    category: 'competencia',
+    icon: 'puzzle',
+    color: '#FFEAA7'
+  }
+];
+
 async function main() {
   console.log('🌱 Iniciando seed do banco de dados...');
 
@@ -146,6 +197,9 @@ async function main() {
   // Seed dos achievements
   console.log('🏆 Criando conquistas (achievements)...');
   for (const achievement of INITIAL_ACHIEVEMENTS) {
+    // Converter componente React para nome de string
+    const iconName = achievement.icon.displayName || achievement.icon.name || 'star';
+    
     await prisma.achievementConfig.upsert({
       where: { id: achievement.id },
       update: {},
@@ -156,7 +210,7 @@ async function main() {
         xp: achievement.xp,
         active: achievement.active,
         color: achievement.color,
-        icon: achievement.icon.name // Salvar o nome do componente como string
+        icon: iconName
       }
     });
     console.log(`✅ Achievement criado: ${achievement.title}`);
@@ -165,6 +219,9 @@ async function main() {
   // Seed dos level rewards
   console.log('🎖️ Criando recompensas de nível...');
   for (const reward of INITIAL_LEVEL_REWARDS) {
+    // Converter componente React para nome de string
+    const iconName = reward.icon.displayName || reward.icon.name || 'medal';
+    
     await prisma.levelTrackConfig.upsert({
       where: { level: reward.level },
       update: {},
@@ -174,10 +231,29 @@ async function main() {
         description: reward.description,
         active: reward.active,
         color: reward.color,
-        icon: reward.icon.name // Salvar o nome do componente como string
+        icon: iconName
       }
     });
     console.log(`✅ Level reward criado: Nível ${reward.level} - ${reward.title}`);
+  }
+
+  // Seed dos tipos de XP avulso
+  console.log('⚡ Criando tipos de XP avulso...');
+  for (const xpType of INITIAL_XP_TYPES) {
+    await prisma.xpTypeConfig.upsert({
+      where: { name: xpType.name },
+      update: {},
+      create: {
+        name: xpType.name,
+        description: xpType.description,
+        points: xpType.points,
+        category: xpType.category,
+        icon: xpType.icon,
+        color: xpType.color,
+        createdBy: superAdmin.id
+      }
+    });
+    console.log(`✅ Tipo de XP criado: ${xpType.name} (${xpType.points} pontos)`);
   }
 
   console.log('🎉 Seed concluído com sucesso!');
@@ -189,6 +265,7 @@ async function main() {
   console.log(`   🏢 ${INITIAL_SETORES.length} setores`);
   console.log(`   🏆 ${INITIAL_ACHIEVEMENTS.length} conquistas`);
   console.log(`   🎖️ ${INITIAL_LEVEL_REWARDS.length} recompensas de nível`);
+  console.log(`   ⚡ ${INITIAL_XP_TYPES.length} tipos de XP avulso`);
   console.log(`   🎮 1 configuração de gamificação`);
   console.log('');
   console.log('🔐 Credenciais de acesso:');
