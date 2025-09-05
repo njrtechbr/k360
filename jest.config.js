@@ -58,6 +58,11 @@ const customJestConfig = {
     '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }]
   },
   
+  // Transform ignore patterns
+  transformIgnorePatterns: [
+    'node_modules/(?!(lucide-react|@tanstack/react-table|@hookform/resolvers|@radix-ui|date-fns)/)'
+  ],
+  
   // Module file extensions
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   

@@ -15,15 +15,27 @@ const getBreadcrumbItems = (pathname: string) => {
 
     const breadcrumbs = [{ href: "/dashboard", label: "Dashboard", isLast: pathParts.length === 0 }];
 
+    const formatLabel = (part: string) => {
+        let label = decodeURIComponent(part).replace(/-/g, ' ');
+        label = label.charAt(0).toUpperCase() + label.slice(1);
+        
+        // Customizações específicas para labels mais amigáveis
+        if (label.toLowerCase() === 'rh') label = 'Recursos Humanos';
+        if (label.toLowerCase() === 'pesquisa satisfacao') label = 'Pesquisa de Satisfação';
+        if (label.toLowerCase() === 'gamificacao') label = 'Gamificação';
+        if (label.toLowerCase() === 'configuracoes') label = 'Configurações';
+        if (label.toLowerCase() === 'tipos xp') label = 'Tipos de XP Avulso';
+        if (label.toLowerCase() === 'conceder xp') label = 'Conceder XP';
+        if (label.toLowerCase() === 'historico xp') label = 'Histórico de XP';
+        
+        return label;
+    };
+
     if (pathParts.length > 0 && pathParts[0] !== 'dashboard') {
          pathParts.forEach((part, index) => {
             const href = `/${pathParts.slice(0, index + 1).join('/')}`;
             const isLast = index === pathParts.length - 1;
-            let label = decodeURIComponent(part).replace(/-/g, ' ');
-            label = label.charAt(0).toUpperCase() + label.slice(1);
-
-            if (label.toLowerCase() === 'rh') label = 'Recursos Humanos';
-            if (label.toLowerCase() === 'pesquisa satisfacao') label = 'Pesquisa de Satisfação';
+            const label = formatLabel(part);
 
             breadcrumbs.push({ href, label, isLast });
         });
@@ -31,10 +43,7 @@ const getBreadcrumbItems = (pathname: string) => {
          pathParts.slice(1).forEach((part, index) => {
             const href = `/dashboard/${pathParts.slice(1, index + 2).join('/')}`;
             const isLast = index === pathParts.length - 2;
-            let label = decodeURIComponent(part).replace(/-/g, ' ');
-            label = label.charAt(0).toUpperCase() + label.slice(1);
-             if (label.toLowerCase() === 'rh') label = 'Recursos Humanos';
-            if (label.toLowerCase() === 'pesquisa satisfacao') label = 'Pesquisa de Satisfação';
+            const label = formatLabel(part);
 
             breadcrumbs.push({ href, label, isLast });
         });

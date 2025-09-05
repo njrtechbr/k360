@@ -21,48 +21,51 @@ global.ResizeObserver = class ResizeObserver {
   unobserve() {}
 };
 
-// Mock matchMedia
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: jest.fn().mockImplementation(query => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: jest.fn(), // deprecated
-    removeListener: jest.fn(), // deprecated
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
-  })),
-});
+// Mock browser APIs only if window exists (jsdom environment)
+if (typeof window !== 'undefined') {
+  // Mock matchMedia
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: jest.fn().mockImplementation(query => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: jest.fn(), // deprecated
+      removeListener: jest.fn(), // deprecated
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    })),
+  });
 
-// Mock window.scrollTo
-Object.defineProperty(window, 'scrollTo', {
-  writable: true,
-  value: jest.fn(),
-});
+  // Mock window.scrollTo
+  Object.defineProperty(window, 'scrollTo', {
+    writable: true,
+    value: jest.fn(),
+  });
 
-// Mock localStorage
-const localStorageMock = {
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-  clear: jest.fn(),
-};
-Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock
-});
+  // Mock localStorage
+  const localStorageMock = {
+    getItem: jest.fn(),
+    setItem: jest.fn(),
+    removeItem: jest.fn(),
+    clear: jest.fn(),
+  };
+  Object.defineProperty(window, 'localStorage', {
+    value: localStorageMock
+  });
 
-// Mock sessionStorage
-const sessionStorageMock = {
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-  clear: jest.fn(),
-};
-Object.defineProperty(window, 'sessionStorage', {
-  value: sessionStorageMock
-});
+  // Mock sessionStorage
+  const sessionStorageMock = {
+    getItem: jest.fn(),
+    setItem: jest.fn(),
+    removeItem: jest.fn(),
+    clear: jest.fn(),
+  };
+  Object.defineProperty(window, 'sessionStorage', {
+    value: sessionStorageMock
+  });
+}
 
 // Mock fetch
 global.fetch = jest.fn();
@@ -149,12 +152,24 @@ afterAll(() => {
 // Clean up after each test
 afterEach(() => {
   jest.clearAllMocks();
-  localStorageMock.getItem.mockClear();
-  localStorageMock.setItem.mockClear();
-  localStorageMock.removeItem.mockClear();
-  localStorageMock.clear.mockClear();
-  sessionStorageMock.getItem.mockClear();
-  sessionStorageMock.setItem.mockClear();
-  sessionStorageMock.removeItem.mockClear();
-  sessionStorageMock.clear.mockClear();
+  
+  // Clear localStorage and sessionStorage mocks only if window exists
+  if (typeof window !== 'undefined') {
+    const localStorageMock = window.localStorage;
+    const sessionStorageMock = window.sessionStorage;
+    
+    if (localStorageMock && typeof localStorageMock.getItem?.mockClear === 'function') {
+      localStorageMock.getItem.mockClear();
+      localStorageMock.setItem.mockClear();
+      localStorageMock.removeItem.mockClear();
+      localStorageMock.clear.mockClear();
+    }
+    
+    if (sessionStorageMock && typeof sessionStorageMock.getItem?.mockClear === 'function') {
+      sessionStorageMock.getItem.mockClear();
+      sessionStorageMock.setItem.mockClear();
+      sessionStorageMock.removeItem.mockClear();
+      sessionStorageMock.clear.mockClear();
+    }
+  }
 });

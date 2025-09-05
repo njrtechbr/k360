@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
-import { ChevronRight, Star, Trophy, GitBranch, Hourglass, Percent, AlertCircle, Shield } from "lucide-react";
+import { ChevronRight, Star, Trophy, GitBranch, Hourglass, Percent, AlertCircle, Shield, Zap } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -52,6 +52,22 @@ export default function GamificacaoConfiguracoesPage() {
                   <div>
                     <CardTitle>Pontos por Avaliação</CardTitle>
                     <CardDescription>Defina o XP base ganho ou perdido para cada nota de avaliação.</CardDescription>
+                  </div>
+                </div>
+                <ChevronRight className="h-6 w-6 text-muted-foreground" />
+              </CardHeader>
+            </Card>
+          </Link>
+          <Link href="/dashboard/gamificacao/configuracoes/tipos-xp">
+            <Card className="hover:border-primary transition-colors cursor-pointer">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-orange-100 dark:bg-orange-900 rounded-lg">
+                      <Zap className="h-6 w-6 text-orange-600" />
+                  </div>
+                  <div>
+                    <CardTitle>Tipos de XP Avulso</CardTitle>
+                    <CardDescription>Configure tipos de XP que podem ser concedidos manualmente aos atendentes.</CardDescription>
                   </div>
                 </div>
                 <ChevronRight className="h-6 w-6 text-muted-foreground" />

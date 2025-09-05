@@ -224,17 +224,41 @@ export default function GamificacaoPage() {
                     </CardContent>
                 </Card>
                  {canManageSystem && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><Settings /> Configurações</CardTitle>
-                            <CardDescription>Ajuste as regras e a pontuação do sistema de gamificação.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                        <Button asChild>
-                            <Link href="/dashboard/gamificacao/configuracoes">Ajustar Configurações</Link>
-                        </Button>
-                        </CardContent>
-                    </Card>
+                    <>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2"><Zap /> Conceder XP Avulso</CardTitle>
+                                <CardDescription>Conceda pontos de experiência extras para reconhecer ações específicas.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                            <Button asChild>
+                                <Link href="/dashboard/gamificacao/conceder-xp">Conceder XP</Link>
+                            </Button>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2"><History /> Histórico de XP Avulso</CardTitle>
+                                <CardDescription>Visualize e audite todas as concessões de XP avulso realizadas.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                            <Button asChild>
+                                <Link href="/dashboard/gamificacao/historico-xp">Ver Histórico</Link>
+                            </Button>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2"><Settings /> Configurações</CardTitle>
+                                <CardDescription>Ajuste as regras e a pontuação do sistema de gamificação.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                            <Button asChild>
+                                <Link href="/dashboard/gamificacao/configuracoes">Ajustar Configurações</Link>
+                            </Button>
+                            </CardContent>
+                        </Card>
+                    </>
                  )}
             </div>
             

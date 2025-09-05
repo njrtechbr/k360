@@ -1,9 +1,8 @@
-import { PrismaClient, XpTypeConfig, XpGrant, Attendant, User } from '@prisma/client';
+import { XpTypeConfig, XpGrant, Attendant, User } from '@prisma/client';
 import { z } from 'zod';
 import { handlePrismaError, logError } from '@/lib/errors';
 import { GamificationService } from './gamificationService';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 // Schemas de validação
 export const CreateXpTypeSchema = z.object({
@@ -41,7 +40,9 @@ export const GrantHistoryFiltersSchema = z.object({
   minPoints: z.number().optional(),
   maxPoints: z.number().optional(),
   page: z.number().min(1).default(1),
-  limit: z.number().min(1).max(100).default(20)
+  limit: z.number().min(1).max(100).default(20),
+  sortBy: z.enum(['grantedAt', 'points', 'attendantName', 'typeName', 'granterName']).default('grantedAt'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc')
 });
 
 export type CreateXpTypeData = z.infer<typeof CreateXpTypeSchema>;
@@ -403,6 +404,29 @@ export class XpAvulsoService {
         }
       }
 
+      // Construir ordenação
+      let orderBy: any = {};
+      
+      switch (validatedFilters.sortBy) {
+        case 'grantedAt':
+          orderBy = { grantedAt: validatedFilters.sortOrder };
+          break;
+        case 'points':
+          orderBy = { points: validatedFilters.sortOrder };
+          break;
+        case 'attendantName':
+          orderBy = { attendant: { name: validatedFilters.sortOrder } };
+          break;
+        case 'typeName':
+          orderBy = { type: { name: validatedFilters.sortOrder } };
+          break;
+        case 'granterName':
+          orderBy = { granter: { name: validatedFilters.sortOrder } };
+          break;
+        default:
+          orderBy = { grantedAt: 'desc' };
+      }
+
       // Calcular offset
       const offset = (validatedFilters.page - 1) * validatedFilters.limit;
 
@@ -424,9 +448,7 @@ export class XpAvulsoService {
             }
           }
         },
-        orderBy: {
-          grantedAt: 'desc'
-        },
+        orderBy,
         skip: offset,
         take: validatedFilters.limit
       });
@@ -485,6 +507,68 @@ export class XpAvulsoService {
       return grants as XpGrantWithRelations[];
     } catch (error) {
       logError(error as Error, 'XpAvulsoService.findGrantsByAttendant');
+      throw error;
+    }
+  }
+
+  /**
+   * Buscar concessões de um atendente específico com ordenação customizável
+   */
+  static async findGrantsByAttendantWithSort(
+    attendantId: string, 
+    sortBy: 'grantedAt' | 'points' | 'typeName' | 'granterName' = 'grantedAt',
+    sortOrder: 'asc' | 'desc' = 'desc'
+  ): Promise<XpGrantWithRelations[]> {
+    try {
+      // Verificar se atendente existe
+      const attendant = await prisma.attendant.findUnique({
+        where: { id: attendantId }
+      });
+      
+      if (!attendant) {
+        throw new Error('Atendente não encontrado');
+      }
+
+      // Construir ordenação
+      let orderBy: any = {};
+      
+      switch (sortBy) {
+        case 'grantedAt':
+          orderBy = { grantedAt: sortOrder };
+          break;
+        case 'points':
+          orderBy = { points: sortOrder };
+          break;
+        case 'typeName':
+          orderBy = { type: { name: sortOrder } };
+          break;
+        case 'granterName':
+          orderBy = { granter: { name: sortOrder } };
+          break;
+        default:
+          orderBy = { grantedAt: 'desc' };
+      }
+
+      const grants = await prisma.xpGrant.findMany({
+        where: { attendantId },
+        include: {
+          attendant: true,
+          type: true,
+          granter: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true
+            }
+          }
+        },
+        orderBy
+      });
+
+      return grants as XpGrantWithRelations[];
+    } catch (error) {
+      logError(error as Error, 'XpAvulsoService.findGrantsByAttendantWithSort');
       throw error;
     }
   }
