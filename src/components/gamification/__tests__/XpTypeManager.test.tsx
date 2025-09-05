@@ -199,7 +199,7 @@ describe('XpTypeManager', () => {
   it('deve fazer chamada para API ao carregar', async () => {
     (fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
-      json: async () => [],
+      json: async () => ({ success: true, data: [], stats: {} }),
     });
 
     render(<XpTypeManager userId="test-user-id" />);
@@ -212,7 +212,7 @@ describe('XpTypeManager', () => {
   it('deve exibir mensagem quando não há tipos configurados', async () => {
     (fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
-      json: async () => [],
+      json: async () => ({ success: true, data: [], stats: {} }),
     });
 
     render(<XpTypeManager userId="test-user-id" />);
