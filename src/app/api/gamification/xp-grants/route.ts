@@ -82,30 +82,45 @@ export async function POST(request: NextRequest) {
       request
     );
 
+    // Preparar dados de resposta incluindo informações de notificação
+    const responseData = {
+      id: xpGrant.id,
+      attendant: {
+        id: xpGrant.attendant.id,
+        name: xpGrant.attendant.name
+      },
+      type: {
+        id: xpGrant.type.id,
+        name: xpGrant.type.name,
+        points: xpGrant.type.points
+      },
+      points: xpGrant.points,
+      justification: xpGrant.justification,
+      grantedAt: xpGrant.grantedAt,
+      granter: {
+        id: xpGrant.granter.id,
+        name: xpGrant.granter.name
+      }
+    };
+
+    // Adicionar dados de notificação se disponíveis
+    const notificationData = (xpGrant as any).notificationData;
+    if (notificationData) {
+      (responseData as any).notification = {
+        xpAmount: notificationData.xpAmount,
+        typeName: notificationData.typeName,
+        justification: notificationData.justification,
+        levelUp: notificationData.levelUp,
+        achievementsUnlocked: notificationData.achievementsUnlocked
+      };
+    }
+
     // Retornar sucesso com dados da concessão
     return NextResponse.json(
       {
         success: true,
         message: 'XP avulso concedido com sucesso',
-        data: {
-          id: xpGrant.id,
-          attendant: {
-            id: xpGrant.attendant.id,
-            name: xpGrant.attendant.name
-          },
-          type: {
-            id: xpGrant.type.id,
-            name: xpGrant.type.name,
-            points: xpGrant.type.points
-          },
-          points: xpGrant.points,
-          justification: xpGrant.justification,
-          grantedAt: xpGrant.grantedAt,
-          granter: {
-            id: xpGrant.granter.id,
-            name: xpGrant.granter.name
-          }
-        }
+        data: responseData
       },
       { 
         status: 201,

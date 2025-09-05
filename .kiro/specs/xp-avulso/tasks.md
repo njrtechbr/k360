@@ -164,7 +164,11 @@
     - Implementar breadcrumbs e título da página
     - _Requirements: 1.1_
 
-- [ ] 6. Criar interface de concessão de XP
+- [x] 6. Criar interface de concessão de XP
+
+
+
+
 
 
   - [x] 6.1 Implementar componente XpGrantInterface
@@ -179,7 +183,11 @@
     - Criar confirmação visual antes da concessão
     - _Requirements: 2.1, 2.2_
 
-  - [ ] 6.2 Adicionar página de concessão de XP
+  - [x] 6.2 Adicionar página de concessão de XP
+
+
+
+
     - Criar rota em /dashboard/gamificacao/conceder-xp
     - Implementar feedback visual para sucesso/erro
     - Adicionar validações de temporada ativa
@@ -215,21 +223,42 @@
     - Criar página em /dashboard/gamificacao/historico-xp
     - Adicionar métricas e estatísticas de uso
     - Implementar filtros por período e administrador
+
     - _Requirements: 3.1, 3.2, 6.1_
 
-- [-] 8. Integrar XP avulso ao perfil do atendente
+- [x] 8. Integrar XP avulso ao perfil do atendente
 
 
 
-  - [-] 8.1 Atualizar componente AttendantXpDisplay
+
+
+
+
+
+
+
+
+
+
+
+  - [x] 8.1 Atualizar componente AttendantXpDisplay
+
+
+
+
+
 
 
     - Modificar exibição para separar XP de avaliações e XP avulso
+
+
     - Adicionar seção de histórico de XP avulso recebido
     - Implementar indicadores visuais para diferentes tipos de XP
     - _Requirements: 4.1, 4.2_
 
-  - [ ] 8.2 Implementar notificações de XP recebido
+  - [x] 8.2 Implementar notificações de XP recebido
+
+
 
     - Criar sistema de notificação para atendentes
     - Integrar com concessão de XP para notificar automaticamente
@@ -237,6 +266,7 @@
     - _Requirements: 4.3, 4.4_
 
 - [ ] 9. Implementar testes unitários
+
 
   - [ ] 9.1 Criar testes para XpAvulsoService
 

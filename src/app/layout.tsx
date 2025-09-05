@@ -8,6 +8,7 @@ import { SidebarProvider } from '@/components/ui/sidebar';
 import AppLayout from '@/components/AppLayout';
 import { PerformanceProvider } from '@/providers/PerformanceProvider';
 import { SessionProvider } from '@/providers/SessionProvider';
+import { NotificationProvider } from '@/providers/NotificationProvider';
 
 
 export const metadata: Metadata = {
@@ -33,12 +34,14 @@ export default function RootLayout({
         <PerformanceProvider>
             <SessionProvider>
               <PrismaProvider>
+                <NotificationProvider>
                   <SidebarProvider>
                     <AppLayout>
                       {children}
                     </AppLayout>
                     <Toaster />
                   </SidebarProvider>
+                </NotificationProvider>
               </PrismaProvider>
             </SessionProvider>
         </PerformanceProvider>

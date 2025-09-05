@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { XpGrantInterface } from "@/components/gamification/xp/XpGrantInterface";
+import { XpGrantPageClient } from "./XpGrantPageClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -119,14 +119,8 @@ export default async function ConcederXpPage() {
         </Card>
       </div>
 
-      {/* Interface de Concessão */}
-      <XpGrantInterface 
-        userId={session.user.id}
-        onGrantSuccess={() => {
-          // Callback para atualizar estatísticas ou mostrar feedback adicional
-          console.log("XP concedido com sucesso!");
-        }}
-      />
+      {/* Interface de Concessão - Componente Client */}
+      <XpGrantPageClient userId={session.user.id} />
 
       {/* Informações Adicionais */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

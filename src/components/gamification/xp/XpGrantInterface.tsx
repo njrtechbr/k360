@@ -16,6 +16,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { triggerXpGrantedEvent } from "@/hooks/useXpNotifications";
+import { triggerXpAvulsoNotification } from "@/components/gamification/notifications/XpAvulsoNotification";
+import { triggerXpAvulsoAdminNotification } from "@/components/gamification/notifications/XpAvulsoToast";
 
 // Schema de validação para o formulário
 const XpGrantFormSchema = z.object({
@@ -60,9 +63,11 @@ const iconOptions = [
 interface XpGrantInterfaceProps {
   userId?: string;
   onGrantSuccess?: () => void;
+  disabled?: boolean;
+  remainingPoints?: number;
 }
 
-export function XpGrantInterface({ userId, onGrantSuccess }: XpGrantInterfaceProps) {
+export function XpGrantInterface({ userId, onGrantSuccess, disabled = false, remainingPoints }: XpGrantInterfaceProps) {
   const [attendants, setAttendants] = useState<Attendant[]>([]);
   const [xpTypes, setXpTypes] = useState<XpTypeConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -166,7 +171,7 @@ export function XpGrantInterface({ userId, onGrantSuccess }: XpGrantInterfacePro
       });
 
       if (response.ok) {
-        await response.json();
+        const result = await response.json();
         
         toast({
           title: "Sucesso!",
@@ -178,6 +183,55 @@ export function XpGrantInterface({ userId, onGrantSuccess }: XpGrantInterfacePro
             </div>
           )
         });
+
+        // Disparar notificações usando os dados retornados pela API
+        if (result.data?.notification) {
+          const notificationData = result.data.notification;
+          
+          // Disparar notificação administrativa (para o admin que concedeu)
+          triggerXpAvulsoAdminNotification({
+            xpAmount: notificationData.xpAmount,
+            typeName: notificationData.typeName,
+            justification: notificationData.justification,
+            levelUp: notificationData.levelUp,
+            achievementsUnlocked: notificationData.achievementsUnlocked,
+            attendantName: selectedAttendant?.name
+          });
+
+          // Disparar notificação específica de XP avulso (para o atendente)
+          triggerXpAvulsoNotification({
+            xpAmount: notificationData.xpAmount,
+            typeName: notificationData.typeName,
+            justification: notificationData.justification,
+            levelUp: notificationData.levelUp,
+            achievementsUnlocked: notificationData.achievementsUnlocked
+          });
+
+          // Disparar evento genérico para compatibilidade
+          triggerXpGrantedEvent({
+            attendantId: selectedAttendant!.id,
+            xpAmount: notificationData.xpAmount,
+            typeName: notificationData.typeName,
+            justification: notificationData.justification,
+            achievementsUnlocked: notificationData.achievementsUnlocked
+          });
+        } else {
+          // Fallback para notificação básica se não houver dados específicos
+          if (selectedAttendant && selectedXpType) {
+            triggerXpAvulsoNotification({
+              xpAmount: selectedXpType.points,
+              typeName: selectedXpType.name,
+              justification: formData.justification
+            });
+
+            triggerXpAvulsoAdminNotification({
+              xpAmount: selectedXpType.points,
+              typeName: selectedXpType.name,
+              justification: formData.justification,
+              attendantName: selectedAttendant.name
+            });
+          }
+        }
         
         // Reset form
         form.reset();
@@ -228,14 +282,22 @@ export function XpGrantInterface({ userId, onGrantSuccess }: XpGrantInterfacePro
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className={disabled ? "opacity-60" : ""}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Gift className="h-5 w-5" />
             Conceder XP Avulso
+            {disabled && (
+              <Badge variant="destructive" className="ml-2">
+                Indisponível
+              </Badge>
+            )}
           </CardTitle>
           <CardDescription>
-            Conceda pontos de experiência extras para reconhecer ações e comportamentos excepcionais dos atendentes
+            {disabled 
+              ? "A concessão de XP está temporariamente indisponível devido ao limite diário atingido."
+              : "Conceda pontos de experiência extras para reconhecer ações e comportamentos excepcionais dos atendentes"
+            }
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -376,7 +438,11 @@ export function XpGrantInterface({ userId, onGrantSuccess }: XpGrantInterfacePro
 
               {/* Preview do Tipo Selecionado */}
               {selectedXpType && (
-                <div className="p-4 border rounded-lg bg-muted/50">
+                <div className={`p-4 border rounded-lg ${
+                  remainingPoints !== undefined && selectedXpType.points > remainingPoints
+                    ? 'bg-red-50 border-red-200'
+                    : 'bg-muted/50'
+                }`}>
                   <div className="flex items-center gap-3">
                     <div 
                       className="p-3 rounded-lg"
@@ -394,10 +460,18 @@ export function XpGrantInterface({ userId, onGrantSuccess }: XpGrantInterfacePro
                       <div className="flex items-center gap-2">
                         <h4 className="font-semibold">{selectedXpType.name}</h4>
                         <Badge variant="default">+{selectedXpType.points} XP</Badge>
+                        {remainingPoints !== undefined && selectedXpType.points > remainingPoints && (
+                          <Badge variant="destructive">Pontos Insuficientes</Badge>
+                        )}
                       </div>
                       <p className="text-sm text-muted-foreground">
                         {selectedXpType.description}
                       </p>
+                      {remainingPoints !== undefined && selectedXpType.points > remainingPoints && (
+                        <p className="text-sm text-red-600 mt-1">
+                          Este tipo requer {selectedXpType.points} pontos, mas você tem apenas {remainingPoints} restantes hoje.
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -429,11 +503,11 @@ export function XpGrantInterface({ userId, onGrantSuccess }: XpGrantInterfacePro
               <div className="flex justify-end">
                 <Button 
                   type="submit" 
-                  disabled={!selectedAttendant || !selectedXpType}
+                  disabled={disabled || !selectedAttendant || !selectedXpType || (remainingPoints !== undefined && selectedXpType && selectedXpType.points > remainingPoints)}
                   className="flex items-center gap-2"
                 >
                   <Gift className="h-4 w-4" />
-                  Conceder XP
+                  {disabled ? "Limite Atingido" : "Conceder XP"}
                 </Button>
               </div>
             </form>

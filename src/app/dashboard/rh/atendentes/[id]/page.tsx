@@ -20,6 +20,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { getLevelFromXp } from "@/lib/xp";
 import type { XpEvent, UnlockedAchievement, AchievementConfig } from "@/lib/types";
+import XpAvulsoToast from "@/components/gamification/notifications/XpAvulsoToast";
 
 const RatingStars = ({ rating, className }: { rating: number, className?: string }) => {
     const totalStars = 5;
@@ -1144,6 +1145,9 @@ export default function AttendantProfilePage() {
                     </Card>
                 </TabsContent>
             </Tabs>
+            
+            {/* Componente de Toast para Notificações de XP Avulso */}
+            <XpAvulsoToast attendantId={id} attendantName={attendant.name} />
         </div>
     );
 }

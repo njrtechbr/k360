@@ -1,18 +1,21 @@
 {
   "enabled": true,
   "name": "Auto Commit PT-BR",
-  "description": "Monitora mudanças nos arquivos do projeto e automaticamente faz commits com comentários descritivos em português brasileiro quando necessário",
+  "description": "Analisa mudanças nos arquivos e faz commit automático com mensagem descritiva em português brasileiro usando padrões convencionais (feat/fix/docs)",
   "version": "1",
   "when": {
-    "type": "userTriggered",
+    "type": "fileEdited",
     "patterns": [
-      "src/**/*.ts",
-      "src/**/*.tsx",
-      "prisma/schema.prisma",
-      "package.json",
-      "*.md",
+      "src/**/*",
+      "prisma/**/*",
+      "*.ts",
+      "*.tsx",
       "*.js",
-      "*.ts"
+      "*.jsx",
+      "*.md",
+      "*.json",
+      "package.json",
+      "*.config.*"
     ]
   },
   "then": {

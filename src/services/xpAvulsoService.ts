@@ -308,6 +308,9 @@ export class XpAvulsoService {
       // Validar limites de concessão
       await this.validateGrantLimits(validatedData.grantedBy, xpType.points);
 
+      // Calcular XP total antes da concessão para verificar mudança de nível
+      const previousTotalXp = await GamificationService.calculateTotalXp(validatedData.attendantId);
+
       // Criar concessão em transação
       const result = await prisma.$transaction(async (tx) => {
         // Criar evento XP usando o GamificationService
@@ -345,6 +348,34 @@ export class XpAvulsoService {
 
         return xpGrant;
       });
+
+      // Verificar conquistas desbloqueadas após a concessão
+      const newTotalXp = await GamificationService.calculateTotalXp(validatedData.attendantId);
+      
+      // Verificar se houve mudança de nível
+      const { getLevelFromXp } = await import('@/lib/xp');
+      const previousLevel = getLevelFromXp(previousTotalXp).level;
+      const newLevel = getLevelFromXp(newTotalXp).level;
+
+      // Verificar conquistas desbloqueadas
+      const achievementsUnlocked = await this.checkAchievementsUnlocked(
+        validatedData.attendantId, 
+        previousTotalXp, 
+        newTotalXp
+      );
+
+      // Preparar dados para notificação
+      const notificationData = {
+        attendantId: validatedData.attendantId,
+        xpAmount: xpType.points,
+        typeName: xpType.name,
+        justification: validatedData.justification,
+        levelUp: newLevel > previousLevel ? { previousLevel, newLevel, totalXp: newTotalXp } : null,
+        achievementsUnlocked
+      };
+
+      // Adicionar dados de notificação ao resultado
+      (result as any).notificationData = notificationData;
 
       return result as XpGrantWithRelations;
     } catch (error) {
@@ -620,9 +651,76 @@ export class XpAvulsoService {
   }
 
   /**
+   * Verificar conquistas desbloqueadas após concessão de XP
+   */
+  static async checkAchievementsUnlocked(
+    attendantId: string, 
+    previousXp: number, 
+    newXp: number
+  ): Promise<Array<{ id: string; title: string; description: string; }>> {
+    try {
+      // Buscar conquistas baseadas em XP que podem ter sido desbloqueadas
+      const achievements = await prisma.achievementConfig.findMany({
+        where: {
+          active: true,
+          criteria: {
+            path: ['xp'],
+            not: null
+          }
+        }
+      });
+
+      const unlockedAchievements = [];
+
+      for (const achievement of achievements) {
+        const criteria = achievement.criteria as any;
+        
+        // Verificar se é baseado em XP total
+        if (criteria.xp && typeof criteria.xp === 'number') {
+          const requiredXp = criteria.xp;
+          
+          // Se o XP anterior era menor que o necessário e o novo XP é maior ou igual
+          if (previousXp < requiredXp && newXp >= requiredXp) {
+            // Verificar se já não foi desbloqueada antes
+            const existingUnlock = await prisma.attendantAchievement.findFirst({
+              where: {
+                attendantId,
+                achievementId: achievement.id
+              }
+            });
+
+            if (!existingUnlock) {
+              // Desbloquear conquista
+              await prisma.attendantAchievement.create({
+                data: {
+                  attendantId,
+                  achievementId: achievement.id,
+                  unlockedAt: new Date(),
+                  progress: 100
+                }
+              });
+
+              unlockedAchievements.push({
+                id: achievement.id,
+                title: achievement.title,
+                description: achievement.description
+              });
+            }
+          }
+        }
+      }
+
+      return unlockedAchievements;
+    } catch (error) {
+      logError(error as Error, 'XpAvulsoService.checkAchievementsUnlocked');
+      return []; // Retornar array vazio em caso de erro para não quebrar o fluxo
+    }
+  }
+
+  /**
    * Obter estatísticas de concessões
    */
-  static async getGrantStatistics(period: string = '30d'): Promise<GrantStatistics> {
+  static async getGrantStatistics(period: string = '30d', userId?: string): Promise<GrantStatistics> {
     try {
       // Calcular período
       const endDate = new Date();
@@ -643,13 +741,20 @@ export class XpAvulsoService {
       }
 
       // Buscar concessões do período
+      const whereClause: any = {
+        grantedAt: {
+          gte: startDate,
+          lte: endDate
+        }
+      };
+
+      // Filtrar por usuário se especificado
+      if (userId) {
+        whereClause.grantedBy = userId;
+      }
+
       const grants = await prisma.xpGrant.findMany({
-        where: {
-          grantedAt: {
-            gte: startDate,
-            lte: endDate
-          }
-        },
+        where: whereClause,
         include: {
           type: true,
           granter: {
