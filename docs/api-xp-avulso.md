@@ -240,12 +240,12 @@ Lista concessões de XP para um atendente específico.
 
 ### GET /api/gamification/xp-grants/daily-stats
 
-Estatísticas diárias de concessões.
+Estatísticas diárias de concessões com métricas detalhadas.
 
 **Permissões**: SUPERVISOR, ADMIN, SUPERADMIN
 
 **Query Parameters**:
-- `days` (number, opcional): Número de dias para análise (padrão: 30)
+- `days` (number, opcional): Número de dias para análise (padrão: 30, máximo: 365)
 
 **Response**:
 ```json
@@ -258,7 +258,13 @@ Estatísticas diárias de concessões.
         "totalGrants": 5,
         "totalPoints": 45,
         "uniqueAttendants": 3,
-        "topType": "Excelência no Atendimento"
+        "uniqueGranters": 2,
+        "topType": "Excelência no Atendimento",
+        "averagePointsPerGrant": 9.0,
+        "typeDistribution": {
+          "Excelência no Atendimento": 3,
+          "Iniciativa": 2
+        }
       }
     ],
     "summary": {
@@ -266,8 +272,72 @@ Estatísticas diárias de concessões.
       "totalPoints": 1250,
       "averagePerDay": 5.0,
       "mostActiveGranter": "Admin User",
-      "topType": "Excelência no Atendimento"
+      "topType": "Excelência no Atendimento",
+      "peakDay": "2024-01-15",
+      "peakDayGrants": 12,
+      "uniqueAttendantsTotal": 45,
+      "uniqueGrantersTotal": 3,
+      "averagePointsPerGrant": 8.3
+    },
+    "trends": {
+      "grantsGrowth": "+15%",
+      "pointsGrowth": "+12%",
+      "attendantsGrowth": "+8%"
     }
+  }
+}
+```
+
+### GET /api/gamification/xp-grants/statistics
+
+Estatísticas gerais do sistema de XP avulso.
+
+**Permissões**: SUPERVISOR, ADMIN, SUPERADMIN
+
+**Query Parameters**:
+- `period` (string, opcional): Período de análise ('week', 'month', 'quarter', 'year')
+- `groupBy` (string, opcional): Agrupamento ('type', 'granter', 'attendant')
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "overview": {
+      "totalGrants": 1250,
+      "totalPoints": 12500,
+      "activeTypes": 8,
+      "activeGranters": 5,
+      "beneficiaryAttendants": 120
+    },
+    "byType": [
+      {
+        "typeId": "type123",
+        "typeName": "Excelência no Atendimento",
+        "totalGrants": 450,
+        "totalPoints": 4500,
+        "percentage": 36.0,
+        "averagePerGrant": 10.0
+      }
+    ],
+    "byGranter": [
+      {
+        "granterId": "user123",
+        "granterName": "Admin Principal",
+        "totalGrants": 300,
+        "totalPoints": 2800,
+        "averagePerGrant": 9.3,
+        "favoriteType": "Excelência no Atendimento"
+      }
+    ],
+    "timeline": [
+      {
+        "period": "2024-01",
+        "grants": 85,
+        "points": 750,
+        "uniqueAttendants": 25
+      }
+    ]
   }
 }
 ```
@@ -340,7 +410,23 @@ Estatísticas diárias de concessões.
 
 - **Concessão de XP**: Máximo 10 concessões por minuto por usuário
 - **Criação de tipos**: Máximo 5 criações por minuto por usuário
-- **Consultas**: Máximo 100 requests por minuto por usuário
+- **Consultas gerais**: Máximo 100 requests por minuto por usuário
+- **Estatísticas**: Máximo 20 requests por minuto por usuário
+- **Exportações**: Máximo 5 exportações por minuto por usuário
+
+## Limites de Segurança
+
+### Limites Diários por Administrador
+- **50 concessões** máximo por dia
+- **1000 pontos** máximo por dia
+- **Alertas automáticos** quando próximo dos limites
+- **Bloqueio temporário** em caso de abuso
+
+### Validações de Integridade
+- Verificação de temporada ativa obrigatória
+- Validação de atendente ativo e existente
+- Confirmação de tipo de XP ativo
+- Auditoria completa de todas as ações
 
 ## Webhooks (Futuro)
 
@@ -398,9 +484,24 @@ curl -X POST "https://api.exemplo.com/api/gamification/xp-types" \
 
 ## Changelog da API
 
+### v1.2.0 (2024-12-01)
+- **Novo endpoint**: `/api/gamification/xp-grants/statistics` para estatísticas gerais
+- **Melhorias**: Endpoint de daily-stats com métricas expandidas
+- **Segurança**: Limites diários por administrador implementados
+- **Performance**: Otimização de queries para relatórios
+- **Validações**: Controles de integridade aprimorados
+
+### v1.1.0 (2024-11-01)
+- **Novo endpoint**: `/api/gamification/xp-grants/daily-stats` para métricas diárias
+- **Filtros avançados**: Múltiplos filtros no histórico de concessões
+- **Exportação**: Suporte a CSV nos endpoints de consulta
+- **Rate limiting**: Limites específicos por tipo de operação
+- **Auditoria**: Logs expandidos com mais detalhes
+
 ### v1.0.0 (2024-01-01)
 - Implementação inicial
-- Endpoints de tipos de XP
-- Endpoints de concessão
-- Sistema de auditoria
+- Endpoints de tipos de XP (CRUD completo)
+- Endpoints de concessão de XP
+- Sistema de auditoria básico
 - Rate limiting básico
+- Autenticação e autorização por roles

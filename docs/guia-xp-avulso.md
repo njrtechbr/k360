@@ -226,7 +226,74 @@ Para problemas técnicos ou dúvidas sobre critérios:
 2. Verifique com outros administradores
 3. Entre em contato com o suporte técnico
 
+## Limites e Controles de Segurança
+
+### Limites por Administrador
+- **50 concessões** por dia por administrador
+- **1000 pontos** máximo por dia por administrador
+- **Rate limiting**: 10 concessões por minuto
+- **Auditoria completa**: Todos os logs são permanentes
+
+### Validações Automáticas
+- Verificação de temporada ativa
+- Validação de atendente ativo
+- Confirmação de tipo de XP ativo
+- Limites de pontos por tipo (1-50 recomendado)
+
+### Alertas de Segurança
+- Concessões suspeitas (muito XP em pouco tempo)
+- Tentativas de concessão fora dos limites
+- Uso de tipos inativos
+- Falhas de autenticação
+
+## Relatórios e Estatísticas
+
+### Métricas Disponíveis
+- **Total de concessões** por período
+- **Distribuição por tipo** de XP
+- **Uso por administrador** com rankings
+- **Impacto nas conquistas** desbloqueadas
+- **Evolução temporal** do uso do sistema
+
+### Exportação de Dados
+- **CSV completo** com todas as concessões
+- **Filtros avançados** para relatórios específicos
+- **Dados inclusos**: Data, atendente, tipo, pontos, administrador, justificativa
+- **Formato padronizado** para análise externa
+
+## Integração com Outros Sistemas
+
+### Sistema de Gamificação
+- XP avulso soma ao XP total do atendente
+- Multiplicadores sazonais se aplicam automaticamente
+- Conquistas são verificadas após cada concessão
+- Rankings incluem XP avulso no cálculo
+
+### Sistema de Notificações
+- Atendentes recebem notificação automática
+- Administradores recebem confirmação da concessão
+- Notificações especiais para conquistas desbloqueadas
+- Histórico de notificações no perfil
+
+### Dashboard em Tempo Real
+- Métricas de XP avulso atualizadas automaticamente
+- Gráficos de evolução de concessões
+- Indicadores de uso por administrador
+- Alertas para atividades suspeitas
+
 ## Changelog
+
+### Versão 1.2 (Atual)
+- **Estatísticas diárias**: Endpoint para métricas de uso
+- **Melhorias de segurança**: Rate limiting aprimorado
+- **Notificações automáticas**: Sistema completo implementado
+- **Dashboard integrado**: Métricas em tempo real
+
+### Versão 1.1
+- **Filtros avançados**: Histórico com múltiplos filtros
+- **Exportação CSV**: Relatórios detalhados
+- **Validações aprimoradas**: Controles de segurança
+- **Interface melhorada**: UX otimizada
 
 ### Versão 1.0
 - Implementação inicial do sistema de XP avulso

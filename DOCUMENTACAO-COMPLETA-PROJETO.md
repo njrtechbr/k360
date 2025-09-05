@@ -125,10 +125,13 @@ src/
 ### 3. Sistema de Gamificação Completo
 
 #### XP (Pontos de Experiência)
-- **XP por Avaliação**: Pontos baseados na nota recebida
-- **XP Avulso**: Sistema de concessão manual de pontos extras
-- **Multiplicadores Sazonais**: Bônus por temporada ativa
-- **Histórico Detalhado**: Rastreamento de todos os eventos de XP
+- **XP por Avaliação**: Pontos baseados na nota recebida (configurável por temporada)
+- **XP Avulso**: Sistema completo de concessão manual com 6 tipos padrão + tipos personalizados
+- **Multiplicadores Sazonais**: Bônus por temporada ativa aplicados automaticamente
+- **Histórico Detalhado**: Rastreamento completo com auditoria e filtros avançados
+- **Controles de Segurança**: Limites diários por administrador e logs de auditoria
+- **Notificações**: Sistema automático para atendentes e administradores
+- **Estatísticas**: Dashboard com métricas de uso e relatórios detalhados
 
 #### Níveis e Progressão
 - **Sistema de Níveis**: Progressão baseada em XP acumulado

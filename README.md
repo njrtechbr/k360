@@ -16,10 +16,13 @@ Sistema para gerenciar avaliações de atendentes com mecânicas de gamificaçã
 - **Temporadas**: Campanhas com multiplicadores e metas específicas
 
 ### Sistema de XP Avulso ⚡
-- **Tipos Pré-cadastrados**: Administradores podem criar tipos de XP com valores específicos
-- **Concessão Manual**: Reconhecimento imediato por ações excepcionais
-- **Histórico Completo**: Auditoria de todas as concessões com justificativas
+- **Tipos Pré-cadastrados**: 6 tipos padrão + criação personalizada de tipos de XP
+- **Concessão Manual**: Reconhecimento imediato por ações excepcionais com justificativas
+- **Histórico Completo**: Auditoria de todas as concessões com filtros avançados
 - **Integração Total**: XP avulso conta para rankings, conquistas e progressão
+- **Controles de Segurança**: Limites por administrador e logs completos de auditoria
+- **Notificações**: Sistema automático de notificação para atendentes
+- **Estatísticas**: Dashboard com métricas de uso e relatórios detalhados
 
 ## Stack Tecnológico
 
@@ -57,6 +60,30 @@ Após executar o seed, você pode acessar com:
 - **SUPERADMIN**: `superadmin@sistema.com` / `admin123`
 - **ADMIN**: `admin@sistema.com` / `admin123`
 
+## Sistema de XP Avulso
+
+O sistema de XP avulso permite que administradores concedam pontos extras aos atendentes através de tipos pré-cadastrados:
+
+### Tipos Padrão Disponíveis
+- **Excelência no Atendimento** (10 pontos) - Atendimento excepcional ao cliente
+- **Iniciativa** (8 pontos) - Tomar iniciativa em situações importantes
+- **Trabalho em Equipe** (6 pontos) - Colaboração excepcional com colegas
+- **Melhoria de Processo** (12 pontos) - Sugerir ou implementar melhorias
+- **Pontualidade Exemplar** (5 pontos) - Pontualidade consistente
+- **Resolução de Problemas** (15 pontos) - Resolver problemas complexos
+
+### Funcionalidades Principais
+- **Gerenciamento de Tipos**: Criar, editar e desativar tipos de XP
+- **Concessão Controlada**: Limites por administrador e auditoria completa
+- **Histórico Detalhado**: Filtros avançados e exportação para CSV
+- **Integração Completa**: XP avulso conta para rankings e conquistas
+- **Notificações**: Atendentes são notificados automaticamente
+
+### Acesso às Funcionalidades
+- **Configuração**: `/dashboard/gamificacao/configuracoes/tipos-xp`
+- **Concessão**: `/dashboard/gamificacao/conceder-xp`
+- **Histórico**: `/dashboard/gamificacao/historico-xp`
+
 ## API Endpoints
 
 ### Autenticação
@@ -73,8 +100,9 @@ Após executar o seed, você pode acessar com:
 - `PUT /api/gamification/xp-types/[id]` - Atualizar tipo (ADMIN+)
 - `DELETE /api/gamification/xp-types/[id]` - Desativar tipo (ADMIN+)
 - `POST /api/gamification/xp-grants` - Conceder XP avulso (ADMIN+)
-- `GET /api/gamification/xp-grants` - Histórico de concessões
+- `GET /api/gamification/xp-grants` - Histórico de concessões com filtros
 - `GET /api/gamification/xp-grants/attendant/[id]` - Concessões por atendente
+- `GET /api/gamification/xp-grants/daily-stats` - Estatísticas diárias de uso
 
 ### Atendentes
 - `GET /api/attendants` - Listar atendentes
@@ -85,3 +113,15 @@ Após executar o seed, você pode acessar com:
 - `GET /api/evaluations` - Listar avaliações
 - `POST /api/evaluations` - Criar avaliação
 - `GET /api/evaluations/[id]` - Detalhes da avaliação
+
+## Documentação Completa
+
+### Documentação do Sistema de XP Avulso
+- **[API Reference](docs/api-xp-avulso.md)** - Documentação completa da API
+- **[Guia do Administrador](docs/guia-xp-avulso.md)** - Manual de uso para administradores
+- **[Guia de Desenvolvimento](docs/desenvolvimento-xp-avulso.md)** - Documentação técnica para desenvolvedores
+- **[Endpoints Técnicos](docs/endpoints-xp-avulso.md)** - Detalhes de implementação dos endpoints
+
+### Documentação Geral
+- **[Documentação Completa](DOCUMENTACAO-COMPLETA-PROJETO.md)** - Visão geral completa do sistema
+- **[Documentação do Projeto](DOCUMENTACAO_PROJETO.md)** - Estrutura e funcionalidades principais
