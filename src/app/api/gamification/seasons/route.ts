@@ -1,9 +1,73 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import { SeasonsService } from '@/services/gamification';
-import type { GamificationSeason } from '@/lib/types';
+import { GamificationService } from '@/services/gamificationService';
+import type { GamificationSeason } from '@prisma/client';
 
 const prisma = new PrismaClient();
+
+// Funções auxiliares para temporadas
+function isSeasonActive(season: GamificationSeason): boolean {
+  const now = new Date();
+  return season.active && season.startDate <= now && season.endDate >= now;
+}
+
+function filterSeasonsByStatus(seasons: GamificationSeason[], status: string): GamificationSeason[] {
+  const now = new Date();
+  
+  switch (status) {
+    case 'active':
+      return seasons.filter(s => isSeasonActive(s));
+    case 'upcoming':
+      return seasons.filter(s => s.startDate > now);
+    case 'past':
+      return seasons.filter(s => s.endDate < now);
+    default:
+      return seasons;
+  }
+}
+
+function findActiveSeason(seasons: GamificationSeason[]): GamificationSeason | null {
+  return seasons.find(s => isSeasonActive(s)) || null;
+}
+
+function findNextSeason(seasons: GamificationSeason[]): GamificationSeason | null {
+  const now = new Date();
+  const upcomingSeasons = seasons
+    .filter(s => s.startDate > now)
+    .sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+  
+  return upcomingSeasons[0] || null;
+}
+
+function findPreviousSeason(seasons: GamificationSeason[]): GamificationSeason | null {
+  const now = new Date();
+  const pastSeasons = seasons
+    .filter(s => s.endDate < now)
+    .sort((a, b) => b.endDate.getTime() - a.endDate.getTime());
+  
+  return pastSeasons[0] || null;
+}
+
+function validateSeason(season: GamificationSeason): { isValid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  
+  if (!season.name || season.name.trim().length === 0) {
+    errors.push('Nome é obrigatório');
+  }
+  
+  if (season.endDate <= season.startDate) {
+    errors.push('Data de fim deve ser posterior à data de início');
+  }
+  
+  if (season.xpMultiplier < 0.1) {
+    errors.push('Multiplicador deve ser pelo menos 0.1');
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+}
 
 // GET /api/gamification/seasons
 // Buscar todas as temporadas com filtros opcionais
@@ -25,16 +89,16 @@ export async function GET(request: NextRequest) {
     // Filtrar por status se especificado
     let filteredSeasons = seasons;
     if (status) {
-      filteredSeasons = SeasonsService.filterByStatus(seasons, status as any);
+      filteredSeasons = filterSeasonsByStatus(seasons, status);
     }
 
     // Calcular estatísticas se solicitado
     let stats = null;
     if (includeStats) {
       const now = new Date();
-      const activeSeasons = seasons.filter(s => SeasonsService.isSeasonActive(s));
-      const upcomingSeasons = SeasonsService.filterByStatus(seasons, 'upcoming');
-      const pastSeasons = SeasonsService.filterByStatus(seasons, 'past');
+      const activeSeasons = seasons.filter(s => isSeasonActive(s));
+      const upcomingSeasons = filterSeasonsByStatus(seasons, 'upcoming');
+      const pastSeasons = filterSeasonsByStatus(seasons, 'past');
 
       // Buscar estatísticas de XP por temporada
       const seasonXpStats = await Promise.all(
@@ -70,9 +134,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Identificar temporadas especiais
-    const activeSeason = SeasonsService.findActiveSeason(filteredSeasons);
-    const nextSeason = SeasonsService.findNextSeason(filteredSeasons);
-    const previousSeason = SeasonsService.findPreviousSeason(filteredSeasons);
+    const activeSeason = findActiveSeason(filteredSeasons);
+    const nextSeason = findNextSeason(filteredSeasons);
+    const previousSeason = findPreviousSeason(filteredSeasons);
 
     return NextResponse.json({
       seasons: filteredSeasons,
@@ -178,7 +242,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Validar temporada criada
-    const validation = SeasonsService.validateSeason(season);
+    const validation = validateSeason(season);
     if (!validation.isValid) {
       // Se a validação falhar, deletar a temporada criada
       await prisma.gamificationSeason.delete({

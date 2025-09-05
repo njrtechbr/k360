@@ -312,10 +312,10 @@
 
     - _Requirements: 6.1, 6.2, 6.3_
 
-- [ ] 10. Criar dados iniciais e documentação
+- [x] 10. Criar dados iniciais e documentação
 
 
-  - [ ] 10.1 Implementar seed de tipos padrão de XP
+  - [x] 10.1 Implementar seed de tipos padrão de XP
 
 
     - Criar tipos básicos como "Excelência no Atendimento", "Iniciativa", "Trabalho em Equipe"
@@ -342,7 +342,7 @@
 
 
 
-  - [ ] 11.1 Criar testes de fluxo completo
+  - [x] 11.1 Criar testes de fluxo completo
 
 
 

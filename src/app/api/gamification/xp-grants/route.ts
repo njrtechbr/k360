@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { XpAvulsoService, GrantXpSchema, GrantHistoryFiltersSchema } from '@/services/xpAvulsoService';
+import { XpAvulsoConfigService } from '@/services/xpAvulsoConfigService';
 import { AuthMiddleware, AuthConfigs, AuditLogger } from '@/lib/auth-middleware';
 import { xpGrantRateLimiter, xpAvulsoRateLimiter } from '@/lib/rate-limit';
 
@@ -64,6 +65,29 @@ export async function POST(request: NextRequest) {
     }
 
     const grantData = validationResult.data;
+
+    // Validar contra configurações de XP Avulso
+    const configValidation = await XpAvulsoConfigService.validateGrant(
+      grantData.points || 0, // Usar pontos do tipo se não especificado
+      grantData.grantedBy,
+      grantData.attendantId
+    );
+
+    if (!configValidation.isValid) {
+      return NextResponse.json(
+        {
+          error: 'Concessão não permitida',
+          details: configValidation.errors,
+          warnings: configValidation.warnings
+        },
+        { status: 400 }
+      );
+    }
+
+    // Mostrar avisos se houver
+    if (configValidation.warnings.length > 0) {
+      console.warn('Avisos na concessão de XP:', configValidation.warnings);
+    }
 
     // Conceder XP avulso
     const xpGrant = await XpAvulsoService.grantXp(grantData);

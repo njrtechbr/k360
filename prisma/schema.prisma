@@ -165,6 +165,24 @@ model GamificationConfig {
   seasons            Json     @default("[]")
 }
 
+model XpAvulsoConfig {
+  id                    String   @id @default("main")
+  dailyLimitPoints      Int      @default(1000)  // Limite diário de pontos por admin
+  dailyLimitGrants      Int      @default(50)    // Limite diário de concessões por admin
+  maxPointsPerGrant     Int      @default(200)   // Máximo de pontos por concessão individual
+  minPointsPerGrant     Int      @default(1)     // Mínimo de pontos por concessão individual
+  requireJustification  Boolean  @default(false) // Se justificativa é obrigatória
+  autoApproveLimit      Int      @default(50)    // Limite para aprovação automática
+  auditRetentionDays    Int      @default(365)   // Dias para manter logs de auditoria
+  enableNotifications   Boolean  @default(true)  // Se notificações estão habilitadas
+  allowWeekendGrants    Boolean  @default(true)  // Se permite concessões nos fins de semana
+  allowHolidayGrants    Boolean  @default(true)  // Se permite concessões em feriados
+  maxGrantsPerAttendant Int      @default(10)    // Máximo de concessões por atendente por dia
+  cooldownMinutes       Int      @default(5)     // Tempo mínimo entre concessões para o mesmo atendente
+  updatedAt             DateTime @updatedAt
+  updatedBy             String?  // ID do usuário que fez a última atualização
+}
+
 model AchievementConfig {
   id          String   @id
   title       String

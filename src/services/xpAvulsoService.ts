@@ -305,8 +305,17 @@ export class XpAvulsoService {
         throw new Error('Usuário responsável pela concessão não encontrado');
       }
 
-      // Validar limites de concessão
-      await this.validateGrantLimits(validatedData.grantedBy, xpType.points);
+      // Validar limites de concessão usando configurações
+      const { XpAvulsoConfigService } = await import('./xpAvulsoConfigService');
+      const configValidation = await XpAvulsoConfigService.validateGrant(
+        xpType.points,
+        validatedData.grantedBy,
+        validatedData.attendantId
+      );
+
+      if (!configValidation.isValid) {
+        throw new Error(configValidation.errors.join('; '));
+      }
 
       // Calcular XP total antes da concessão para verificar mudança de nível
       const previousTotalXp = await GamificationService.calculateTotalXp(validatedData.attendantId);

@@ -74,6 +74,22 @@ export default function GamificacaoConfiguracoesPage() {
               </CardHeader>
             </Card>
           </Link>
+          <Link href="/dashboard/gamificacao/configuracoes/xp-avulso">
+            <Card className="hover:border-primary transition-colors cursor-pointer">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-emerald-100 dark:bg-emerald-900 rounded-lg">
+                      <Shield className="h-6 w-6 text-emerald-600" />
+                  </div>
+                  <div>
+                    <CardTitle>Configurações de XP Avulso</CardTitle>
+                    <CardDescription>Configure limites diários, regras e controles para concessão manual de XP.</CardDescription>
+                  </div>
+                </div>
+                <ChevronRight className="h-6 w-6 text-muted-foreground" />
+              </CardHeader>
+            </Card>
+          </Link>
           <Link href="/dashboard/gamificacao/configuracoes/multiplicadores">
             <Card className="hover:border-primary transition-colors cursor-pointer">
               <CardHeader className="flex flex-row items-center justify-between">

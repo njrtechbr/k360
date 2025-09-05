@@ -6,17 +6,28 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ShieldAlert, ShieldCheck, ShieldHalf, UserIcon, Wrench, Users, PlusCircle, Gift, Building2, Cake, CalendarDays, PartyPopper } from "lucide-react";
+import { ShieldAlert, ShieldCheck, ShieldHalf, UserIcon, Wrench, Users, Gift, Building2, Cake, CalendarDays, PartyPopper, BarChart3, TrendingUp } from "lucide-react";
 import { ROLES, type Attendant } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { differenceInDays, format, getYear, setYear, isFuture, addYears, differenceInYears } from 'date-fns';
+import { differenceInDays, format, getYear, setYear, addYears, differenceInYears } from 'date-fns';
 import { ptBR } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
-import { usePerformance } from "@/providers/PerformanceProvider";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+// Componentes de dashboard
+import { StatsCards } from "@/components/dashboard/StatsCards";
+import { EvaluationTrendChart } from "@/components/dashboard/EvaluationTrendChart";
+import { RatingDistributionChart } from "@/components/dashboard/RatingDistributionChart";
+import { TopPerformersChart } from "@/components/dashboard/TopPerformersChart";
+import { GamificationOverview } from "@/components/dashboard/GamificationOverview";
+import { MonthlyStatsChart } from "@/components/dashboard/MonthlyStatsChart";
+
+// Serviços
+import { DashboardService } from "@/services/dashboardService";
 
 
 const RoleIcon = ({ role }: { role: string }) => {
@@ -113,11 +124,64 @@ export default function DashboardPage() {
   const [isAnniversaryModalOpen, setIsAnniversaryModalOpen] = useState(false);
   const [modalContent, setModalContent] = useState<{ type: 'birthday' | 'admission', title: string, data: Anniversary[] } | null>(null);
   
+  // Estados para dados do dashboard
+  const [dashboardStats, setDashboardStats] = useState<any>(null);
+  const [evaluationTrend, setEvaluationTrend] = useState<any[]>([]);
+  const [ratingDistribution, setRatingDistribution] = useState<any[]>([]);
+  const [topPerformers, setTopPerformers] = useState<any[]>([]);
+  const [gamificationOverview, setGamificationOverview] = useState<any>(null);
+  const [popularAchievements, setPopularAchievements] = useState<any[]>([]);
+  const [monthlyStats, setMonthlyStats] = useState<any[]>([]);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       router.push("/login");
     }
   }, [authLoading, isAuthenticated, router]);
+
+  // Carregar dados do dashboard
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      loadDashboardData();
+    }
+  }, [isAuthenticated, user]);
+
+  const loadDashboardData = async () => {
+    try {
+      setIsLoadingStats(true);
+      
+      const [
+        stats,
+        trend,
+        distribution,
+        performers,
+        gamification,
+        achievements,
+        monthly
+      ] = await Promise.all([
+        DashboardService.getGeneralStats(),
+        DashboardService.getEvaluationTrend(30),
+        DashboardService.getRatingDistribution(),
+        DashboardService.getTopPerformers(10),
+        DashboardService.getGamificationOverview(),
+        DashboardService.getPopularAchievements(5),
+        DashboardService.getMonthlyEvaluationStats(6)
+      ]);
+
+      setDashboardStats(stats);
+      setEvaluationTrend(trend);
+      setRatingDistribution(distribution);
+      setTopPerformers(performers);
+      setGamificationOverview(gamification);
+      setPopularAchievements(achievements);
+      setMonthlyStats(monthly);
+    } catch (error) {
+      console.error('Erro ao carregar dados do dashboard:', error);
+    } finally {
+      setIsLoadingStats(false);
+    }
+  };
 
   const allAnniversaries = useMemo(() => getUpcomingAnniversaries(attendants), [attendants]);
 
@@ -253,6 +317,19 @@ export default function DashboardPage() {
               Seu nível de acesso: {user.role}
           </Badge>
         </div>
+
+        {/* Estatísticas Gerais */}
+        <StatsCards 
+          stats={dashboardStats || {
+            totalEvaluations: 0,
+            totalAttendants: 0,
+            averageRating: 0,
+            totalXp: 0,
+            activeSeasons: 0,
+            unlockedAchievements: 0
+          }} 
+          isLoading={isLoadingStats} 
+        />
         
         {todayAnniversaries.length > 0 && (
             <Card className="border-amber-400 bg-amber-50 dark:bg-amber-950/30">
@@ -281,56 +358,125 @@ export default function DashboardPage() {
             </Card>
         )}
 
-        <div className="grid md:grid-cols-2 gap-8">
-              <Card>
+        {/* Abas principais do dashboard */}
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="overview" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Visão Geral
+            </TabsTrigger>
+            <TabsTrigger value="evaluations" className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Avaliações
+            </TabsTrigger>
+            <TabsTrigger value="gamification" className="flex items-center gap-2">
+              <Gift className="h-4 w-4" />
+              Gamificação
+            </TabsTrigger>
+            <TabsTrigger value="team" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Equipe
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid lg:grid-cols-2 gap-6">
+              <EvaluationTrendChart data={evaluationTrend} isLoading={isLoadingStats} />
+              <RatingDistributionChart data={ratingDistribution} isLoading={isLoadingStats} />
+            </div>
+            <MonthlyStatsChart data={monthlyStats} isLoading={isLoadingStats} />
+          </TabsContent>
+
+          <TabsContent value="evaluations" className="space-y-6">
+            <div className="grid lg:grid-cols-2 gap-6">
+              <EvaluationTrendChart data={evaluationTrend} isLoading={isLoadingStats} />
+              <RatingDistributionChart data={ratingDistribution} isLoading={isLoadingStats} />
+            </div>
+            <MonthlyStatsChart data={monthlyStats} isLoading={isLoadingStats} />
+          </TabsContent>
+
+          <TabsContent value="gamification" className="space-y-6">
+            <GamificationOverview 
+              data={gamificationOverview || {
+                totalXpDistributed: 0,
+                activeAchievements: 0,
+                totalUnlocked: 0,
+                topAchievement: null
+              }} 
+              popularAchievements={popularAchievements}
+              isLoading={isLoadingStats} 
+            />
+          </TabsContent>
+
+          <TabsContent value="team" className="space-y-6">
+            <div className="grid lg:grid-cols-2 gap-6">
+              <TopPerformersChart data={topPerformers} isLoading={isLoadingStats} />
+              
+              {/* Aniversários da equipe */}
+              <div className="grid gap-6">
+                <Card>
                   <CardHeader>
-                      <CardTitle className="flex items-center gap-2"><Gift className="text-pink-500"/> Próximos Aniversariantes</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                      <Gift className="text-pink-500 h-5 w-5"/> 
+                      Próximos Aniversariantes
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                      {appLoading ? (
-                          Array.from({ length: 2 }).map((_, i) => (
-                              <div key={i} className="flex items-center justify-between p-2">
-                                  <div className="flex items-center gap-3">
-                                      <Skeleton className="h-10 w-10 rounded-full" />
-                                      <div className="space-y-1">
-                                          <Skeleton className="h-4 w-32" />
-                                          <Skeleton className="h-3 w-24" />
-                                      </div>
-                                  </div>
-                                  <Skeleton className="h-6 w-16 rounded-full" />
-                              </div>
-                          ))
-                      ) : renderAnniversaryGroup(upcomingBirthdays.slice(0, 5), 'birthday')}
+                    {appLoading ? (
+                      Array.from({ length: 2 }).map((_, i) => (
+                        <div key={i} className="flex items-center justify-between p-2">
+                          <div className="flex items-center gap-3">
+                            <Skeleton className="h-10 w-10 rounded-full" />
+                            <div className="space-y-1">
+                              <Skeleton className="h-4 w-32" />
+                              <Skeleton className="h-3 w-24" />
+                            </div>
+                          </div>
+                          <Skeleton className="h-6 w-16 rounded-full" />
+                        </div>
+                      ))
+                    ) : renderAnniversaryGroup(upcomingBirthdays.slice(0, 3), 'birthday')}
                   </CardContent>
                   <CardFooter>
-                       <Button variant="secondary" className="w-full" onClick={() => handleOpenModal('birthday')}>Ver todos</Button>
+                    <Button variant="secondary" className="w-full" onClick={() => handleOpenModal('birthday')}>
+                      Ver todos
+                    </Button>
                   </CardFooter>
-              </Card>
-              <Card>
+                </Card>
+
+                <Card>
                   <CardHeader>
-                      <CardTitle className="flex items-center gap-2"><Building2 className="text-blue-500" /> Aniversários de Admissão</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                      <Building2 className="text-blue-500 h-5 w-5" /> 
+                      Aniversários de Admissão
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                      {appLoading ? (
-                          Array.from({ length: 2 }).map((_, i) => (
-                              <div key={i} className="flex items-center justify-between p-2">
-                                  <div className="flex items-center gap-3">
-                                      <Skeleton className="h-10 w-10 rounded-full" />
-                                      <div className="space-y-1">
-                                          <Skeleton className="h-4 w-32" />
-                                          <Skeleton className="h-3 w-24" />
-                                      </div>
-                                  </div>
-                                  <Skeleton className="h-6 w-16 rounded-full" />
-                              </div>
-                          ))
-                      ) : renderAnniversaryGroup(upcomingWorkAnniversaries.slice(0, 5), 'admission')}
+                    {appLoading ? (
+                      Array.from({ length: 2 }).map((_, i) => (
+                        <div key={i} className="flex items-center justify-between p-2">
+                          <div className="flex items-center gap-3">
+                            <Skeleton className="h-10 w-10 rounded-full" />
+                            <div className="space-y-1">
+                              <Skeleton className="h-4 w-32" />
+                              <Skeleton className="h-3 w-24" />
+                            </div>
+                          </div>
+                          <Skeleton className="h-6 w-16 rounded-full" />
+                        </div>
+                      ))
+                    ) : renderAnniversaryGroup(upcomingWorkAnniversaries.slice(0, 3), 'admission')}
                   </CardContent>
-                   <CardFooter>
-                       <Button variant="secondary" className="w-full" onClick={() => handleOpenModal('admission')}>Ver todos</Button>
+                  <CardFooter>
+                    <Button variant="secondary" className="w-full" onClick={() => handleOpenModal('admission')}>
+                      Ver todos
+                    </Button>
                   </CardFooter>
-              </Card>
-          </div>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
 
 
         <Card>

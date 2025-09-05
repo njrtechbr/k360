@@ -19,10 +19,7 @@ import { INITIAL_ACHIEVEMENTS, INITIAL_LEVEL_REWARDS } from "@/lib/achievements"
 import { getScoreFromRating } from "@/lib/gamification";
 import { analyzeEvaluation } from '@/ai/flows/analyze-evaluation-flow';
 import type { EvaluationAnalysis } from '@/lib/types';
-import { de } from "date-fns/locale";
-import { de } from "date-fns/locale";
-import { de } from "date-fns/locale";
-import { de } from "date-fns/locale";
+import { ptBR } from "date-fns/locale";
 
 const AI_ANALYSIS_STORAGE_KEY = "controle_acesso_ai_analysis";
 const LAST_AI_ANALYSIS_DATE_KEY = "controle_acesso_last_ai_analysis_date";
@@ -230,8 +227,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } finally {
             setLoading(false);
         }
-    }, [session, toast]);    // 
-Funções de autenticação
+    }, [session, toast]);
+
+    // Funções de autenticação
     const login = useCallback(async (email: string, password: string) => {
         try {
             const result = await signIn('credentials', {
@@ -618,8 +616,9 @@ Funções de autenticação
             });
             throw error;
         }
-    }, [fetchAllData, toast]);    // F
-unções de avaliação
+    }, [fetchAllData, toast]);
+
+    // Funções de avaliação
     const createEvaluation = useCallback(async (evaluationData: Omit<Evaluation, 'id' | 'createdAt'>) => {
         try {
             await EvaluationService.create({
