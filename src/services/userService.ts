@@ -1,6 +1,7 @@
 import { PrismaClient, User, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
+import { handlePrismaError, logError } from '@/lib/errors';
 
 const prisma = new PrismaClient();
 
@@ -37,8 +38,9 @@ export class UserService {
         }
       });
     } catch (error) {
-      console.error('Erro ao buscar usuários:', error);
-      throw new Error('Falha ao buscar usuários');
+      logError(error as Error, 'UserService.findAll');
+      const dbError = handlePrismaError(error);
+      throw dbError;
     }
   }
 
@@ -52,8 +54,9 @@ export class UserService {
         }
       });
     } catch (error) {
-      console.error('Erro ao buscar usuário:', error);
-      throw new Error('Falha ao buscar usuário');
+      logError(error as Error, 'UserService.findById');
+      const dbError = handlePrismaError(error);
+      throw dbError;
     }
   }
 
@@ -67,8 +70,9 @@ export class UserService {
         }
       });
     } catch (error) {
-      console.error('Erro ao buscar usuário por email:', error);
-      throw new Error('Falha ao buscar usuário');
+      logError(error as Error, 'UserService.findByEmail');
+      const dbError = handlePrismaError(error);
+      throw dbError;
     }
   }
 
@@ -103,11 +107,15 @@ export class UserService {
         }
       });
     } catch (error) {
-      console.error('Erro ao criar usuário:', error);
+      logError(error as Error, 'UserService.create');
+      
       if (error instanceof z.ZodError) {
         throw new Error(`Dados inválidos: ${error.errors.map(e => e.message).join(', ')}`);
       }
-      throw error instanceof Error ? error : new Error('Falha ao criar usuário');
+      
+      // Tratar erros Prisma
+      const dbError = handlePrismaError(error);
+      throw dbError;
     }
   }
 
@@ -158,11 +166,15 @@ export class UserService {
         }
       });
     } catch (error) {
-      console.error('Erro ao atualizar usuário:', error);
+      logError(error as Error, 'UserService.update');
+      
       if (error instanceof z.ZodError) {
         throw new Error(`Dados inválidos: ${error.errors.map(e => e.message).join(', ')}`);
       }
-      throw error instanceof Error ? error : new Error('Falha ao atualizar usuário');
+      
+      // Tratar erros Prisma
+      const dbError = handlePrismaError(error);
+      throw dbError;
     }
   }
 
@@ -190,8 +202,9 @@ export class UserService {
         where: { id }
       });
     } catch (error) {
-      console.error('Erro ao deletar usuário:', error);
-      throw error instanceof Error ? error : new Error('Falha ao deletar usuário');
+      logError(error as Error, 'UserService.delete');
+      const dbError = handlePrismaError(error);
+      throw dbError;
     }
   }
 
@@ -203,7 +216,7 @@ export class UserService {
       });
       return count > 0;
     } catch (error) {
-      console.error('Erro ao verificar super admin:', error);
+      logError(error as Error, 'UserService.hasSuperAdmin');
       return false;
     }
   }
@@ -223,155 +236,7 @@ export class UserService {
 
       return user;
     } catch (error) {
-      console.error('Erro ao verificar credenciais:', error);
-      return null;
-    }
-  }
-}  // 
-Criar usuário
-  static async create(userData: CreateUserData): Promise<User> {
-    try {
-      // Validar dados
-      const validatedData = CreateUserSchema.parse(userData);
-      
-      // Verificar se email já existe
-      const existingUser = await prisma.user.findUnique({
-        where: { email: validatedData.email }
-      });
-      
-      if (existingUser) {
-        throw new Error('Email já está em uso');
-      }
-
-      // Hash da senha
-      const hashedPassword = await bcrypt.hash(validatedData.password, 12);
-
-      // Criar usuário com módulos
-      const user = await prisma.user.create({
-        data: {
-          name: validatedData.name,
-          email: validatedData.email,
-          password: hashedPassword,
-          role: validatedData.role,
-          modules: {
-            connect: validatedData.modules.map(moduleId => ({ id: moduleId }))
-          }
-        },
-        include: {
-          modules: true
-        }
-      });
-
-      return user;
-    } catch (error) {
-      console.error('Erro ao criar usuário:', error);
-      if (error instanceof z.ZodError) {
-        throw new Error(`Dados inválidos: ${error.errors.map(e => e.message).join(', ')}`);
-      }
-      throw error;
-    }
-  }
-
-  // Atualizar usuário
-  static async update(id: string, userData: UpdateUserData): Promise<User> {
-    try {
-      // Validar dados
-      const validatedData = UpdateUserSchema.parse(userData);
-      
-      // Verificar se usuário existe
-      const existingUser = await prisma.user.findUnique({
-        where: { id }
-      });
-      
-      if (!existingUser) {
-        throw new Error('Usuário não encontrado');
-      }
-
-      // Verificar email único se estiver sendo atualizado
-      if (validatedData.email && validatedData.email !== existingUser.email) {
-        const emailExists = await prisma.user.findUnique({
-          where: { email: validatedData.email }
-        });
-        
-        if (emailExists) {
-          throw new Error('Email já está em uso');
-        }
-      }
-
-      // Preparar dados para atualização
-      const updateData: any = {
-        ...validatedData
-      };
-
-      // Hash da senha se fornecida
-      if (validatedData.password) {
-        updateData.password = await bcrypt.hash(validatedData.password, 12);
-      }
-
-      // Atualizar módulos se fornecidos
-      if (validatedData.modules) {
-        updateData.modules = {
-          set: validatedData.modules.map(moduleId => ({ id: moduleId }))
-        };
-      }
-
-      const user = await prisma.user.update({
-        where: { id },
-        data: updateData,
-        include: {
-          modules: true
-        }
-      });
-
-      return user;
-    } catch (error) {
-      console.error('Erro ao atualizar usuário:', error);
-      if (error instanceof z.ZodError) {
-        throw new Error(`Dados inválidos: ${error.errors.map(e => e.message).join(', ')}`);
-      }
-      throw error;
-    }
-  }
-
-  // Deletar usuário
-  static async delete(id: string): Promise<void> {
-    try {
-      // Verificar se usuário existe
-      const existingUser = await prisma.user.findUnique({
-        where: { id }
-      });
-      
-      if (!existingUser) {
-        throw new Error('Usuário não encontrado');
-      }
-
-      await prisma.user.delete({
-        where: { id }
-      });
-    } catch (error) {
-      console.error('Erro ao deletar usuário:', error);
-      throw error;
-    }
-  }
-
-  // Verificar senha
-  static async verifyPassword(email: string, password: string): Promise<User | null> {
-    try {
-      const user = await prisma.user.findUnique({
-        where: { email },
-        include: {
-          modules: true
-        }
-      });
-
-      if (!user || !user.password) {
-        return null;
-      }
-
-      const isValid = await bcrypt.compare(password, user.password);
-      return isValid ? user : null;
-    } catch (error) {
-      console.error('Erro ao verificar senha:', error);
+      logError(error as Error, 'UserService.verifyCredentials');
       return null;
     }
   }
@@ -379,13 +244,10 @@ Criar usuário
   // Verificar se é super admin
   static async isSuperAdmin(userId: string): Promise<boolean> {
     try {
-      const user = await prisma.user.findUnique({
-        where: { id: userId }
-      });
-      
+      const user = await this.findById(userId);
       return user?.role === Role.SUPERADMIN;
     } catch (error) {
-      console.error('Erro ao verificar super admin:', error);
+      logError(error as Error, 'UserService.isSuperAdmin');
       return false;
     }
   }

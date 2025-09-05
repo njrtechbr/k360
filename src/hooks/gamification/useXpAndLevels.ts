@@ -64,7 +64,7 @@ export function useXpAndLevels(): UseXpAndLevelsReturn {
   // Buscar eventos de XP da API
   const fetchXpEvents = useCallback(async () => {
     try {
-      const response = await fetch('/api/gamification/xp-events');
+      const response = await fetch('/api/gamification/xp-events?limit=10000');
       if (!response.ok) {
         throw new Error(`Erro na API: ${response.status}`);
       }

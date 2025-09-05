@@ -4,7 +4,7 @@
 
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, Suspense } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,7 @@ const RatingSelector = ({ rating, setRating }: { rating: number; setRating: (r: 
     );
 };
 
-export default function SurveyPage() {
+function SurveyContent() {
     const searchParams = useSearchParams();
     const { attendants, addEvaluation, appLoading } = useAuth();
     
@@ -206,5 +206,25 @@ export default function SurveyPage() {
                 </Button>
             </div>
         </div>
+    );
+}
+
+export default function SurveyPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+                <Card className="w-full max-w-md">
+                    <CardHeader className="text-center">
+                        <Skeleton className="h-8 w-48 mx-auto mb-2" />
+                        <Skeleton className="h-4 w-32 mx-auto" />
+                    </CardHeader>
+                    <CardContent>
+                        <Skeleton className="h-32 w-full" />
+                    </CardContent>
+                </Card>
+            </div>
+        }>
+            <SurveyContent />
+        </Suspense>
     );
 }

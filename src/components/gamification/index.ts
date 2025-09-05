@@ -25,3 +25,4 @@ export * from './types';
 // Componentes legados (para compatibilidade)
 export { default as GamificationSeasonStatus } from './season/SeasonStatus';
 export { default as RewardTrack } from './rewards/RewardTrack';
+export { default as LevelScale } from './LevelScale';

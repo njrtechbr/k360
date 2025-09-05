@@ -33,7 +33,7 @@ const ACHIEVEMENT_RULES = {
     // 3 avaliações de 5 estrelas consecutivas
     for (let i = 0; i <= evaluations.length - 3; i++) {
       const consecutive = evaluations.slice(i, i + 3);
-      if (consecutive.every(eval => eval.nota === 5)) {
+      if (consecutive.every(evaluation => evaluation.nota === 5)) {
         return true;
       }
     }
@@ -41,27 +41,27 @@ const ACHIEVEMENT_RULES = {
   },
   
   'mestre-qualidade': (attendant: Attendant, evaluations: Evaluation[]) => {
-    const fiveStarEvals = evaluations.filter(eval => eval.nota === 5);
+    const fiveStarEvals = evaluations.filter(evaluation => evaluation.nota === 5);
     return fiveStarEvals.length >= 50;
   },
   
   'satisfacao-garantida': (attendant: Attendant, evaluations: Evaluation[]) => {
     if (evaluations.length < 10) return false;
-    const positiveEvals = evaluations.filter(eval => eval.nota >= 4);
+    const positiveEvals = evaluations.filter(evaluation => evaluation.nota >= 4);
     const percentage = (positiveEvals.length / evaluations.length) * 100;
     return percentage >= 90;
   },
   
   'excelencia': (attendant: Attendant, evaluations: Evaluation[]) => {
     if (evaluations.length < 50) return false;
-    const totalNota = evaluations.reduce((sum, eval) => sum + eval.nota, 0);
+    const totalNota = evaluations.reduce((sum, evaluation) => sum + evaluation.nota, 0);
     const average = totalNota / evaluations.length;
     return average >= 4.5;
   },
   
   'perfeicao': (attendant: Attendant, evaluations: Evaluation[]) => {
     if (evaluations.length < 25) return false;
-    const totalNota = evaluations.reduce((sum, eval) => sum + eval.nota, 0);
+    const totalNota = evaluations.reduce((sum, evaluation) => sum + evaluation.nota, 0);
     const average = totalNota / evaluations.length;
     return average === 5.0;
   }

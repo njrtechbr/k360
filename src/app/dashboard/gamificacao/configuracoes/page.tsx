@@ -3,7 +3,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
-import { ChevronRight, Star, Trophy, GitBranch, Hourglass, Percent, AlertCircle } from "lucide-react";
+import { ChevronRight, Star, Trophy, GitBranch, Hourglass, Percent, AlertCircle, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -90,6 +90,22 @@ export default function GamificacaoConfiguracoesPage() {
               </CardHeader>
             </Card>
           </Link>
+          <Link href="/dashboard/gamificacao/configuracoes/conquistas">
+            <Card className="hover:border-primary transition-colors cursor-pointer">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-purple-100 dark:bg-purple-900 rounded-lg">
+                      <AlertCircle className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <CardTitle>Gerenciar Conquistas</CardTitle>
+                    <CardDescription>Verificar e desbloquear conquistas que deveriam ter sido obtidas na temporada atual.</CardDescription>
+                  </div>
+                </div>
+                <ChevronRight className="h-6 w-6 text-muted-foreground" />
+              </CardHeader>
+            </Card>
+          </Link>
           <Link href="/dashboard/gamificacao/configuracoes/niveis">
             <Card className="hover:border-primary transition-colors cursor-pointer">
               <CardHeader className="flex flex-row items-center justify-between">
@@ -100,6 +116,22 @@ export default function GamificacaoConfiguracoesPage() {
                   <div>
                     <CardTitle>Trilha de Níveis</CardTitle>
                     <CardDescription>Personalize as recompensas desbloqueadas a cada nível.</CardDescription>
+                  </div>
+                </div>
+                <ChevronRight className="h-6 w-6 text-muted-foreground" />
+              </CardHeader>
+            </Card>
+          </Link>
+          <Link href="/dashboard/gamificacao/configuracoes/escala-niveis">
+            <Card className="hover:border-primary transition-colors cursor-pointer">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-indigo-100 dark:bg-indigo-900 rounded-lg">
+                      <Shield className="h-6 w-6 text-indigo-600" />
+                  </div>
+                  <div>
+                    <CardTitle>Escala de Níveis e Progressão</CardTitle>
+                    <CardDescription>Visualize a tabela completa de XP, estatísticas e progresso da equipe.</CardDescription>
                   </div>
                 </div>
                 <ChevronRight className="h-6 w-6 text-muted-foreground" />

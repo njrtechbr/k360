@@ -1,5 +1,6 @@
 import { PrismaClient, Attendant } from '@prisma/client';
 import { z } from 'zod';
+import { handlePrismaError, logError } from '@/lib/errors';
 
 const prisma = new PrismaClient();
 
@@ -55,8 +56,9 @@ export class AttendantService {
         }
       });
     } catch (error) {
-      console.error('Erro ao buscar atendentes:', error);
-      throw new Error('Falha ao buscar atendentes');
+      logError(error as Error, 'AttendantService.findAll');
+      const dbError = handlePrismaError(error);
+      throw dbError;
     }
   }
 
@@ -109,8 +111,9 @@ export class AttendantService {
       console.error('Erro ao buscar atendente por CPF:', error);
       throw new Error('Falha ao buscar atendente');
     }
-  }  // Criar 
-atendente
+  }
+
+  // Criar atendente
   static async create(attendantData: CreateAttendantData): Promise<Attendant> {
     try {
       // Validar dados

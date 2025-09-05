@@ -1,29 +1,28 @@
-
-
 "use client";
 
 import type { ReactNode } from "react";
 import React, { useCallback, useEffect, useState } from "react";
+import { useSession, signIn, signOut } from "next-auth/react";
 import type { User, Role, Module, Attendant, Evaluation, EvaluationImport, AttendantImport, Funcao, Setor, GamificationConfig, Achievement, LevelReward, GamificationSeason, XpEvent } from "@/lib/types";
 import { ROLES } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 
-// Firebase Imports
-import { auth, db } from "@/lib/firebase";
-import { 
-    onAuthStateChanged,
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword,
-    signOut,
-    updateProfile as updateFirebaseProfile,
-    updatePassword
-} from "firebase/auth";
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc, writeBatch, deleteDoc, query, where, documentId } from 'firebase/firestore';
+// Serviços Prisma
+import { UserService } from "@/services/userService";
+import { ModuleService } from "@/services/moduleService";
+import { AttendantService } from "@/services/attendantService";
+import { EvaluationService } from "@/services/evaluationService";
+import { GamificationService } from "@/services/gamificationService";
+import { RHService } from "@/services/rhService";
+
 import { INITIAL_ACHIEVEMENTS, INITIAL_LEVEL_REWARDS } from "@/lib/achievements";
 import { getScoreFromRating } from "@/lib/gamification";
 import { analyzeEvaluation } from '@/ai/flows/analyze-evaluation-flow';
 import type { EvaluationAnalysis } from '@/lib/types';
-
+import { de } from "date-fns/locale";
+import { de } from "date-fns/locale";
+import { de } from "date-fns/locale";
+import { de } from "date-fns/locale";
 
 const AI_ANALYSIS_STORAGE_KEY = "controle_acesso_ai_analysis";
 const LAST_AI_ANALYSIS_DATE_KEY = "controle_acesso_last_ai_analysis_date";
@@ -49,975 +48,1070 @@ type ImportStatus = {
     isOpen: boolean;
     logs: string[];
     progress: number;
-    title: string;
-    status: 'idle' | 'processing' | 'done' | 'error';
-}
+    total: number;
+    isProcessing: boolean;
+};
 
 interface AuthContextType {
-  user: User | null;
-  isAuthenticated: boolean;
-  authLoading: boolean;
-  appLoading: boolean;
-  isProcessing: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
-  register: (userData: Omit<User, "id">) => Promise<void>;
-  updateProfile: (userData: Partial<User>) => Promise<void>;
-  hasSuperAdmin: () => Promise<boolean>;
-  
-  // All Users
-  allUsers: User[];
-  updateUser: (userId: string, userData: { name: string; role: Role; modules: string[] }) => Promise<void>;
-  deleteUser: (userId: string) => Promise<void>;
-  
-  // Modules
-  modules: Module[];
-  addModule: (moduleData: Omit<Module, 'id' | 'active'>) => Promise<void>;
-  updateModule: (moduleId: string, moduleData: Partial<Omit<Module, 'id' | 'active'>>) => Promise<void>;
-  toggleModuleStatus: (moduleId: string) => Promise<void>;
-  deleteModule: (moduleId: string) => Promise<void>;
-  
-  // Attendants
-  attendants: Attendant[];
-  addAttendant: (attendantData: Omit<Attendant, 'id'>) => Promise<Attendant>;
-  updateAttendant: (attendantId: string, attendantData: Partial<Omit<Attendant, 'id'>>) => Promise<void>;
-  deleteAttendants: (attendantIds: string[]) => Promise<void>;
-  
-  // RH Config
-  funcoes: Funcao[];
-  setores: Setor[];
-  addFuncao: (funcao: string) => Promise<void>;
-  updateFuncao: (oldFuncao: string, newFuncao: string) => Promise<void>;
-  deleteFuncao: (funcao: string) => Promise<void>;
-  addSetor: (setor: string) => Promise<void>;
-  updateSetor: (oldSetor: string, newSetor: string) => Promise<void>;
-  deleteSetor: (setor: string) => Promise<void>;
-
-  // Evaluations
-  evaluations: Evaluation[];
-  addEvaluation: (evaluationData: Omit<Evaluation, 'id' | 'xpGained' | 'importId'>) => Promise<Evaluation>;
-  deleteEvaluations: (evaluationIds: string[], title: string) => Promise<void>;
-  
-  // Imports
-  evaluationImports: EvaluationImport[];
-  attendantImports: AttendantImport[];
-  importLegacyEvaluations: (evaluationsData: Omit<Evaluation, 'xpGained'>[], fileName: string, userId: string) => Promise<void>;
-  importWhatsAppEvaluations: (evaluationsData: Omit<Evaluation, 'id' | 'xpGained' | 'importId'>[], agentMap: Record<string, string>, fileName: string, userId: string) => Promise<void>;
-  importAttendants: (attendantsData: Omit<Attendant, 'importId'>[], fileName: string, userId: string) => Promise<void>;
-  revertEvaluationImport: (importId: string) => Promise<void>;
-  revertAttendantImport: (importId: string) => Promise<void>;
-  importStatus: ImportStatus;
-  setImportStatus: React.Dispatch<React.SetStateAction<ImportStatus>>;
-
-
-  // Gamification
-  xpEvents: XpEvent[];
-  seasonXpEvents: XpEvent[]; // <-- XP Events filtered by active season
-  gamificationConfig: GamificationConfig;
-  achievements: Achievement[];
-  levelRewards: LevelReward[];
-  seasons: GamificationSeason[];
-  activeSeason: GamificationSeason | null;
-  nextSeason: GamificationSeason | null;
-  updateGamificationConfig: (newConfig: Partial<Pick<GamificationConfig, 'ratingScores' | 'globalXpMultiplier'>>) => Promise<void>;
-  updateAchievement: (id: string, data: Partial<Omit<Achievement, 'id' | 'icon' | 'color' | 'isUnlocked'>>) => Promise<void>;
-  updateLevelReward: (level: number, data: Partial<Omit<LevelReward, 'level' | 'icon' | 'color'>>) => Promise<void>;
-  addSeason: (seasonData: Omit<GamificationSeason, 'id'>) => void;
-  updateSeason: (id: string, seasonData: Partial<Omit<GamificationSeason, 'id'>>) => void;
-  deleteSeason: (id: string) => void;
-  resetXpEvents: () => Promise<void>;
-
-  // AI Analysis
-  aiAnalysisResults: EvaluationAnalysis[];
-  lastAiAnalysis: string | null;
-  isAiAnalysisRunning: boolean;
-  runAiAnalysis: () => Promise<void>;
-  analysisProgress: AnalysisProgress;
-  isProgressModalOpen: boolean;
-  setIsProgressModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    // Estado de autenticação
+    user: User | null;
+    authLoading: boolean;
+    
+    // Dados do sistema
+    users: User[];
+    modules: Module[];
+    attendants: Attendant[];
+    evaluations: Evaluation[];
+    evaluationImports: EvaluationImport[];
+    attendantImports: AttendantImport[];
+    funcoes: Funcao[];
+    setores: Setor[];
+    gamificationConfig: GamificationConfig;
+    seasons: GamificationSeason[];
+    
+    // Estados de carregamento
+    loading: boolean;
+    
+    // Funções de autenticação
+    login: (email: string, password: string) => Promise<void>;
+    logout: () => Promise<void>;
+    
+    // Funções de usuário
+    createUser: (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+    updateUser: (userId: string, userData: Partial<User>) => Promise<void>;
+    deleteUser: (userId: string) => Promise<void>;
+    
+    // Funções de módulo
+    createModule: (moduleData: Omit<Module, 'users'>) => Promise<void>;
+    updateModule: (moduleId: string, moduleData: Partial<Module>) => Promise<void>;
+    deleteModule: (moduleId: string) => Promise<void>;
+    
+    // Funções de atendente
+    createAttendant: (attendantData: Omit<Attendant, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+    updateAttendant: (attendantId: string, attendantData: Partial<Attendant>) => Promise<void>;
+    deleteAttendant: (attendantId: string) => Promise<void>;
+    importAttendants: (file: File) => Promise<void>;
+    reverseAttendantImport: (importId: string) => Promise<void>;
+    
+    // Funções de avaliação
+    createEvaluation: (evaluationData: Omit<Evaluation, 'id' | 'createdAt'>) => Promise<void>;
+    updateEvaluation: (evaluationId: string, evaluationData: Partial<Evaluation>) => Promise<void>;
+    deleteEvaluation: (evaluationId: string) => Promise<void>;
+    importEvaluations: (file: File, attendantMap: Record<string, string>) => Promise<void>;
+    reverseEvaluationImport: (importId: string) => Promise<void>;
+    
+    // Funções de gamificação
+    updateGamificationConfig: (config: Partial<GamificationConfig>) => Promise<void>;
+    createSeason: (seasonData: Omit<GamificationSeason, 'id' | 'createdAt'>) => Promise<void>;
+    updateSeason: (seasonId: string, seasonData: Partial<GamificationSeason>) => Promise<void>;
+    deleteSeason: (seasonId: string) => Promise<void>;
+    
+    // Funções de RH
+    createFuncao: (name: string) => Promise<void>;
+    createSetor: (name: string) => Promise<void>;
+    
+    // Análise IA
+    analysisProgress: AnalysisProgress;
+    startAnalysis: () => Promise<void>;
+    stopAnalysis: () => void;
+    
+    // Status de importação
+    importStatus: ImportStatus;
+    
+    // Função para recarregar dados
+    fetchAllData: () => Promise<void>;
 }
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 
-const mergeWithDefaults = <T extends { id?: string; level?: number }>(
-  defaults: T[],
-  savedItems: Partial<T>[],
-  key: 'id' | 'level'
-): T[] => {
-  const savedMap = new Map(savedItems.map(item => [item[key], item]));
-  return defaults.map(defaultItem => ({
-    ...defaultItem,
-    ...savedMap.get(defaultItem[key]),
-  }));
-};
-
-const INITIAL_IMPORT_STATUS: ImportStatus = {
-    isOpen: false,
-    logs: [],
-    progress: 0,
-    title: 'Aguardando Importação',
-    status: 'idle'
-};
-
-const getUniqueEvaluations = (evals: Evaluation[]): Evaluation[] => {
-    const seen = new Set();
-    return evals.filter(el => {
-        const duplicate = seen.has(el.id);
-        seen.add(el.id);
-        return !duplicate;
+export function AuthProvider({ children }: { children: ReactNode }) {
+    const { data: session, status } = useSession();
+    const { toast } = useToast();
+    
+    // Estados
+    const [user, setUser] = useState<User | null>(null);
+    const [authLoading, setAuthLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
+    
+    // Dados do sistema
+    const [users, setUsers] = useState<User[]>([]);
+    const [modules, setModules] = useState<Module[]>([]);
+    const [attendants, setAttendants] = useState<Attendant[]>([]);
+    const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
+    const [evaluationImports, setEvaluationImports] = useState<EvaluationImport[]>([]);
+    const [attendantImports, setAttendantImports] = useState<AttendantImport[]>([]);
+    const [funcoes, setFuncoes] = useState<Funcao[]>([]);
+    const [setores, setSetores] = useState<Setor[]>([]);
+    const [gamificationConfig, setGamificationConfig] = useState<GamificationConfig>(INITIAL_GAMIFICATION_CONFIG);
+    const [seasons, setSeasons] = useState<GamificationSeason[]>([]);
+    
+    // Estados de análise e importação
+    const [analysisProgress, setAnalysisProgress] = useState<AnalysisProgress>({
+        current: 0,
+        total: 0,
+        evaluation: null,
+        status: 'idle',
+        countdown: 0,
+        lastResult: null
     });
-};
-
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const { toast } = useToast();
-  
-  // Auth State
-  const [user, setUser] = useState<User | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [appLoading, setAppLoading] = useState(true);
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  // Data State
-  const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [modules, setModules] = useState<Module[]>([]);
-  const [attendants, setAttendants] = useState<Attendant[]>([]);
-  const [funcoes, setFuncoes] = useState<Funcao[]>([]);
-  const [setores, setSetores] = useState<Setor[]>([]);
-  const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
-  const [evaluationImports, setEvaluationImports] = useState<EvaluationImport[]>([]);
-  const [attendantImports, setAttendantImports] = useState<AttendantImport[]>([]);
-  const [gamificationConfig, setGamificationConfig] = useState<GamificationConfig>(INITIAL_GAMIFICATION_CONFIG);
-  const [achievements, setAchievements] = useState<Achievement[]>(INITIAL_ACHIEVEMENTS);
-  const [levelRewards, setLevelRewards] = useState<LevelReward[]>(INITIAL_LEVEL_REWARDS);
-  const [seasons, setSeasons] = useState<GamificationSeason[]>([]);
-  const [activeSeason, setActiveSeason] = useState<GamificationSeason | null>(null);
-  const [nextSeason, setNextSeason] = useState<GamificationSeason | null>(null);
-  const [xpEvents, setXpEvents] = useState<XpEvent[]>([]);
-  const [seasonXpEvents, setSeasonXpEvents] = useState<XpEvent[]>([]);
-
-  // AI Analysis State
-  const [aiAnalysisResults, setAiAnalysisResults] = useState<EvaluationAnalysis[]>([]);
-  const [lastAiAnalysis, setLastAiAnalysis] = useState<string | null>(null);
-  const [isAiAnalysisRunning, setIsAiAnalysisRunning] = useState(false);
-  const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
-  const [analysisProgress, setAnalysisProgress] = useState<AnalysisProgress>({ current: 0, total: 0, evaluation: null, status: 'idle', countdown: 0, lastResult: null });
-
-  // Import State
-  const [importStatus, setImportStatus] = useState<ImportStatus>(INITIAL_IMPORT_STATUS);
-
-  // --- Data Fetching Callbacks ---
-  const fetchAllData = useCallback(async () => {
-    setAppLoading(true);
-    console.log("AUTH: Iniciando inicialização do App...");
-    try {
-        const [
-            usersData, modulesData, attendantsData, evaluationsData, 
-            evaluationImportsData, attendantImportsData, 
-            gamificationConfigData, funcoesData, setoresData, xpEventsData
-        ] = await Promise.all([
-            getDocs(collection(db, "users")).then(snap => snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as User))),
-            getDocs(collection(db, "modules")).then(snap => snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Module))),
-            getDocs(collection(db, "attendants")).then(snap => snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Attendant))),
-            getDocs(collection(db, "evaluations")).then(snap => snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Evaluation))),
-            getDocs(collection(db, "evaluationImports")).then(snap => snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as EvaluationImport))),
-            getDocs(collection(db, "attendantImports")).then(snap => snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as AttendantImport))),
-            getDoc(doc(db, "gamification", "config")).then(async (configDoc) => {
-                if (configDoc.exists()) {
-                    const data = configDoc.data();
-                    const mergedAchievements = data.achievements ? mergeWithDefaults(INITIAL_ACHIEVEMENTS, data.achievements, 'id') : INITIAL_ACHIEVEMENTS;
-                    const mergedLevelRewards = data.levelRewards ? mergeWithDefaults(INITIAL_LEVEL_REWARDS, data.levelRewards, 'level') : INITIAL_LEVEL_REWARDS;
-                    return { ...INITIAL_GAMIFICATION_CONFIG, ...data, achievements: mergedAchievements, levelRewards: mergedLevelRewards };
-                }
-                return INITIAL_GAMIFICATION_CONFIG;
-            }),
-            getDocs(collection(db, "funcoes")).then(snap => snap.docs.map(doc => doc.id)),
-            getDocs(collection(db, "setores")).then(snap => snap.docs.map(doc => doc.id)),
-            getDocs(collection(db, "xp_events")).then(snap => snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as XpEvent))),
-        ]);
-        
-        setAllUsers(usersData);
-        setModules(modulesData.length > 0 ? modulesData : []);
-        setAttendants(attendantsData);
-        setEvaluations(getUniqueEvaluations(evaluationsData));
-        setEvaluationImports(evaluationImportsData);
-        setAttendantImports(attendantImportsData);
-        setGamificationConfig(gamificationConfigData);
-        setAchievements(gamificationConfigData.achievements);
-        setLevelRewards(gamificationConfigData.levelRewards);
-        setSeasons(gamificationConfigData.seasons);
-        setFuncoes(funcoesData);
-        setSetores(setoresData);
-        // Ensure xpEventsData is an array before setting state
-        setXpEvents(Array.isArray(xpEventsData) ? xpEventsData : []);
-
-        if (modulesData.length === 0) {
-            console.log("AUTH: No modules found, seeding initial modules.");
-            const batch = writeBatch(db);
-            const initialModules = [
-              { id: 'rh', name: 'Recursos Humanos', description: 'Gerenciamento de atendentes e funcionários.', path: '/dashboard/rh', active: true },
-              { id: 'pesquisa-satisfacao', name: 'Pesquisa de Satisfação', description: 'Gerenciamento de pesquisas de satisfação e avaliações.', path: '/dashboard/pesquisa-satisfacao', active: true },
-              { id: 'gamificacao', name: 'Gamificação', description: 'Acompanhe o ranking, o progresso e as recompensas da equipe.', path: '/dashboard/gamificacao', active: true },
-            ];
-            initialModules.forEach(mod => {
-              const docRef = doc(db, "modules", mod.id);
-              batch.set(docRef, mod);
-            });
-            await batch.commit();
-            setModules(initialModules);
-        }
-
-        console.log("AUTH: Todos os dados foram carregados com sucesso.");
-
-    } catch (error) {
-        console.error("AUTH: Falha crítica na inicialização do app", error);
-        toast({ variant: "destructive", title: "Erro de Inicialização", description: "Não foi possível carregar os dados do aplicativo." });
-    } finally {
-        setAppLoading(false);
-    }
-  }, [toast]);
-
-
-  // --- Auth Lifecycle ---
-  useEffect(() => {
-    setAuthLoading(true);
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const userDocRef = doc(db, "users", firebaseUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-          setUser({ id: userDoc.id, ...userDoc.data() } as User);
-        } else {
-            setUser(null); // User exists in Auth but not in Firestore DB
-        }
-      } else {
-        setUser(null);
-      }
-      setAuthLoading(false);
+    
+    const [importStatus, setImportStatus] = useState<ImportStatus>({
+        isOpen: false,
+        logs: [],
+        progress: 0,
+        total: 0,
+        isProcessing: false
     });
-    return () => unsubscribe();
-  }, []);
 
-  useEffect(() => {
-    if (!authLoading && user) {
-        fetchAllData();
-    } else if (!authLoading && !user) {
-        setAppLoading(false);
-    }
-  }, [user, authLoading, fetchAllData]);
-  
+    // Efeito para gerenciar autenticação
     useEffect(() => {
-        const now = new Date();
-        const currentActiveSeason = seasons.find(s => s.active && new Date(s.startDate) <= now && new Date(s.endDate) >= now) || null;
-        setActiveSeason(currentActiveSeason);
-        
-        const nextUpcomingSeason = seasons
-            .filter(s => s.active && new Date(s.startDate) > now)
-            .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())[0] || null;
-        setNextSeason(nextUpcomingSeason);
-
-        if (currentActiveSeason) {
-            const seasonStart = new Date(currentActiveSeason.startDate);
-            const seasonEnd = new Date(currentActiveSeason.endDate);
-            // Ensure xpEvents is an array before filtering
-            const filteredEvents = Array.isArray(xpEvents) ? xpEvents.filter(e => {
-                const eventDate = new Date(e.date);
-                return eventDate >= seasonStart && eventDate <= seasonEnd;
-            }) : [];
-            setSeasonXpEvents(filteredEvents);
-        } else {
-            setSeasonXpEvents([]);
+        if (status === 'loading') {
+            setAuthLoading(true);
+            return;
         }
-    }, [seasons, xpEvents]);
 
-  // --- Auth Actions ---
-  const login = useCallback(async (email: string, password: string) => {
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      toast({ title: "Login bem-sucedido!" });
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Erro de autenticação", description: "Email ou senha incorretos." });
-      throw error;
-    }
-  }, [toast]);
-  
-  const register = useCallback(async (userData: Omit<User, 'id'>) => {
-    try {
-      const allModuleIds = modules.map(doc => doc.id);
-      const userCredential = await createUserWithEmailAndPassword(auth, userData.password! );
-      const firebaseUser = userCredential.user;
-      await updateFirebaseProfile(firebaseUser, { displayName: userData.name });
-      const { password, ...userDataForDb } = userData;
-      const finalModules = userData.role === ROLES.SUPERADMIN ? allModuleIds : userDataForDb.modules;
-      await setDoc(doc(db, "users", firebaseUser.uid), { ...userDataForDb, modules: finalModules });
-      await fetchAllData();
-      toast({ title: "Conta Criada!", description: "Sua conta foi criada com sucesso." });
-    } catch (error: any) {
-      const description = error.code === 'auth/email-already-in-use' ? "Este email já está em uso." : "Ocorreu um erro desconhecido.";
-      toast({ variant: "destructive", title: "Erro no Registro", description });
-      throw error;
-    }
-  }, [toast, modules, fetchAllData]);
-
-  const logout = useCallback(async () => {
-    await signOut(auth);
-    setUser(null);
-    setAppLoading(true);
-  }, []);
-
-  const updateProfile = useCallback(async (userData: Partial<User>) => {
-    if (!auth.currentUser) throw new Error("Usuário não autenticado");
-    const userDocRef = doc(db, "users", auth.currentUser.uid);
-    if (userData.name) await updateFirebaseProfile(auth.currentUser, { displayName: userData.name });
-    await updateDoc(userDocRef, { name: userData.name });
-    if (userData.password) await updatePassword(auth.currentUser, userData.password);
-    const updatedDoc = await getDoc(userDocRef);
-    if(updatedDoc.exists()) setUser({ id: updatedDoc.id, ...updatedDoc.data() } as User);
-    toast({ title: "Perfil Atualizado!", description: "Suas informações foram atualizadas." });
-  }, [toast]);
-
-  const hasSuperAdmin = useCallback(async (): Promise<boolean> => {
-      const q = query(collection(db, 'users'), where("role", "==", ROLES.SUPERADMIN));
-      const snapshot = await getDocs(q);
-      return !snapshot.empty;
-  }, []);
-
-  // --- User Actions ---
-  const updateUser = useCallback(async (userId: string, userData: { name: string; role: Role; modules: string[] }) => {
-    await updateDoc(doc(db, "users", userId), userData);
-    if (user?.id === userId) setUser({ ...user, ...userData });
-    const users = await getDocs(collection(db, "users"));
-    setAllUsers(users.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
-    toast({ title: "Usuário Atualizado!", description: "Os dados foram atualizados." });
-  }, [user, toast]);
-
-  const deleteUser = useCallback(async (userId: string) => {
-    if (user?.id === userId) {
-        toast({ variant: "destructive", title: "Ação não permitida", description: "Você não pode excluir sua própria conta."});
-        return;
-    }
-    await deleteDoc(doc(db, "users", userId));
-    setAllUsers(prev => prev.filter(u => u.id !== userId));
-    toast({ title: "Usuário Removido!" });
-  }, [user?.id, toast]);
-
-  // --- Module Actions ---
-  const addModule = useCallback(async (moduleData: Omit<Module, 'id' | 'active'>) => {
-    const newId = moduleData.name.toLowerCase().replace(/\s+/g, '-');
-    if (modules.find(m => m.id === newId)) {
-      toast({ variant: "destructive", title: "Erro", description: "Um módulo com este ID já existe." });
-      return;
-    }
-    const newModule = { ...moduleData, active: true, id: newId };
-    await setDoc(doc(db, "modules", newId), newModule);
-    setModules(prev => [...prev, newModule]);
-    toast({ title: "Módulo Adicionado!" });
-  }, [modules, toast]);
-  
-  const updateModule = useCallback(async (moduleId: string, moduleData: Partial<Omit<Module, 'id' | 'active'>>) => {
-    await updateDoc(doc(db, "modules", moduleId), moduleData);
-    setModules(prev => prev.map(m => m.id === moduleId ? {...m, ...moduleData} : m));
-    toast({ title: "Módulo Atualizado!" });
-  }, [toast]);
-
-  const toggleModuleStatus = useCallback(async (moduleId: string) => {
-    const moduleToUpdate = modules.find(m => m.id === moduleId);
-    if (!moduleToUpdate) return;
-    const newStatus = !moduleToUpdate.active;
-    await updateDoc(doc(db, "modules", moduleId), { active: newStatus });
-    setModules(prev => prev.map(m => m.id === moduleId ? {...m, active: newStatus} : m));
-    toast({ title: "Status Alterado!" });
-  }, [modules, toast]);
-
-  const deleteModule = useCallback(async (moduleId: string) => {
-    await deleteDoc(doc(db, "modules", moduleId));
-    setModules(prev => prev.filter(m => m.id !== moduleId));
-    const batch = writeBatch(db);
-    allUsers.forEach(u => {
-        if (u.modules.includes(moduleId)) {
-            const updatedModules = u.modules.filter(m => m !== moduleId);
-            batch.update(doc(db, "users", u.id), { modules: updatedModules });
-        }
-    });
-    await batch.commit();
-    setAllUsers(prev => prev.map(u => ({ ...u, modules: u.modules.filter(m => m !== moduleId) })));
-    toast({ title: "Módulo Removido!" });
-  }, [allUsers, toast]);
-
-
-  // --- RH Config Actions ---
-  const addFuncao = useCallback(async (funcao: string) => {
-    await setDoc(doc(db, "funcoes", funcao), { name: funcao });
-    setFuncoes(prev => [...prev, funcao]);
-  }, []);
-
-  const updateFuncao = useCallback(async (oldFuncao: string, newFuncao: string) => {
-    await deleteDoc(doc(db, "funcoes", oldFuncao));
-    await setDoc(doc(db, "funcoes", newFuncao), { name: newFuncao });
-    setFuncoes(prev => [...prev.filter(f => f !== oldFuncao), newFuncao]);
-  }, []);
-  
-  const deleteFuncao = useCallback(async (funcao: string) => {
-    await deleteDoc(doc(db, "funcoes", funcao));
-    setFuncoes(prev => prev.filter(f => f !== funcao));
-  }, []);
-
-  const addSetor = useCallback(async (setor: string) => {
-    await setDoc(doc(db, "setores", setor), { name: setor });
-    setSetores(prev => [...prev, setor]);
-  }, []);
-  
-  const updateSetor = useCallback(async (oldSetor: string, newSetor: string) => {
-    await deleteDoc(doc(db, "setores", oldSetor));
-    await setDoc(doc(db, "setores", newSetor), { name: newSetor });
-    setSetores(prev => [...prev.filter(s => s !== oldSetor), newSetor]);
-  }, []);
-  
-  const deleteSetor = useCallback(async (setor: string) => {
-    await deleteDoc(doc(db, "setores", setor));
-    setSetores(prev => prev.filter(s => s !== setor));
-  }, []);
-  
-  // --- Attendant Actions ---
-  const addAttendant = useCallback(async (attendantData: Omit<Attendant, 'id'>) => {
-    const newId = attendantData.id || doc(collection(db, "attendants")).id;
-    const finalAttendantData = { ...attendantData, id: newId };
-    await setDoc(doc(db, "attendants", newId), finalAttendantData);
-    setAttendants(prev => [...prev, finalAttendantData]);
-    return finalAttendantData;
-  }, []);
-
-  const updateAttendant = useCallback(async (attendantId: string, attendantData: Partial<Omit<Attendant, 'id'>>) => {
-     await updateDoc(doc(db, "attendants", attendantId), attendantData);
-     setAttendants(prev => prev.map(a => a.id === attendantId ? { ...a, ...attendantData } as Attendant : a));
-     toast({ title: "Atendente Atualizado!" });
-  }, [toast]);
-
-  const deleteAttendants = useCallback(async (attendantIds: string[]) => {
-      const batch = writeBatch(db);
-      attendantIds.forEach(id => batch.delete(doc(db, "attendants", id)));
-      await batch.commit();
-      await fetchAllData(); // Force a full refresh to ensure consistency
-      toast({ title: "Atendentes Removidos!" });
-  }, [toast, fetchAllData]);
-
-  // --- Evaluation Actions ---
-  const addEvaluation = useCallback(async (evaluationData: Omit<Evaluation, 'id' | 'xpGained' | 'importId'>): Promise<Evaluation> => {
-      const evaluationDate = new Date();
-      const baseScore = getScoreFromRating(evaluationData.nota, gamificationConfig.ratingScores);
-      
-      const seasonForEvaluation = seasons.find(s => s.active && evaluationDate >= new Date(s.startDate) && evaluationDate <= new Date(s.endDate));
-      const seasonMultiplier = seasonForEvaluation?.xpMultiplier ?? 1;
-      const totalMultiplier = gamificationConfig.globalXpMultiplier * seasonMultiplier;
-      const finalXp = baseScore * totalMultiplier;
-      
-      const newEvaluation: Evaluation = {
-          ...evaluationData,
-          id: '', // Will be set by Firestore
-          data: evaluationDate.toISOString(),
-          xpGained: finalXp,
-          importId: "native"
-      };
-
-      const docRef = doc(collection(db, "evaluations"));
-      newEvaluation.id = docRef.id;
-
-      const xpEventRef = doc(collection(db, "xp_events"));
-      const newXpEvent: XpEvent = {
-          id: xpEventRef.id,
-          attendantId: newEvaluation.attendantId,
-          points: finalXp,
-          basePoints: baseScore,
-          multiplier: totalMultiplier,
-          reason: `Avaliação de ${newEvaluation.nota} estrela(s)`,
-          date: newEvaluation.data,
-          type: 'evaluation',
-          relatedId: newEvaluation.id,
-      };
-
-      const batch = writeBatch(db);
-      batch.set(docRef, newEvaluation);
-      batch.set(xpEventRef, newXpEvent);
-      await batch.commit();
-
-      setEvaluations(prev => [...prev, newEvaluation]);
-      setXpEvents(prev => [...prev, newXpEvent]);
-      
-      return newEvaluation;
-  }, [gamificationConfig, seasons]);
-
-    const deleteEvaluations = useCallback(async (evaluationIds: string[], title: string = 'Excluindo Avaliações') => {
-        if (!evaluationIds || evaluationIds.length === 0) return;
-
-        setIsProcessing(true);
-        setImportStatus({ isOpen: true, logs: [], progress: 0, title: title, status: 'processing' });
-        
-        try {
-            const CHUNK_SIZE = 30; // Firestore `in` query limit
-            
-            // Step 1: Delete all related xp_events
-            setImportStatus(prev => ({...prev, progress: 10, logs: [`Preparando para remover eventos de XP...`]}));
-            const xpEventsToDelete: string[] = [];
-            for (let i = 0; i < evaluationIds.length; i += CHUNK_SIZE) {
-                const chunk = evaluationIds.slice(i, i + CHUNK_SIZE);
-                const q = query(collection(db, "xp_events"), where("type", "==", "evaluation"), where("relatedId", "in", chunk));
-                const snapshot = await getDocs(q);
-                snapshot.forEach(doc => xpEventsToDelete.push(doc.id));
-            }
-            
-            const xpDeleteBatch = writeBatch(db);
-            if (xpEventsToDelete.length > 0) {
-                 setImportStatus(prev => ({...prev, logs: [...prev.logs, `Encontrados ${xpEventsToDelete.length} eventos de XP para remover.`]}));
-                 xpEventsToDelete.forEach(id => xpDeleteBatch.delete(doc(db, "xp_events", id)));
-                 await xpDeleteBatch.commit();
-                 setImportStatus(prev => ({...prev, progress: 40, logs: [...prev.logs, `Eventos de XP removidos.`]}));
-            } else {
-                 setImportStatus(prev => ({...prev, progress: 40, logs: [...prev.logs, `Nenhum evento de XP correspondente encontrado.`]}));
-            }
-            
-            // Step 2: Delete the evaluations themselves
-            setImportStatus(prev => ({...prev, progress: 60, logs: [...prev.logs, `Preparando para remover ${evaluationIds.length} avaliações...`]}));
-            const evalDeleteBatch = writeBatch(db);
-            evaluationIds.forEach(id => {
-                evalDeleteBatch.delete(doc(db, "evaluations", id));
+        if (session?.user) {
+            setUser({
+                id: session.user.id,
+                name: session.user.name,
+                email: session.user.email,
+                role: session.user.role as Role,
+                modules: [], // Será carregado em fetchAllData
+                createdAt: new Date(),
+                updatedAt: new Date()
             });
-            await evalDeleteBatch.commit();
-            setImportStatus(prev => ({...prev, progress: 90, logs: [...prev.logs, `Avaliações removidas.`]}));
-
-            // Step 3: Refresh all data to ensure consistency
-            await fetchAllData();
-            setImportStatus(prev => ({...prev, progress: 100, logs: [...prev.logs, `Dados atualizados com sucesso.`]}));
-
-
-            setImportStatus(prev => ({ ...prev, status: 'done', title: 'Exclusão Concluída' }));
-            toast({ title: "Exclusão Concluída", description: `${evaluationIds.length} avaliações e seus dados associados foram removidos.` });
-        } catch (error: any) {
-            console.error(error);
-            setImportStatus(prev => ({ ...prev, status: 'error', title: 'Erro na Exclusão', logs: [...prev.logs, `Falha: ${error.message}`]}));
-            toast({ variant: 'destructive', title: "Erro na Exclusão", description: "Ocorreu um erro. Verifique os logs para mais detalhes." });
-        } finally {
-            setIsProcessing(false);
-            setTimeout(() => setImportStatus(INITIAL_IMPORT_STATUS), 5000);
+            fetchAllData();
+        } else {
+            setUser(null);
         }
-
-    }, [toast, fetchAllData]);
-  
-  // --- Gamification Actions ---
-  const resetXpEvents = useCallback(async () => {
-    try {
-        setIsProcessing(true);
-        const xpEventsSnapshot = await getDocs(collection(db, "xp_events"));
-        const batch = writeBatch(db);
-        xpEventsSnapshot.forEach(doc => {
-            batch.delete(doc.ref);
-        });
-        await batch.commit();
-        setXpEvents([]);
-        toast({ title: "Dados Resetados!", description: "Todos os eventos de XP foram removidos com sucesso." });
-    } catch (error) {
-        console.error("Error resetting XP events:", error);
-        toast({ variant: "destructive", title: "Erro ao Resetar", description: "Não foi possível apagar os dados de XP." });
-    } finally {
-        setIsProcessing(false);
-    }
-}, [toast]);
-
-  const recalculateAllGamificationData = useCallback(async () => {
-    const currentAttendants = await getDocs(collection(db, "attendants")).then(snap => snap.docs.map(d => ({id: d.id, ...d.data()}) as Attendant));
-    const currentEvaluations = await getDocs(collection(db, "evaluations")).then(snap => snap.docs.map(d => ({id: d.id, ...d.data()}) as Evaluation));
-
-    setImportStatus(prev => ({...prev, progress: 50, logs: [...prev.logs, 'Recalculando todos os eventos de XP...'] }));
-
-    const configDoc = await getDoc(doc(db, "gamification", "config"));
-    const loadedConfigData = configDoc.exists() ? configDoc.data() : {};
-    const mergedAchievements = loadedConfigData.achievements ? mergeWithDefaults(INITIAL_ACHIEVEMENTS, loadedConfigData.achievements, 'id') : INITIAL_ACHIEVEMENTS;
-    const mergedLevelRewards = loadedConfigData.levelRewards ? mergeWithDefaults(INITIAL_LEVEL_REWARDS, loadedConfigData.levelRewards, 'level') : INITIAL_LEVEL_REWARDS;
-    const currentConfig = { ...INITIAL_GAMIFICATION_CONFIG, ...loadedConfigData, achievements: mergedAchievements, levelRewards: mergedLevelRewards };
-
-    const xpEventsBatch = writeBatch(db);
-    const existingXpEventsSnapshot = await getDocs(collection(db, "xp_events"));
-    existingXpEventsSnapshot.forEach(doc => xpEventsBatch.delete(doc.ref));
-
-    const allAiAnalysis = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem(AI_ANALYSIS_STORAGE_KEY) || '[]') : [];
-
-    for (const ev of currentEvaluations) {
-        const evaluationDate = new Date(ev.data);
-        const seasonForEvaluation = currentConfig.seasons.find(s => s.active && evaluationDate >= new Date(s.startDate) && evaluationDate <= new Date(s.endDate));
-        const baseScore = getScoreFromRating(ev.nota, currentConfig.ratingScores);
-        const seasonMultiplier = seasonForEvaluation?.xpMultiplier ?? 1;
-        const totalMultiplier = currentConfig.globalXpMultiplier * seasonMultiplier;
-        const finalXp = baseScore * totalMultiplier;
-
-        const xpEventRef = doc(collection(db, "xp_events"));
-        xpEventsBatch.set(xpEventRef, {
-            id: xpEventRef.id,
-            attendantId: ev.attendantId,
-            points: finalXp,
-            basePoints: baseScore,
-            multiplier: totalMultiplier,
-            reason: `Avaliação de ${ev.nota} estrela(s)`,
-            date: ev.data,
-            type: 'evaluation',
-            relatedId: ev.id,
-        });
-    }
-
-    setImportStatus(prev => ({...prev, progress: 75, logs: [...prev.logs, 'Verificando troféus e conquistas...'] }));
-
-    for (const attendant of currentAttendants) {
-        const attendantEvaluations = currentEvaluations.filter(e => e.attendantId === attendant.id).sort((a,b) => new Date(a.data).getTime() - new Date(b.data).getTime());
         
-        for (const achievement of currentConfig.achievements) {
-            if (!achievement.active) continue;
+        setAuthLoading(false);
+    }, [session, status]);
 
-            const existingUnlock = await getDocs(query(collection(db, 'xp_events'), where('attendantId', '==', attendant.id), where('relatedId', '==', achievement.id), where('type', '==', 'achievement'))).then(snap => !snap.empty);
+    // Função para buscar todos os dados
+    const fetchAllData = useCallback(async () => {
+        if (!session?.user) return;
+        
+        setLoading(true);
+        try {
+            const [
+                usersData,
+                modulesData,
+                attendantsData,
+                evaluationsData,
+                funcoesData,
+                setoresData,
+                seasonsData
+            ] = await Promise.all([
+                UserService.findAll(),
+                ModuleService.findAll(),
+                AttendantService.findAll(),
+                EvaluationService.findAll(),
+                RHService.findAllFuncoes(),
+                RHService.findAllSetores(),
+                GamificationService.findAllSeasons()
+            ]);
 
-            if (existingUnlock) continue;
-
-            let unlockDate: string | null = null;
+            setUsers(usersData);
+            setModules(modulesData);
+            setAttendants(attendantsData);
+            setEvaluations(evaluationsData);
+            setFuncoes(funcoesData);
+            setSetores(setoresData);
+            setSeasons(seasonsData);
             
-            // Check condition iteratively to find unlock date
-            for (let i = 0; i < attendantEvaluations.length; i++) {
-                const subEvaluations = attendantEvaluations.slice(0, i + 1);
-                if (achievement.isUnlocked(attendant, subEvaluations, currentEvaluations, currentAttendants, allAiAnalysis)) {
-                    unlockDate = subEvaluations[i].data; // Date of the evaluation that triggered the achievement
-                    break;
-                }
-            }
-
-            if (unlockDate) {
-                 const seasonForAchievement = currentConfig.seasons.find(s => s.active && new Date(unlockDate!) >= new Date(s.startDate) && new Date(unlockDate!) <= new Date(s.endDate));
-                if (seasonForAchievement) {
-                    const totalMultiplier = currentConfig.globalXpMultiplier * (seasonForAchievement.xpMultiplier || 1);
-                    const xpEventRef = doc(collection(db, "xp_events"));
-                    xpEventsBatch.set(xpEventRef, {
-                        id: xpEventRef.id,
-                        attendantId: attendant.id,
-                        points: achievement.xp * totalMultiplier,
-                        basePoints: achievement.xp,
-                        multiplier: totalMultiplier,
-                        reason: `Troféu: ${achievement.title}`,
-                        date: unlockDate,
-                        type: 'achievement',
-                        relatedId: achievement.id,
-                    });
-                }
-            }
+        } catch (error) {
+            console.error('Erro ao carregar dados:', error);
+            toast({
+                title: "Erro",
+                description: "Falha ao carregar dados do sistema",
+                variant: "destructive"
+            });
+        } finally {
+            setLoading(false);
         }
-    }
-    
-    await xpEventsBatch.commit();
-    setImportStatus(prev => ({...prev, progress: 100, logs: [...prev.logs, 'Recálculo completo!'] }));
-    await fetchAllData();
-  }, [fetchAllData]);
+    }, [session, toast]);    // 
+Funções de autenticação
+    const login = useCallback(async (email: string, password: string) => {
+        try {
+            const result = await signIn('credentials', {
+                email,
+                password,
+                redirect: false
+            });
 
-  // --- Import Actions ---
-  const importLegacyEvaluations = useCallback(async (evaluationsData: Omit<Evaluation, 'xpGained'>[], fileName: string, userId: string) => {
-    setIsProcessing(true);
-    setImportStatus({ isOpen: true, logs: [], progress: 0, title: 'Importando Avaliações (Legado)', status: 'processing' });
-    
-    try {
-        setImportStatus(prev => ({...prev, logs: [...prev.logs, `Iniciando importação do arquivo: ${fileName}`]}));
-        const batch = writeBatch(db);
-        const importDocRef = doc(collection(db, "evaluationImports"));
-        
-        evaluationsData.forEach(evData => {
-            const docRef = doc(db, "evaluations", evData.id);
-            batch.set(docRef, {...evData, importId: importDocRef.id});
+            if (result?.error) {
+                throw new Error('Credenciais inválidas');
+            }
+
+            toast({
+                title: "Login realizado!",
+                description: "Bem-vindo de volta!"
+            });
+        } catch (error) {
+            console.error('Erro no login:', error);
+            toast({
+                title: "Erro no login",
+                description: error instanceof Error ? error.message : "Erro desconhecido",
+                variant: "destructive"
+            });
+            throw error;
+        }
+    }, [toast]);
+
+    const logout = useCallback(async () => {
+        try {
+            await signOut({ redirect: false });
+            setUser(null);
+            toast({
+                title: "Logout realizado",
+                description: "Até logo!"
+            });
+        } catch (error) {
+            console.error('Erro no logout:', error);
+            toast({
+                title: "Erro no logout",
+                description: "Erro ao fazer logout",
+                variant: "destructive"
+            });
+        }
+    }, [toast]);
+
+    // Funções de usuário
+    const createUser = useCallback(async (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>) => {
+        try {
+            await UserService.create({
+                name: userData.name,
+                email: userData.email,
+                password: userData.password!,
+                role: userData.role,
+                modules: userData.modules?.map(m => m.id) || []
+            });
+            
+            await fetchAllData();
+            toast({
+                title: "Usuário criado!",
+                description: "Usuário criado com sucesso."
+            });
+        } catch (error) {
+            console.error('Erro ao criar usuário:', error);
+            toast({
+                title: "Erro",
+                description: error instanceof Error ? error.message : "Erro ao criar usuário",
+                variant: "destructive"
+            });
+            throw error;
+        }
+    }, [fetchAllData, toast]);
+
+    const updateUser = useCallback(async (userId: string, userData: Partial<User>) => {
+        try {
+            const updateData: any = {
+                name: userData.name,
+                email: userData.email,
+                role: userData.role
+            };
+
+            if (userData.password) {
+                updateData.password = userData.password;
+            }
+
+            if (userData.modules) {
+                updateData.modules = userData.modules.map(m => m.id);
+            }
+
+            await UserService.update(userId, updateData);
+            await fetchAllData();
+            
+            toast({
+                title: "Usuário atualizado!",
+                description: "Dados atualizados com sucesso."
+            });
+        } catch (error) {
+            console.error('Erro ao atualizar usuário:', error);
+            toast({
+                title: "Erro",
+                description: error instanceof Error ? error.message : "Erro ao atualizar usuário",
+                variant: "destructive"
+            });
+            throw error;
+        }
+    }, [fetchAllData, toast]);
+
+    const deleteUser = useCallback(async (userId: string) => {
+        try {
+            await UserService.delete(userId);
+            await fetchAllData();
+            
+            toast({
+                title: "Usuário removido!",
+                description: "Usuário removido com sucesso."
+            });
+        } catch (error) {
+            console.error('Erro ao deletar usuário:', error);
+            toast({
+                title: "Erro",
+                description: error instanceof Error ? error.message : "Erro ao remover usuário",
+                variant: "destructive"
+            });
+            throw error;
+        }
+    }, [fetchAllData, toast]);
+
+    // Funções de módulo
+    const createModule = useCallback(async (moduleData: Omit<Module, 'users'>) => {
+        try {
+            await ModuleService.create({
+                id: moduleData.id,
+                name: moduleData.name,
+                description: moduleData.description,
+                path: moduleData.path,
+                active: moduleData.active
+            });
+            
+            await fetchAllData();
+            toast({
+                title: "Módulo criado!",
+                description: "Módulo criado com sucesso."
+            });
+        } catch (error) {
+            console.error('Erro ao criar módulo:', error);
+            toast({
+                title: "Erro",
+                description: error instanceof Error ? error.message : "Erro ao criar módulo",
+                variant: "destructive"
+            });
+            throw error;
+        }
+    }, [fetchAllData, toast]);
+
+    const updateModule = useCallback(async (moduleId: string, moduleData: Partial<Module>) => {
+        try {
+            await ModuleService.update(moduleId, {
+                name: moduleData.name,
+                description: moduleData.description,
+                path: moduleData.path,
+                active: moduleData.active
+            });
+            
+            await fetchAllData();
+            toast({
+                title: "Módulo atualizado!",
+                description: "Módulo atualizado com sucesso."
+            });
+        } catch (error) {
+            console.error('Erro ao atualizar módulo:', error);
+            toast({
+                title: "Erro",
+                description: error instanceof Error ? error.message : "Erro ao atualizar módulo",
+                variant: "destructive"
+            });
+            throw error;
+        }
+    }, [fetchAllData, toast]);
+
+    const deleteModule = useCallback(async (moduleId: string) => {
+        try {
+            await ModuleService.delete(moduleId);
+            await fetchAllData();
+            
+            toast({
+                title: "Módulo removido!",
+                description: "Módulo removido com sucesso."
+            });
+        } catch (error) {
+            console.error('Erro ao deletar módulo:', error);
+            toast({
+                title: "Erro",
+                description: error instanceof Error ? error.message : "Erro ao remover módulo",
+                variant: "destructive"
+            });
+            throw error;
+        }
+    }, [fetchAllData, toast]);
+
+    // Funções de atendente
+    const createAttendant = useCallback(async (attendantData: Omit<Attendant, 'id' | 'createdAt' | 'updatedAt'>) => {
+        try {
+            await AttendantService.create({
+                name: attendantData.name,
+                email: attendantData.email,
+                funcao: attendantData.funcao,
+                setor: attendantData.setor,
+                status: attendantData.status,
+                avatarUrl: attendantData.avatarUrl,
+                telefone: attendantData.telefone,
+                portaria: attendantData.portaria,
+                situacao: attendantData.situacao,
+                dataAdmissao: attendantData.dataAdmissao,
+                dataNascimento: attendantData.dataNascimento,
+                rg: attendantData.rg,
+                cpf: attendantData.cpf
+            });
+            
+            await fetchAllData();
+            toast({
+                title: "Atendente criado!",
+                description: "Atendente criado com sucesso."
+            });
+        } catch (error) {
+            console.error('Erro ao criar atendente:', error);
+            toast({
+                title: "Erro",
+                description: error instanceof Error ? error.message : "Erro ao criar atendente",
+                variant: "destructive"
+            });
+            throw error;
+        }
+    }, [fetchAllData, toast]);
+
+    const updateAttendant = useCallback(async (attendantId: string, attendantData: Partial<Attendant>) => {
+        try {
+            await AttendantService.update(attendantId, {
+                name: attendantData.name,
+                email: attendantData.email,
+                funcao: attendantData.funcao,
+                setor: attendantData.setor,
+                status: attendantData.status,
+                avatarUrl: attendantData.avatarUrl,
+                telefone: attendantData.telefone,
+                portaria: attendantData.portaria,
+                situacao: attendantData.situacao,
+                dataAdmissao: attendantData.dataAdmissao,
+                dataNascimento: attendantData.dataNascimento,
+                rg: attendantData.rg,
+                cpf: attendantData.cpf
+            });
+            
+            await fetchAllData();
+            toast({
+                title: "Atendente atualizado!",
+                description: "Dados atualizados com sucesso."
+            });
+        } catch (error) {
+            console.error('Erro ao atualizar atendente:', error);
+            toast({
+                title: "Erro",
+                description: error instanceof Error ? error.message : "Erro ao atualizar atendente",
+                variant: "destructive"
+            });
+            throw error;
+        }
+    }, [fetchAllData, toast]);
+
+    const deleteAttendant = useCallback(async (attendantId: string) => {
+        try {
+            await AttendantService.delete(attendantId);
+            await fetchAllData();
+            
+            toast({
+                title: "Atendente removido!",
+                description: "Atendente removido com sucesso."
+            });
+        } catch (error) {
+            console.error('Erro ao deletar atendente:', error);
+            toast({
+                title: "Erro",
+                description: error instanceof Error ? error.message : "Erro ao remover atendente",
+                variant: "destructive"
+            });
+            throw error;
+        }
+    }, [fetchAllData, toast]);
+
+    // Funções de importação
+    const importAttendants = useCallback(async (file: File) => {
+        try {
+            const text = await file.text();
+            const lines = text.split('\n').filter(line => line.trim());
+            
+            if (lines.length < 2) {
+                throw new Error('Arquivo CSV deve ter pelo menos um cabeçalho e uma linha de dados');
+            }
+            
+            const headers = lines[0].split(',').map(h => h.trim());
+            const attendants = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',').map(v => v.trim());
+                if (values.length !== headers.length) continue;
+                
+                const attendant: any = {};
+                headers.forEach((header, index) => {
+                    attendant[header] = values[index];
+                });
+                
+                // Validar campos obrigatórios
+                if (!attendant.name || !attendant.email || !attendant.cpf) {
+                    continue;
+                }
+                
+                attendants.push({
+                    name: attendant.name,
+                    email: attendant.email,
+                    funcao: attendant.funcao || '',
+                    setor: attendant.setor || '',
+                    status: attendant.status || 'ATIVO',
+                    telefone: attendant.telefone || '',
+                    portaria: attendant.portaria || '',
+                    situacao: attendant.situacao || '',
+                    dataAdmissao: attendant.dataAdmissao ? new Date(attendant.dataAdmissao) : new Date(),
+                    dataNascimento: attendant.dataNascimento ? new Date(attendant.dataNascimento) : new Date(),
+                    rg: attendant.rg || '',
+                    cpf: attendant.cpf
+                });
+            }
+            
+            if (attendants.length === 0) {
+                throw new Error('Nenhum atendente válido encontrado no arquivo');
+            }
+            
+            const response = await fetch('/api/attendants/import', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    attendants,
+                    fileName: file.name
+                })
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Erro ao importar atendentes');
+            }
+            
+            const result = await response.json();
+            await fetchAllData();
+            
+            toast({
+                title: "Importação concluída!",
+                description: `${result.count} atendentes importados com sucesso.`
+            });
+        } catch (error) {
+            console.error('Erro na importação:', error);
+            toast({
+                title: "Erro na importação",
+                description: error instanceof Error ? error.message : "Erro desconhecido",
+                variant: "destructive"
+            });
+            throw error;
+        }
+    }, [fetchAllData, toast]);
+
+    const reverseAttendantImport = useCallback(async (importId: string) => {
+        try {
+            await AttendantService.deleteByImportId(importId);
+            await fetchAllData();
+            
+            toast({
+                title: "Importação revertida!",
+                description: "Dados da importação foram removidos."
+            });
+        } catch (error) {
+            console.error('Erro ao reverter importação:', error);
+            toast({
+                title: "Erro",
+                description: error instanceof Error ? error.message : "Erro ao reverter importação",
+                variant: "destructive"
+            });
+            throw error;
+        }
+    }, [fetchAllData, toast]);    // F
+unções de avaliação
+    const createEvaluation = useCallback(async (evaluationData: Omit<Evaluation, 'id' | 'createdAt'>) => {
+        try {
+            await EvaluationService.create({
+                attendantId: evaluationData.attendantId,
+                nota: evaluationData.nota,
+                comentario: evaluationData.comentario || '',
+                data: evaluationData.data,
+                xpGained: evaluationData.xpGained || 0
+            });
+            
+            await fetchAllData();
+            toast({
+                title: "Avaliação criada!",
+                description: "Avaliação criada com sucesso."
+            });
+        } catch (error) {
+            console.error('Erro ao criar avaliação:', error);
+            toast({
+                title: "Erro",
+                description: error instanceof Error ? error.message : "Erro ao criar avaliação",
+                variant: "destructive"
+            });
+            throw error;
+        }
+    }, [fetchAllData, toast]);
+
+    const updateEvaluation = useCallback(async (evaluationId: string, evaluationData: Partial<Evaluation>) => {
+        try {
+            await EvaluationService.update(evaluationId, {
+                nota: evaluationData.nota,
+                comentario: evaluationData.comentario,
+                data: evaluationData.data,
+                xpGained: evaluationData.xpGained
+            });
+            
+            await fetchAllData();
+            toast({
+                title: "Avaliação atualizada!",
+                description: "Avaliação atualizada com sucesso."
+            });
+        } catch (error) {
+            console.error('Erro ao atualizar avaliação:', error);
+            toast({
+                title: "Erro",
+                description: error instanceof Error ? error.message : "Erro ao atualizar avaliação",
+                variant: "destructive"
+            });
+            throw error;
+        }
+    }, [fetchAllData, toast]);
+
+    const deleteEvaluation = useCallback(async (evaluationId: string) => {
+        try {
+            await EvaluationService.delete(evaluationId);
+            await fetchAllData();
+            
+            toast({
+                title: "Avaliação removida!",
+                description: "Avaliação removida com sucesso."
+            });
+        } catch (error) {
+            console.error('Erro ao deletar avaliação:', error);
+            toast({
+                title: "Erro",
+                description: error instanceof Error ? error.message : "Erro ao remover avaliação",
+                variant: "destructive"
+            });
+            throw error;
+        }
+    }, [fetchAllData, toast]);
+
+    const importEvaluations = useCallback(async (file: File, attendantMap: Record<string, string>) => {
+        try {
+            const text = await file.text();
+            const lines = text.split('\n').filter(line => line.trim());
+            
+            if (lines.length < 2) {
+                throw new Error('Arquivo CSV deve ter pelo menos um cabeçalho e uma linha de dados');
+            }
+            
+            const headers = lines[0].split(',').map(h => h.trim());
+            const evaluations = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',').map(v => v.trim());
+                if (values.length !== headers.length) continue;
+                
+                const evaluation: any = {};
+                headers.forEach((header, index) => {
+                    evaluation[header] = values[index];
+                });
+                
+                // Mapear nome do atendente para ID se necessário
+                let attendantId = evaluation.attendantId;
+                if (!attendantId && evaluation.attendantName && attendantMap[evaluation.attendantName]) {
+                    attendantId = attendantMap[evaluation.attendantName];
+                }
+                
+                // Validar campos obrigatórios
+                if (!attendantId || !evaluation.nota || !evaluation.data) {
+                    continue;
+                }
+                
+                evaluations.push({
+                    attendantId,
+                    nota: parseInt(evaluation.nota),
+                    comentario: evaluation.comentario || '',
+                    data: new Date(evaluation.data)
+                });
+            }
+            
+            if (evaluations.length === 0) {
+                throw new Error('Nenhuma avaliação válida encontrada no arquivo');
+            }
+            
+            const response = await fetch('/api/evaluations/import', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    evaluations,
+                    fileName: file.name
+                })
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Erro ao importar avaliações');
+            }
+            
+            const result = await response.json();
+            await fetchAllData();
+            
+            toast({
+                title: "Importação concluída!",
+                description: `${result.evaluationsCount} avaliações importadas com sucesso.`
+            });
+        } catch (error) {
+            console.error('Erro na importação:', error);
+            toast({
+                title: "Erro na importação",
+                description: error instanceof Error ? error.message : "Erro desconhecido",
+                variant: "destructive"
+            });
+            throw error;
+        }
+    }, [fetchAllData, toast]);
+
+    const reverseEvaluationImport = useCallback(async (importId: string) => {
+        try {
+            await EvaluationService.deleteByImportId(importId);
+            await fetchAllData();
+            
+            toast({
+                title: "Importação revertida!",
+                description: "Avaliações da importação foram removidas."
+            });
+        } catch (error) {
+            console.error('Erro ao reverter importação:', error);
+            toast({
+                title: "Erro",
+                description: error instanceof Error ? error.message : "Erro ao reverter importação",
+                variant: "destructive"
+            });
+            throw error;
+        }
+    }, [fetchAllData, toast]);
+
+    // Funções de gamificação
+    const updateGamificationConfig = useCallback(async (config: Partial<GamificationConfig>) => {
+        try {
+            const response = await fetch('/api/gamification', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(config)
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Erro ao atualizar configuração');
+            }
+            
+            setGamificationConfig(prev => ({ ...prev, ...config }));
+            
+            toast({
+                title: "Configuração atualizada!",
+                description: "Configurações de gamificação atualizadas com sucesso."
+            });
+        } catch (error) {
+            console.error('Erro ao atualizar configuração:', error);
+            toast({
+                title: "Erro",
+                description: error instanceof Error ? error.message : "Erro ao atualizar configuração",
+                variant: "destructive"
+            });
+            throw error;
+        }
+    }, [toast]);
+
+    const createSeason = useCallback(async (seasonData: Omit<GamificationSeason, 'id' | 'createdAt'>) => {
+        try {
+            await GamificationService.createSeason({
+                name: seasonData.name,
+                startDate: seasonData.startDate,
+                endDate: seasonData.endDate,
+                active: seasonData.active,
+                xpMultiplier: seasonData.xpMultiplier
+            });
+            
+            await fetchAllData();
+            toast({
+                title: "Temporada criada!",
+                description: "Temporada criada com sucesso."
+            });
+        } catch (error) {
+            console.error('Erro ao criar temporada:', error);
+            toast({
+                title: "Erro",
+                description: error instanceof Error ? error.message : "Erro ao criar temporada",
+                variant: "destructive"
+            });
+            throw error;
+        }
+    }, [fetchAllData, toast]);
+
+    const updateSeason = useCallback(async (seasonId: string, seasonData: Partial<GamificationSeason>) => {
+        try {
+            await GamificationService.updateSeason(seasonId, {
+                name: seasonData.name,
+                startDate: seasonData.startDate,
+                endDate: seasonData.endDate,
+                active: seasonData.active,
+                xpMultiplier: seasonData.xpMultiplier
+            });
+            
+            await fetchAllData();
+            toast({
+                title: "Temporada atualizada!",
+                description: "Temporada atualizada com sucesso."
+            });
+        } catch (error) {
+            console.error('Erro ao atualizar temporada:', error);
+            toast({
+                title: "Erro",
+                description: error instanceof Error ? error.message : "Erro ao atualizar temporada",
+                variant: "destructive"
+            });
+            throw error;
+        }
+    }, [fetchAllData, toast]);
+
+    const deleteSeason = useCallback(async (seasonId: string) => {
+        try {
+            await GamificationService.deleteSeason(seasonId);
+            await fetchAllData();
+            
+            toast({
+                title: "Temporada removida!",
+                description: "Temporada removida com sucesso."
+            });
+        } catch (error) {
+            console.error('Erro ao deletar temporada:', error);
+            toast({
+                title: "Erro",
+                description: error instanceof Error ? error.message : "Erro ao remover temporada",
+                variant: "destructive"
+            });
+            throw error;
+        }
+    }, [fetchAllData, toast]);
+
+    // Funções de RH
+    const createFuncao = useCallback(async (name: string) => {
+        try {
+            await RHService.createFuncao({ name });
+            await fetchAllData();
+            
+            toast({
+                title: "Função criada!",
+                description: "Função criada com sucesso."
+            });
+        } catch (error) {
+            console.error('Erro ao criar função:', error);
+            toast({
+                title: "Erro",
+                description: error instanceof Error ? error.message : "Erro ao criar função",
+                variant: "destructive"
+            });
+            throw error;
+        }
+    }, [fetchAllData, toast]);
+
+    const createSetor = useCallback(async (name: string) => {
+        try {
+            await RHService.createSetor({ name });
+            await fetchAllData();
+            
+            toast({
+                title: "Setor criado!",
+                description: "Setor criado com sucesso."
+            });
+        } catch (error) {
+            console.error('Erro ao criar setor:', error);
+            toast({
+                title: "Erro",
+                description: error instanceof Error ? error.message : "Erro ao criar setor",
+                variant: "destructive"
+            });
+            throw error;
+        }
+    }, [fetchAllData, toast]);
+
+    // Análise IA
+    const startAnalysis = useCallback(async () => {
+        try {
+            // Buscar avaliações sem análise IA
+            const evaluationsToAnalyze = evaluations.filter(eval => !eval.aiAnalysis);
+            
+            if (evaluationsToAnalyze.length === 0) {
+                toast({
+                    title: "Análise completa",
+                    description: "Todas as avaliações já foram analisadas pela IA"
+                });
+                return;
+            }
+            
+            setAnalysisProgress({
+                current: 0,
+                total: evaluationsToAnalyze.length,
+                evaluation: null,
+                status: 'processing',
+                countdown: 0,
+                lastResult: null
+            });
+            
+            for (let i = 0; i < evaluationsToAnalyze.length; i++) {
+                const evaluation = evaluationsToAnalyze[i];
+                
+                setAnalysisProgress(prev => ({
+                    ...prev,
+                    current: i + 1,
+                    evaluation,
+                    status: 'processing'
+                }));
+                
+                try {
+                    const response = await fetch('/api/evaluations/analysis', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            evaluationId: evaluation.id
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        setAnalysisProgress(prev => ({
+                            ...prev,
+                            lastResult: result.analysis
+                        }));
+                    }
+                } catch (error) {
+                    console.error('Erro na análise IA:', error);
+                }
+                
+                // Aguardar 2 segundos entre análises para não sobrecarregar a API
+                if (i < evaluationsToAnalyze.length - 1) {
+                    setAnalysisProgress(prev => ({ ...prev, status: 'waiting', countdown: 2 }));
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+            }
+            
+            setAnalysisProgress(prev => ({ ...prev, status: 'done' }));
+            await fetchAllData();
+            
+            toast({
+                title: "Análise concluída!",
+                description: `${evaluationsToAnalyze.length} avaliações analisadas pela IA`
+            });
+        } catch (error) {
+            console.error('Erro na análise IA:', error);
+            toast({
+                title: "Erro na análise",
+                description: error instanceof Error ? error.message : "Erro desconhecido",
+                variant: "destructive"
+            });
+            setAnalysisProgress(prev => ({ ...prev, status: 'idle' }));
+        }
+    }, [evaluations, fetchAllData, toast]);
+
+    const stopAnalysis = useCallback(() => {
+        setAnalysisProgress({
+            current: 0,
+            total: 0,
+            evaluation: null,
+            status: 'idle',
+            countdown: 0,
+            lastResult: null
         });
         
-        batch.set(importDocRef, { fileName, evaluationIds: evaluationsData.map(e => e.id), attendantMap: {}, importedBy: userId, importedAt: new Date().toISOString() });
-        setImportStatus(prev => ({...prev, progress: 25, logs: [...prev.logs, `Lote com ${evaluationsData.length} avaliações preparado.`]}));
-        
-        await batch.commit();
-        setImportStatus(prev => ({...prev, progress: 50, logs: [...prev.logs, 'Avaliações salvas no banco de dados.']}));
+        toast({
+            title: "Análise interrompida",
+            description: "Processo de análise IA foi interrompido"
+        });
+    }, [toast]);
 
-        await recalculateAllGamificationData();
+    const value: AuthContextType = {
+        // Estado de autenticação
+        user,
+        authLoading,
         
-        setImportStatus(prev => ({...prev, status: 'done', title: 'Importação Concluída!', logs: [...prev.logs, 'Processo finalizado com sucesso.'] }));
-        toast({ title: "Importação Concluída!", description: `${evaluationsData.length} avaliações importadas.` });
-        setTimeout(() => setImportStatus(INITIAL_IMPORT_STATUS), 3000);
+        // Dados do sistema
+        users,
+        modules,
+        attendants,
+        evaluations,
+        evaluationImports,
+        attendantImports,
+        funcoes,
+        setores,
+        gamificationConfig,
+        seasons,
+        
+        // Estados de carregamento
+        loading,
+        
+        // Funções de autenticação
+        login,
+        logout,
+        
+        // Funções de usuário
+        createUser,
+        updateUser,
+        deleteUser,
+        
+        // Funções de módulo
+        createModule,
+        updateModule,
+        deleteModule,
+        
+        // Funções de atendente
+        createAttendant,
+        updateAttendant,
+        deleteAttendant,
+        importAttendants,
+        reverseAttendantImport,
+        
+        // Funções de avaliação
+        createEvaluation,
+        updateEvaluation,
+        deleteEvaluation,
+        importEvaluations,
+        reverseEvaluationImport,
+        
+        // Funções de gamificação
+        updateGamificationConfig,
+        createSeason,
+        updateSeason,
+        deleteSeason,
+        
+        // Funções de RH
+        createFuncao,
+        createSetor,
+        
+        // Análise IA
+        analysisProgress,
+        startAnalysis,
+        stopAnalysis,
+        
+        // Status de importação
+        importStatus,
+        
+        // Função para recarregar dados
+        fetchAllData
+    };
 
-    } catch (e) {
-        console.error(e);
-        setImportStatus(prev => ({...prev, status: 'error', title: 'Erro na Importação', logs: [...prev.logs, 'Ocorreu um erro. Verifique o console.'] }));
-        toast({ variant: 'destructive', title: "Erro na Importação", description: "Não foi possível concluir a importação." });
-    } finally {
-         setIsProcessing(false);
+    return (
+        <AuthContext.Provider value={value}>
+            {children}
+        </AuthContext.Provider>
+    );
+}
+
+export function useAuth() {
+    const context = React.useContext(AuthContext);
+    if (context === undefined) {
+        throw new Error('useAuth must be used within an AuthProvider');
     }
-  }, [recalculateAllGamificationData, toast]);
-
-  const importWhatsAppEvaluations = useCallback(async (evaluationsData: Omit<Evaluation, 'id' | 'xpGained' | 'importId'>[], agentMap: Record<string, string>, fileName: string, userId: string) => {
-      setIsProcessing(true);
-      setImportStatus({ isOpen: true, logs: [], progress: 0, title: 'Importando Avaliações (WhatsApp)', status: 'processing' });
-
-      try {
-          setImportStatus(prev => ({...prev, logs: [...prev.logs, `Iniciando importação de ${fileName}`]}));
-          const batch = writeBatch(db);
-          const newEvaluationIds: string[] = [];
-          const importDocRef = doc(collection(db, "evaluationImports"));
-
-          evaluationsData.forEach(evData => {
-              const docRef = doc(collection(db, "evaluations"));
-              batch.set(docRef, {...evData, importId: importDocRef.id});
-              newEvaluationIds.push(docRef.id);
-          });
-          
-          batch.set(importDocRef, { fileName, evaluationIds: newEvaluationIds, attendantMap: agentMap, importedBy: userId, importedAt: new Date().toISOString() });
-          setImportStatus(prev => ({...prev, progress: 25, logs: [...prev.logs, `${evaluationsData.length} avaliações preparadas.`]}));
-          
-          await batch.commit();
-          setImportStatus(prev => ({...prev, progress: 50, logs: [...prev.logs, 'Avaliações salvas com sucesso.']}));
-
-          await recalculateAllGamificationData();
-          
-          setImportStatus(prev => ({...prev, status: 'done', title: 'Importação Concluída!', logs: [...prev.logs, 'Processo finalizado.'] }));
-          toast({ title: "Importação Concluída!" });
-          setTimeout(() => setImportStatus(INITIAL_IMPORT_STATUS), 3000);
-
-      } catch (e) {
-          console.error(e);
-          setImportStatus(prev => ({...prev, status: 'error', title: 'Erro na Importação', logs: [...prev.logs, 'Ocorreu um erro grave.'] }));
-          toast({ variant: 'destructive', title: "Erro na Importação" });
-      } finally {
-          setIsProcessing(false);
-      }
-  }, [recalculateAllGamificationData, toast]);
-
-  const importAttendants = useCallback(async (attendantsData: Omit<Attendant, 'importId'>[], fileName: string, userId: string) => {
-      setIsProcessing(true);
-      setImportStatus({ isOpen: true, logs: [], progress: 0, title: 'Importando Atendentes', status: 'processing' });
-      try {
-          setImportStatus(prev => ({...prev, logs: [...prev.logs, `Iniciando importação de ${fileName}`]}));
-          const batch = writeBatch(db);
-          const newAttendantIds: string[] = [];
-          const importDocRef = doc(collection(db, "attendantImports"));
-
-          attendantsData.forEach(attData => {
-              const docRef = doc(db, "attendants", attData.id);
-              batch.set(docRef, {...attData, importId: importDocRef.id});
-              newAttendantIds.push(attData.id);
-          });
-          
-          batch.set(importDocRef, { fileName, attendantIds: newAttendantIds, importedBy: userId, importedAt: new Date().toISOString() });
-           setImportStatus(prev => ({...prev, progress: 50, logs: [...prev.logs, `${attendantsData.length} atendentes salvos no banco.`]}));
-          
-          await batch.commit();
-          
-          setImportStatus(prev => ({...prev, progress: 100, logs: [...prev.logs, 'Finalizando...']}));
-          await fetchAllData();
-
-          setImportStatus(prev => ({...prev, status: 'done', title: 'Importação de Atendentes Concluída!', logs: [...prev.logs, 'Processo finalizado.'] }));
-          toast({ title: "Importação de Atendentes Concluída!" });
-          setTimeout(() => setImportStatus(INITIAL_IMPORT_STATUS), 3000);
-
-      } catch (e) {
-          console.error(e);
-          setImportStatus(prev => ({...prev, status: 'error', title: 'Erro na Importação', logs: [...prev.logs, 'Ocorreu um erro.'] }));
-          toast({ variant: 'destructive', title: "Erro na Importação" });
-      } finally {
-          setIsProcessing(false);
-      }
-  }, [fetchAllData, toast]);
-
-
-  const revertEvaluationImport = useCallback(async (importId: string) => {
-    const importToRevert = (await getDocs(collection(db, 'evaluationImports'))).docs
-        .map(d => ({ id: d.id, ...d.data() } as EvaluationImport))
-        .find(i => i.id === importId);
-        
-    if (!importToRevert) return;
-    
-    await deleteEvaluations(importToRevert.evaluationIds, 'Revertendo Importação');
-    await deleteDoc(doc(db, "evaluationImports", importId));
-    setEvaluationImports(prev => prev.filter(i => i.id !== importId));
-    toast({ title: "Importação Revertida!" });
-  }, [deleteEvaluations, toast]);
-  
-  const revertAttendantImport = useCallback(async (importId: string) => {
-    const importToRevert = (await getDocs(collection(db, 'attendantImports'))).docs
-        .map(d => ({ id: d.id, ...d.data() } as AttendantImport))
-        .find(i => i.id === importId);
-
-    if (!importToRevert) return;
-
-    await deleteAttendants(importToRevert.attendantIds);
-    await deleteDoc(doc(db, "attendantImports", importId));
-    setAttendantImports(prev => prev.filter(i => i.id !== importId));
-    toast({ title: "Importação Revertida!" });
-  }, [deleteAttendants, toast]);
-  
-  const updateFullGamificationConfig = useCallback(async (config: GamificationConfig) => {
-        const configToSave = {
-            ...config,
-            achievements: config.achievements.map(({ isUnlocked, icon, ...ach }) => ach),
-            levelRewards: config.levelRewards.map(({ icon, ...reward }) => reward),
-        };
-        await setDoc(doc(db, "gamification", "config"), configToSave);
-        const newConfig = await getDoc(doc(db, "gamification", "config")).then(d => d.data() as GamificationConfig);
-        setGamificationConfig(newConfig);
-        setAchievements(newConfig.achievements);
-        setLevelRewards(newConfig.levelRewards);
-        setSeasons(newConfig.seasons);
-  }, []);
-
-  const updateGamificationConfig = useCallback(async (newConfig: Partial<Pick<GamificationConfig, 'ratingScores' | 'globalXpMultiplier'>>) => {
-        const configDocRef = doc(db, "gamification", "config");
-        await updateDoc(configDocRef, newConfig);
-        setGamificationConfig(prev => ({...prev, ...newConfig}));
-        toast({ title: "Configurações Salvas!" });
-  }, [toast]);
-
-  const updateAchievement = useCallback(async (id: string, data: Partial<Omit<Achievement, 'id' | 'icon' | 'color' | 'isUnlocked'>>) => {
-    const updatedAchievements = achievements.map(ach => ach.id === id ? { ...ach, ...data } : ach);
-    await updateFullGamificationConfig({ ...gamificationConfig, achievements: updatedAchievements });
-  }, [achievements, gamificationConfig, updateFullGamificationConfig]);
-
-  const updateLevelReward = useCallback(async (level: number, data: Partial<Omit<LevelReward, 'level' | 'icon' | 'color'>>) => {
-    const updatedLevelRewards = levelRewards.map(reward => reward.level === level ? { ...reward, ...data } : reward);
-    await updateFullGamificationConfig({ ...gamificationConfig, levelRewards: updatedLevelRewards });
-  }, [levelRewards, gamificationConfig, updateFullGamificationConfig]);
-  
-  const saveSeasons = useCallback(async (newSeasons: GamificationSeason[]) => {
-    await updateDoc(doc(db, "gamification", "config"), { seasons: newSeasons });
-    setSeasons(newSeasons);
-  }, []);
-
-  const addSeason = useCallback((seasonData: Omit<GamificationSeason, 'id'>) => {
-    saveSeasons([...seasons, { ...seasonData, id: crypto.randomUUID() }]);
-    toast({ title: "Sessão Adicionada!" });
-  }, [seasons, saveSeasons, toast]);
-  
-  const updateSeason = useCallback((id: string, seasonData: Partial<Omit<GamificationSeason, 'id'>>) => {
-    saveSeasons(seasons.map(s => s.id === id ? { ...s, ...seasonData } : s));
-    toast({ title: "Sessão Atualizada!" });
-  }, [seasons, saveSeasons, toast]);
-  
-  const deleteSeason = useCallback((id: string) => {
-    saveSeasons(seasons.filter(s => s.id !== id));
-    toast({ title: "Sessão Removida!" });
-  }, [seasons, saveSeasons, toast]);
-  
-  // --- AI Analysis Actions ---
-  const runAiAnalysis = useCallback(async () => {
-    setIsAiAnalysisRunning(true);
-    setIsProgressModalOpen(true);
-    const existingAnalysis = JSON.parse(localStorage.getItem(AI_ANALYSIS_STORAGE_KEY) || '[]') as EvaluationAnalysis[];
-    const analyzedIds = new Set(existingAnalysis.map(a => a.evaluationId));
-    const pendingEvaluations = evaluations.filter(e => !analyzedIds.has(e.id) && e.comentario && e.comentario.trim() !== '(Sem comentário)' && e.comentario.trim() !== '');
-    
-    if (pendingEvaluations.length === 0) {
-      toast({ title: 'Nenhuma nova avaliação', description: 'Todos os comentários já foram analisados.' });
-      setIsAiAnalysisRunning(false); setIsProgressModalOpen(false); return;
-    }
-    
-    setAnalysisProgress({ current: 0, total: pendingEvaluations.length, evaluation: null, status: 'idle', countdown: 0, lastResult: null });
-    let processedCount = 0;
-    
-    try {
-      for (const ev of pendingEvaluations) {
-        processedCount++;
-        setAnalysisProgress(prev => ({ ...prev, current: processedCount, evaluation: ev, status: 'processing' }));
-        const result = await analyzeEvaluation({ rating: ev.nota, comment: ev.comentario });
-        const newResult: EvaluationAnalysis = { evaluationId: ev.id, sentiment: result.sentiment, summary: result.summary, analyzedAt: new Date().toISOString() };
-        
-        const currentResults = JSON.parse(localStorage.getItem(AI_ANALYSIS_STORAGE_KEY) || '[]') as EvaluationAnalysis[];
-        const updatedResults = [...currentResults, newResult];
-        localStorage.setItem(AI_ANALYSIS_STORAGE_KEY, JSON.stringify(updatedResults));
-        setAiAnalysisResults(updatedResults);
-
-        setAnalysisProgress(prev => ({ ...prev, status: 'waiting', lastResult: newResult }));
-        const countdownDuration = 5;
-        for (let i = countdownDuration; i > 0; i--) {
-          setAnalysisProgress(prev => ({ ...prev, countdown: i }));
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      }
-      const now = new Date().toISOString();
-      localStorage.setItem(LAST_AI_ANALYSIS_DATE_KEY, now);
-      setLastAiAnalysis(now);
-      toast({ title: 'Análise Concluída!', description: `${processedCount} novas avaliações processadas.` });
-    } catch (error) {
-      toast({ variant: "destructive", title: 'Erro na Análise de IA', description: 'Ocorreu um erro. Tente novamente.' });
-    } finally {
-      setIsAiAnalysisRunning(false); setIsProgressModalOpen(false);
-      setAnalysisProgress({ current: 0, total: 0, evaluation: null, status: 'done', countdown: 0, lastResult: null });
-    }
-  }, [evaluations, toast]);
-
-  const value: AuthContextType = {
-    user,
-    isAuthenticated: !!user,
-    authLoading,
-    appLoading,
-    isProcessing,
-    login,
-    logout,
-    register,
-    updateProfile,
-    hasSuperAdmin,
-    allUsers,
-    updateUser,
-    deleteUser,
-    modules,
-    addModule,
-    updateModule,
-    toggleModuleStatus,
-    deleteModule,
-    attendants,
-    addAttendant,
-    updateAttendant,
-    deleteAttendants,
-    funcoes,
-    setores,
-    addFuncao,
-    updateFuncao,
-    deleteFuncao,
-    addSetor,
-    updateSetor,
-    deleteSetor,
-    evaluations,
-    addEvaluation,
-    deleteEvaluations,
-    evaluationImports,
-    attendantImports,
-    importLegacyEvaluations,
-    importWhatsAppEvaluations,
-    importAttendants,
-    revertEvaluationImport,
-    revertAttendantImport,
-    importStatus,
-    setImportStatus,
-    xpEvents,
-    seasonXpEvents,
-    gamificationConfig,
-    achievements,
-    levelRewards,
-    seasons,
-    activeSeason,
-    nextSeason,
-    updateGamificationConfig,
-    updateAchievement,
-    updateLevelReward,
-    addSeason,
-    updateSeason,
-    deleteSeason,
-    resetXpEvents,
-    aiAnalysisResults,
-    lastAiAnalysis,
-    isAiAnalysisRunning,
-    runAiAnalysis,
-    analysisProgress,
-    isProgressModalOpen,
-    setIsProgressModalOpen,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
-
-export const useAuth = () => {
-  const context = React.useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
-};
+    return context;
+}

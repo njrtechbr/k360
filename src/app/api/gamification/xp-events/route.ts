@@ -194,7 +194,7 @@ export async function PUT(request: NextRequest) {
             id: true,
             name: true,
             email: true,
-            department: true
+            setor: true
           }
         },
         season: {

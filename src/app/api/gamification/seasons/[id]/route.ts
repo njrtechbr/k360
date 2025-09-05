@@ -103,13 +103,13 @@ export async function GET(
 
       // Buscar informações dos atendentes
       const attendantIds = participantStats.map(p => p.attendantId);
-      const attendants = await prisma.user.findMany({
+      const attendants = await prisma.attendant.findMany({
         where: { id: { in: attendantIds } },
         select: {
           id: true,
           name: true,
           email: true,
-          department: true
+          setor: true
         }
       });
 

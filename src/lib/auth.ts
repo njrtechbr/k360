@@ -2,6 +2,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "./prisma";
+import { UserService } from "@/services/userService";
 
 export const authOptions: NextAuthOptions = {
   session: {
@@ -23,32 +24,20 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/users/login`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              email: credentials.email,
-              password: credentials.password
-            })
-          });
+          const user = await UserService.verifyPassword(
+            credentials.email,
+            credentials.password
+          );
 
-          if (!response.ok) {
-            return null;
-          }
-
-          const data = await response.json();
-          
-          if (!data.success || !data.user) {
+          if (!user) {
             return null;
           }
 
           return {
-            id: data.user.id,
-            email: data.user.email,
-            name: data.user.name,
-            role: data.user.role,
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
           };
         } catch (error) {
           console.error('Erro na autenticação:', error);

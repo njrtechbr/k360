@@ -149,26 +149,26 @@ export async function GET(request: NextRequest) {
         _sum: { xpGained: true }
       });
 
-      const attendantsWithDept = await prisma.user.findMany({
+      const attendantsWithDept = await prisma.attendant.findMany({
         where: { id: { in: departmentStats.map(d => d.attendantId) } },
-        select: { id: true, department: true }
+        select: { id: true, setor: true }
       });
 
       const deptStats = departmentStats.reduce((acc, stat) => {
         const attendant = attendantsWithDept.find(a => a.id === stat.attendantId);
-        if (!attendant?.department) return acc;
+        if (!attendant?.setor) return acc;
         
-        if (!acc[attendant.department]) {
-          acc[attendant.department] = {
-            department: attendant.department,
+        if (!acc[attendant.setor]) {
+          acc[attendant.setor] = {
+            department: attendant.setor,
             totalXp: 0,
             participantCount: 0,
             averageXp: 0
           };
         }
         
-        acc[attendant.department].totalXp += stat._sum.points || 0;
-        acc[attendant.department].participantCount += 1;
+        acc[attendant.setor].totalXp += stat._sum.points || 0;
+        acc[attendant.setor].participantCount += 1;
         
         return acc;
       }, {} as Record<string, any>);
@@ -285,17 +285,17 @@ export async function POST(request: NextRequest) {
     };
     
     if (departments && departments.length > 0) {
-      attendantsWhereClause.department = { in: departments };
+      attendantsWhereClause.setor = { in: departments };
     }
 
-    const attendants = await prisma.user.findMany({
+    const attendants = await prisma.attendant.findMany({
       where: attendantsWhereClause,
       select: {
         id: true,
         name: true,
         email: true,
-        department: true,
-        avatar: true
+        setor: true,
+        avatarUrl: true
       }
     });
 
@@ -331,11 +331,11 @@ export async function POST(request: NextRequest) {
     } else if (groupBy === 'department') {
       const deptData = xpData.reduce((acc, xp) => {
         const attendant = attendants.find(a => a.id === xp.attendantId);
-        if (!attendant?.department) return acc;
+        if (!attendant?.setor) return acc;
         
-        if (!acc[attendant.department]) {
-          acc[attendant.department] = {
-            department: attendant.department,
+        if (!acc[attendant.setor]) {
+          acc[attendant.setor] = {
+            department: attendant.setor,
             totalXp: 0,
             participantCount: 0,
             eventCount: 0,
@@ -343,9 +343,9 @@ export async function POST(request: NextRequest) {
           };
         }
         
-        acc[attendant.department].totalXp += xp._sum.points || 0;
-        acc[attendant.department].participantCount += 1;
-        acc[attendant.department].eventCount += xp._count;
+        acc[attendant.setor].totalXp += xp._sum.points || 0;
+        acc[attendant.setor].participantCount += 1;
+        acc[attendant.setor].eventCount += xp._count;
         
         return acc;
       }, {} as Record<string, any>);

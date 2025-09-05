@@ -18,13 +18,13 @@ export async function GET(
     const includeStats = searchParams.get('includeStats') === 'true';
 
     // Verificar se o atendente existe
-    const attendant = await prisma.user.findUnique({
+    const attendant = await prisma.attendant.findUnique({
       where: { id: attendantId },
       select: {
         id: true,
         name: true,
         email: true,
-        department: true
+        setor: true
       }
     });
     
@@ -174,7 +174,7 @@ export async function POST(
     }
 
     // Verificar se o atendente existe
-    const attendant = await prisma.user.findUnique({
+    const attendant = await prisma.attendant.findUnique({
       where: { id: attendantId }
     });
     

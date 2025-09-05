@@ -154,25 +154,28 @@ model LevelTrackConfig {
 }
 
 model GamificationSeason {
-  id           String    @id @default(cuid())
-  name         String
-  startDate    DateTime
-  endDate      DateTime
-  active       Boolean
-  xpMultiplier Float
-  xpEvents     XpEvent[]
-  createdAt    DateTime  @default(now())
+  id                   String                @id @default(cuid())
+  name                 String
+  startDate            DateTime
+  endDate              DateTime
+  active               Boolean
+  xpMultiplier         Float
+  xpEvents             XpEvent[]
+  unlockedAchievements UnlockedAchievement[]
+  createdAt            DateTime              @default(now())
 }
 
 model UnlockedAchievement {
-  id            String    @id @default(cuid())
+  id            String              @id @default(cuid())
   attendantId   String
   achievementId String
-  unlockedAt    DateTime  @default(now())
-  xpGained      Float?    @default(0)
-  attendant     Attendant @relation(fields: [attendantId], references: [id], onDelete: Cascade)
+  unlockedAt    DateTime            @default(now())
+  xpGained      Float?              @default(0)
+  seasonId      String?
+  attendant     Attendant           @relation(fields: [attendantId], references: [id], onDelete: Cascade)
+  season        GamificationSeason? @relation(fields: [seasonId], references: [id], onDelete: SetNull)
 
-  @@unique([attendantId, achievementId])
+  @@unique([attendantId, achievementId, seasonId])
 }
 
 model AttendantImport {

@@ -17,10 +17,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ROLES, type LevelReward } from "@/lib/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import Link from "next/link";
 import { Switch } from "@/components/ui/switch";
 import { 
     MoreHorizontal, 
@@ -115,6 +116,30 @@ export default function ConfigurarNiveisPage() {
                     Edite as recompensas desbloqueadas em cada nível da jornada de gamificação.
                 </p>
             </div>
+
+            {/* Link para Escala de Níveis */}
+            <Card className="border-dashed border-2 border-muted-foreground/25 hover:border-primary/50 transition-colors">
+                <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-primary/10 rounded-full">
+                                <Shield className="h-6 w-6 text-primary" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold">Visualizar Escala de Níveis</h3>
+                                <p className="text-sm text-muted-foreground">
+                                    Veja a tabela completa de XP necessário para cada nível e estatísticas do sistema
+                                </p>
+                            </div>
+                        </div>
+                        <Button asChild>
+                            <Link href="/dashboard/gamificacao/configuracoes/escala-niveis">
+                                Ver Escala Completa
+                            </Link>
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
 
             <Card className="shadow-lg">
                 <CardHeader>

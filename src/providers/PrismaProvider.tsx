@@ -270,14 +270,27 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
         setSeasons([]);
       }
       
-      // Fetch XP events from API
-      const xpEventsResponse = await fetch('/api/gamification/xp-events');
+      // Fetch XP events from API (aumentar limite para pegar todos os eventos)
+      const xpEventsResponse = await fetch('/api/gamification/xp-events?limit=10000');
       if (xpEventsResponse.ok) {
         const xpEventsData = await xpEventsResponse.json();
         // A API retorna um objeto com a propriedade 'events'
         const events = xpEventsData.events || xpEventsData;
         // Ensure events is always an array to prevent filter errors
-        setXpEvents(Array.isArray(events) ? events : []);
+        const eventsArray = Array.isArray(events) ? events : [];
+        
+        // Debug: log dos dados carregados
+        console.log('🔍 XP Events carregados:', eventsArray.length);
+        if (eventsArray.length > 0) {
+          const eventsBySeason = {};
+          eventsArray.forEach(event => {
+            const seasonId = event.seasonId || 'sem-temporada';
+            eventsBySeason[seasonId] = (eventsBySeason[seasonId] || 0) + 1;
+          });
+          console.log('📊 Eventos por temporada:', eventsBySeason);
+        }
+        
+        setXpEvents(eventsArray);
       } else {
         console.error('Failed to fetch XP events:', xpEventsResponse.statusText);
         setXpEvents([]);
@@ -1097,9 +1110,62 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
   
   // Gamification management - TODO: Create API routes
   const updateGamificationConfig = useCallback(async (config: Partial<GamificationConfig>) => {
-    console.log('Update gamification config not implemented yet');
-    throw new Error("Atualização de configuração de gamificação não implementada ainda");
-  }, []);
+    try {
+      setIsProcessing(true);
+      
+      // Fazer chamada para a API de gamificação
+      const response = await fetch('/api/gamification', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(config),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao atualizar configuração');
+      }
+
+      // Atualizar estado local
+      if (config.ratingScores) {
+        setGamificationConfig(prev => ({
+          ...prev,
+          ratingScores: config.ratingScores!
+        }));
+      }
+
+      if (config.globalXpMultiplier !== undefined) {
+        setGamificationConfig(prev => ({
+          ...prev,
+          globalXpMultiplier: config.globalXpMultiplier!
+        }));
+      }
+
+      if (config.seasons) {
+        setSeasons(config.seasons);
+      }
+
+      // Recarregar dados para garantir sincronização
+      await fetchAllData();
+
+      toast({
+        title: "Configuração atualizada",
+        description: "As configurações de gamificação foram salvas com sucesso.",
+      });
+
+    } catch (error) {
+      console.error('Erro ao atualizar configuração de gamificação:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao salvar",
+        description: error instanceof Error ? error.message : "Erro desconhecido ao salvar configurações.",
+      });
+      throw error;
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [toast, fetchAllData]);
   
   const updateAchievement = useCallback(async (id: string, data: Partial<Omit<Achievement, 'id' | 'icon' | 'color' | 'isUnlocked'>>) => {
     try {

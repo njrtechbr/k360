@@ -66,7 +66,6 @@ export async function POST(request: NextRequest) {
 
     // Preparar dados das avaliações com importId e xpGained
     const evaluationsData = evaluations.map((evaluation: any) => ({
-      id: evaluation.id,
       attendantId: evaluation.attendantId,
       nota: evaluation.nota,
       comentario: evaluation.comentario || null,
@@ -115,7 +114,7 @@ export async function POST(request: NextRequest) {
         date: evaluationData.data,
         type: 'evaluation',
         relatedId: createdEvaluation.id,
-        seasonId: activeSeason?.id || null,
+        seasonId: seasonForEvaluation?.id || null,
       });
     }
 
@@ -126,11 +125,11 @@ export async function POST(request: NextRequest) {
     });
 
     // Verificar conquistas para cada atendente que teve avaliações importadas
-    const attendantIds = [...new Set(evaluationsData.map(e => e.attendantId))];
+    const uniqueAttendantIds = [...new Set(evaluationsData.map(e => e.attendantId))];
     let totalAchievementsUnlocked = 0;
     let totalAchievementXp = 0;
 
-    for (const attendantId of attendantIds) {
+    for (const attendantId of uniqueAttendantIds) {
       try {
         const attendantEvaluations = evaluationsData.filter(e => e.attendantId === attendantId);
         const latestEvaluationDate = new Date(Math.max(...attendantEvaluations.map(e => new Date(e.data).getTime())));

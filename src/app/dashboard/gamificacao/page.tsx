@@ -62,12 +62,32 @@ export default function GamificacaoPage() {
     const loading = status === "loading" || appLoading;
     const [isAchievementDialogOpen, setIsAchievementDialogOpen] = useState(false);
     const [selectedAchievement, setSelectedAchievement] = useState<AchievementStat | null>(null);
+    const [currentSeasonAchievements, setCurrentSeasonAchievements] = useState<any[]>([]);
 
     useEffect(() => {
         if (!loading && !isAuthenticated) {
             router.push("/login");
         }
     }, [isAuthenticated, loading, router]);
+
+    // Buscar conquistas da temporada atual
+    useEffect(() => {
+        const fetchCurrentSeasonAchievements = async () => {
+            if (!activeSeason) return;
+            
+            try {
+                const response = await fetch(`/api/gamification/achievements/season/${activeSeason.id}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setCurrentSeasonAchievements(data);
+                }
+            } catch (error) {
+                console.error('Erro ao buscar conquistas da temporada:', error);
+            }
+        };
+
+        fetchCurrentSeasonAchievements();
+    }, [activeSeason]);
     
     const globalMultiplier = gamificationConfig.globalXpMultiplier || 1;
     const seasonMultiplier = activeSeason?.xpMultiplier ?? 1;
@@ -120,16 +140,17 @@ export default function GamificacaoPage() {
         if (!attendants || !Array.isArray(attendants)) {
             return [];
         }
-        if (!seasonXpEvents || !Array.isArray(seasonXpEvents)) {
-            return [];
-        }
 
         return achievements
             .filter(ach => ach.active)
             .map(achievement => {
-                const unlockedByAttendantIds = new Set(seasonXpEvents
-                    .filter(e => e.type === 'achievement' && e.relatedId === achievement.id)
-                    .map(e => e.attendantId)
+                // Buscar conquistas desbloqueadas na temporada atual
+                const unlockedInCurrentSeason = currentSeasonAchievements.filter(
+                    unlock => unlock.achievementId === achievement.id
+                );
+                
+                const unlockedByAttendantIds = new Set(
+                    unlockedInCurrentSeason.map(unlock => unlock.attendantId)
                 );
                 
                 const unlockedBy = attendants.filter(att => unlockedByAttendantIds.has(att.id));
@@ -142,7 +163,7 @@ export default function GamificacaoPage() {
                     unlockedBy,
                 };
             });
-    }, [attendants, seasonXpEvents, achievements]);
+    }, [attendants, achievements, currentSeasonAchievements]);
 
     const handleAchievementClick = (achievement: AchievementStat) => {
         setSelectedAchievement(achievement);

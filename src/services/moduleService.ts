@@ -1,5 +1,6 @@
 import { PrismaClient, Module } from '@prisma/client';
 import { z } from 'zod';
+import { handlePrismaError, logError } from '@/lib/errors';
 
 const prisma = new PrismaClient();
 
@@ -35,8 +36,9 @@ export class ModuleService {
         }
       });
     } catch (error) {
-      console.error('Erro ao buscar módulos:', error);
-      throw new Error('Falha ao buscar módulos');
+      logError(error as Error, 'ModuleService.findAll');
+      const dbError = handlePrismaError(error);
+      throw dbError;
     }
   }
 

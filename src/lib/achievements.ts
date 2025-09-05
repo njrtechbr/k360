@@ -286,3 +286,5 @@ export const INITIAL_LEVEL_REWARDS: LevelReward[] = [
         active: true,
     }
 ];
+// Alias para compatibilidade
+export const achievements = INITIAL_ACHIEVEMENTS;

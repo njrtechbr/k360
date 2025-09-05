@@ -66,6 +66,10 @@ export const INITIAL_SETORES: string[] = [
     'administrativo',
 ];
 
+// Aliases para compatibilidade
+export const FUNCOES = INITIAL_FUNCOES;
+export const SETORES = INITIAL_SETORES;
+
 
 export type AttendantStatus = (typeof ATTENDANT_STATUS)[keyof typeof ATTENDANT_STATUS];
 export type Funcao = string;
