@@ -265,10 +265,14 @@
     - Adicionar destaque para conquistas desbloqueadas via XP avulso
     - _Requirements: 4.3, 4.4_
 
-- [ ] 9. Implementar testes unitários
+- [-] 9. Implementar testes unitários
 
 
-  - [ ] 9.1 Criar testes para XpAvulsoService
+
+
+  - [-] 9.1 Criar testes para XpAvulsoService
+
+
 
     - Testar todas as operações CRUD de tipos de XP
     - Implementar testes de concessão de XP com diferentes cenários
@@ -278,6 +282,7 @@
 
   - [ ] 9.2 Testar API endpoints
 
+
     - Criar testes de integração para todos os endpoints
     - Testar autenticação e autorização
     - Verificar validações de dados e tratamento de erros
@@ -286,7 +291,9 @@
 
 - [ ] 10. Criar dados iniciais e documentação
 
+
   - [ ] 10.1 Implementar seed de tipos padrão de XP
+
 
     - Criar tipos básicos como "Excelência no Atendimento", "Iniciativa", "Trabalho em Equipe"
     - Definir pontos apropriados para cada tipo
@@ -294,6 +301,7 @@
     - _Requirements: 1.1_
 
   - [ ] 10.2 Atualizar documentação do sistema
+
 
     - Documentar novos endpoints da API
     - Criar guia de uso para administradores
