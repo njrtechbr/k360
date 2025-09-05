@@ -190,14 +190,27 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
     try {
       setAppLoading(true);
       
-      // Fetch users from API
-      const usersResponse = await fetch('/api/users');
+      // Só buscar dados se o usuário estiver autenticado
+      if (!session?.user) {
+        setAppLoading(false);
+        return;
+      }
+
+      const userRole = session.user.role as Role;
       
-      if (usersResponse.ok) {
-        const usersData = await usersResponse.json();
-        setAllUsers(usersData);
+      // Fetch users from API - apenas para ADMIN e SUPERADMIN
+      if (['ADMIN', 'SUPERADMIN'].includes(userRole)) {
+        const usersResponse = await fetch('/api/users');
+        
+        if (usersResponse.ok) {
+          const usersData = await usersResponse.json();
+          setAllUsers(usersData);
+        } else {
+          // Se não conseguir buscar usuários (ex: sem permissão), limpar a lista
+          setAllUsers([]);
+        }
       } else {
-        // Se não conseguir buscar usuários (ex: sem permissão), limpar a lista
+        // Usuários sem permissão não precisam da lista de usuários
         setAllUsers([]);
       }
       
@@ -305,7 +318,7 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setAppLoading(false);
     }
-  }, [toast]);
+  }, [toast, session]);
   
   // Calculate active season and filter XP events by season
   useEffect(() => {
@@ -1427,7 +1440,7 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
     
     setAuthLoading(false);
     
-    if (session?.user) {
+    if (session?.user && status === 'authenticated') {
       setUser({
         id: session.user.id,
         name: session.user.name,
@@ -1436,10 +1449,19 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
         modules: [] // Will be loaded from API if needed
       });
       
-      // Load all data only when authenticated
+      // Load all data only when fully authenticated
       fetchAllData();
     } else {
       setUser(null);
+      // Limpar dados quando não autenticado
+      setAllUsers([]);
+      setModules([]);
+      setAttendants([]);
+      setEvaluations([]);
+      setAttendantImports([]);
+      setEvaluationImports([]);
+      setFuncoes([]);
+      setSetores([]);
     }
   }, [session, status, fetchAllData]);
   
