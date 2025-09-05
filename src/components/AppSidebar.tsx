@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, useSidebar } from "./ui/sidebar";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, Wrench, CircleUser, Settings, ShieldCheck, Users, Trophy, Star, Briefcase } from "lucide-react";
+import { LayoutDashboard, Wrench, CircleUser, Settings, ShieldCheck, Users, Trophy, Star, Briefcase, Database } from "lucide-react";
 import { ROLES } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -91,6 +91,14 @@ export default function AppSidebar() {
                                     <Link href="/dashboard/modulos">
                                         <Wrench />
                                         <span className={cn(state === 'collapsed' && "hidden")}>Módulos</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                                <SidebarMenuButton asChild isActive={pathname === '/dashboard/backup'} tooltip={{children: "Sistema de Backup"}}>
+                                    <Link href="/dashboard/backup">
+                                        <Database />
+                                        <span className={cn(state === 'collapsed' && "hidden")}>Backup</span>
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>

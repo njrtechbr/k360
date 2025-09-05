@@ -43,3 +43,11 @@ next-env.d.ts
 # firebase
 firebase-debug.log
 firestore-debug.log
+
+# backup files
+/backups/files/*.sql
+/backups/files/*.sql.gz
+/backups/files/*.zip
+/backups/logs/
+*.backup
+*.dump

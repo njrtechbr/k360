@@ -1,0 +1,9 @@
+{
+  "backups": [],
+  "lastCleanup": null,
+  "settings": {
+    "maxBackups": 50,
+    "retentionDays": 30,
+    "defaultDirectory": "./backups/files"
+  }
+}
