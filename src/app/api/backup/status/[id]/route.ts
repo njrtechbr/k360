@@ -113,6 +113,21 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       });
     }
 
+    // Se é um ID temporário e não há progresso, retornar status padrão
+    if (backupId.startsWith('temp_')) {
+      return NextResponse.json({
+        success: true,
+        status: 'in_progress' as const,
+        progress: 0,
+        message: 'Aguardando início do backup...',
+        elapsedTime: {
+          total: 0,
+          formatted: '0:00'
+        },
+        lastUpdate: new Date().toISOString()
+      });
+    }
+
     // Se não há progresso em andamento, verificar se o backup existe
     const backupInfo = await BackupService.getBackupInfo(backupId);
     

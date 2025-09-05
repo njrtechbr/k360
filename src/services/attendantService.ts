@@ -342,4 +342,9 @@ export class AttendantService {
       throw new Error('Falha ao buscar atendentes por função');
     }
   }
+
+  // Alias para compatibilidade
+  static async getAllAttendants(): Promise<Attendant[]> {
+    return this.findAll();
+  }
 }

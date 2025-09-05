@@ -1,15 +1,14 @@
 "use client";
 
 import { useSession, signIn, signOut } from "next-auth/react";
-import { usePrisma } from "@/providers/PrismaProvider";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { useAuthData } from "@/hooks/useAuthData";
 
-// Este hook combina a funcionalidade do NextAuth com o acesso ao Prisma
-// para manter compatibilidade com o código existente
+// Hook simplificado que usa apenas APIs e não importa serviços com Prisma
 export const useAuth = () => {
   const { data: session, status } = useSession();
-  const prisma = usePrisma();
+  const { modules, attendants, isLoading: dataLoading, error, refetch } = useAuthData();
   const router = useRouter();
   const { toast } = useToast();
   
@@ -58,12 +57,15 @@ export const useAuth = () => {
   };
 
   return {
-    ...prisma,
     user: session?.user || null,
     isAuthenticated: status === "authenticated",
-    isLoading: status === "loading",
-    loading: status === "loading", // Alias para compatibilidade
+    authLoading: status === "loading",
+    appLoading: dataLoading,
+    modules,
+    attendants,
     login,
     logout,
+    refetch,
+    error
   };
 };

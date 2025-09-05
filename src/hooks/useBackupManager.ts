@@ -72,14 +72,12 @@ export function useBackupManager() {
   const createBackup = useCallback(async (options?: BackupOptions) => {
     try {
       setIsCreatingBackup(true);
-      // Gerar ID temporário para o backup
-      const tempBackupId = `backup_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
       setBackupProgress({
         progress: 0,
         message: 'Iniciando criação do backup...',
         status: 'in_progress',
-        backupId: tempBackupId
+        backupId: undefined
       });
 
       const response = await fetch('/api/backup/create', {
@@ -97,30 +95,28 @@ export function useBackupManager() {
 
       const result = await response.json();
       
+      // Atualizar progresso com o ID real retornado pela API
       setBackupProgress({
-        progress: 100,
-        message: 'Backup criado com sucesso!',
-        status: 'completed',
-        backupId: result.id || tempBackupId
+        progress: 0,
+        message: 'Backup iniciado com sucesso!',
+        status: 'in_progress',
+        backupId: result.id
       });
 
       toast({
-        title: "Backup criado com sucesso!",
-        description: `Arquivo: ${result.filename}`
+        title: "Backup iniciado!",
+        description: "O processo de backup foi iniciado. Acompanhe o progresso abaixo."
       });
-
-      // Atualizar lista de backups
-      await refreshBackups();
       
       return result;
     } catch (error) {
       console.error('Erro ao criar backup:', error);
-      setBackupProgress({
+      setBackupProgress(prev => ({
         progress: 0,
         message: 'Erro ao criar backup',
         status: 'failed',
-        backupId: tempBackupId
-      });
+        backupId: prev.backupId
+      }));
       
       toast({
         variant: "destructive",
@@ -129,16 +125,8 @@ export function useBackupManager() {
       });
       throw error;
     } finally {
-      setIsCreatingBackup(false);
-      // Limpar progresso após 3 segundos
-      setTimeout(() => {
-        setBackupProgress({
-          progress: 0,
-          message: '',
-          status: 'idle',
-          backupId: undefined
-        });
-      }, 3000);
+      // Não limpar imediatamente para permitir que o usuário veja o progresso
+      // O progresso será limpo quando o backup for concluído ou após timeout
     }
   }, [toast, refreshBackups]);
 
@@ -250,7 +238,31 @@ export function useBackupManager() {
       message,
       status: status as BackupProgress['status']
     }));
-  }, []);
+
+    // Se o backup foi concluído ou falhou, limpar o estado após um tempo
+    if (status === 'completed' || status === 'failed') {
+      setIsCreatingBackup(false);
+      
+      // Atualizar lista de backups se foi bem-sucedido
+      if (status === 'completed') {
+        refreshBackups();
+        toast({
+          title: "Backup concluído!",
+          description: "O backup foi criado com sucesso e está disponível para download."
+        });
+      }
+      
+      // Limpar progresso após 5 segundos
+      setTimeout(() => {
+        setBackupProgress({
+          progress: 0,
+          message: '',
+          status: 'idle',
+          backupId: undefined
+        });
+      }, 5000);
+    }
+  }, [refreshBackups, toast]);
 
   return {
     backups,

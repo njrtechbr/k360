@@ -1,10 +1,10 @@
 "use client";
 
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
+import { Bar, BarChart, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trophy, Medal, Award } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
 interface TopPerformerData {
@@ -96,7 +96,7 @@ export function TopPerformersChart({ data, isLoading }: TopPerformersChartProps)
             <ChartTooltip 
               content={
                 <ChartTooltipContent 
-                  formatter={(value, name, props) => [
+                  formatter={(value, _name, props) => [
                     `${value} XP`,
                     props.payload?.fullName || 'XP Total'
                   ]}

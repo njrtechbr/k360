@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import crypto from 'crypto';
 import { BackupService, setProgressCallback } from '@/services/backupService';
 import { withBackupSecurity } from '@/lib/middleware/backupSecurityMiddleware';
 
@@ -78,38 +79,39 @@ export async function POST(request: NextRequest) {
         throw new Error('Pelo menos um de includeData ou includeSchema deve ser true');
       }
 
+      // Gerar ID do backup antes de iniciar
+      const backupId = crypto.randomUUID();
+      
       // Configurar callback de progresso
-      setProgressCallback(updateBackupProgress);
+      setProgressCallback((id, progress, message, status) => {
+        updateBackupProgress(backupId, progress, message, status);
+      });
 
-      // Criar backup usando o serviço
-      const result = await BackupService.createBackup({
+      // Retornar ID imediatamente para o cliente
+      const response = {
+        success: true,
+        id: backupId,
+        message: 'Backup iniciado com sucesso',
+        status: 'in_progress'
+      };
+
+      // Iniciar backup em background
+      BackupService.createBackup({
         ...options,
         createdBy: context.user.id,
         createdByEmail: context.user.email,
+        backupId, // Passar o ID gerado
+      }).then(result => {
+        if (result.success) {
+          updateBackupProgress(backupId, 100, 'Backup concluído com sucesso!', 'completed');
+        } else {
+          updateBackupProgress(backupId, 0, result.error || 'Falha no backup', 'failed');
+        }
+      }).catch(error => {
+        updateBackupProgress(backupId, 0, error.message || 'Erro inesperado', 'failed');
       });
 
-      if (!result.success) {
-        throw new Error(result.error || 'Falha ao criar backup');
-      }
-
-      return {
-        success: true,
-        backup: {
-          id: result.id,
-          filename: result.filename,
-          size: result.size,
-          checksum: result.checksum,
-          duration: result.duration,
-          createdAt: new Date().toISOString(),
-          createdBy: context.user.email,
-          options: {
-            includeData: options.includeData !== false,
-            includeSchema: options.includeSchema !== false,
-            compress: options.compress || false
-          }
-        },
-        message: 'Backup criado com sucesso'
-      };
+      return response;
 
     } catch (error) {
       console.error('[BACKUP_CREATE_ERROR]', {

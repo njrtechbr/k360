@@ -47,8 +47,8 @@ export class BackupService {
   /**
    * Cria um backup completo do banco de dados com tratamento robusto de erros
    */
-  static async createBackup(options: BackupOptions & { createdBy?: string } = {}): Promise<BackupResult & { id?: string }> {
-    const backupId = crypto.randomUUID();
+  static async createBackup(options: BackupOptions & { createdBy?: string; backupId?: string } = {}): Promise<BackupResult & { id?: string }> {
+    const backupId = options.backupId || crypto.randomUUID();
     const context = { backupId, options };
     
     return await BackupErrorHandler.executeWithRetry(

@@ -1,13 +1,13 @@
 
 "use client";
 
-import { useAuth } from "@/hooks/useAuth";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ShieldAlert, ShieldCheck, ShieldHalf, UserIcon, Wrench, Users, Gift, Building2, Cake, CalendarDays, PartyPopper, BarChart3, TrendingUp } from "lucide-react";
-import { ROLES, type Attendant } from "@/lib/types";
+import { ROLES, type Attendant, type Module } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -25,9 +25,20 @@ import { RatingDistributionChart } from "@/components/dashboard/RatingDistributi
 import { TopPerformersChart } from "@/components/dashboard/TopPerformersChart";
 import { GamificationOverview } from "@/components/dashboard/GamificationOverview";
 import { MonthlyStatsChart } from "@/components/dashboard/MonthlyStatsChart";
+import { DashboardAlerts } from "@/components/dashboard/DashboardAlerts";
+import { QuickActions } from "@/components/dashboard/QuickActions";
+import { RecentActivity } from "@/components/dashboard/RecentActivity";
 
-// Serviços
-import { DashboardService } from "@/services/dashboardService";
+// Não importar mais o DashboardService diretamente
+
+// Tipos para o usuário autenticado
+interface AuthenticatedUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  modules?: string[];
+}
 
 
 const RoleIcon = ({ role }: { role: string }) => {
@@ -118,8 +129,17 @@ const groupAnniversariesByMonth = (anniversaries: Anniversary[]) => {
 
 
 export default function DashboardPage() {
-  const { user, isAuthenticated, authLoading, appLoading, modules, attendants } = useAuth();
+  const { data: session, status } = useSession();
   const router = useRouter();
+  
+  const user = session?.user as AuthenticatedUser | null;
+  const isAuthenticated = status === "authenticated";
+  const authLoading = status === "loading";
+  
+  // Estados para dados básicos
+  const [modules, setModules] = useState<Module[]>([]);
+  const [attendants, setAttendants] = useState<Attendant[]>([]);
+  const [appLoading, setAppLoading] = useState(true);
   
   const [isAnniversaryModalOpen, setIsAnniversaryModalOpen] = useState(false);
   const [modalContent, setModalContent] = useState<{ type: 'birthday' | 'admission', title: string, data: Anniversary[] } | null>(null);
@@ -132,6 +152,7 @@ export default function DashboardPage() {
   const [gamificationOverview, setGamificationOverview] = useState<any>(null);
   const [popularAchievements, setPopularAchievements] = useState<any[]>([]);
   const [monthlyStats, setMonthlyStats] = useState<any[]>([]);
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
   
   useEffect(() => {
@@ -140,50 +161,89 @@ export default function DashboardPage() {
     }
   }, [authLoading, isAuthenticated, router]);
 
-  // Carregar dados do dashboard
+  // Carregar dados básicos
   useEffect(() => {
     if (isAuthenticated && user) {
+      loadBasicData();
       loadDashboardData();
     }
   }, [isAuthenticated, user]);
+
+  const loadBasicData = async () => {
+    try {
+      setAppLoading(true);
+      
+      // Carregar módulos
+      try {
+        const modulesResponse = await fetch('/api/modules');
+        if (modulesResponse.ok) {
+          const modulesData = await modulesResponse.json();
+          setModules(modulesData);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar módulos:', error);
+      }
+
+      // Carregar atendentes
+      try {
+        const attendantsResponse = await fetch('/api/attendants');
+        if (attendantsResponse.ok) {
+          const attendantsData = await attendantsResponse.json();
+          setAttendants(attendantsData);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar atendentes:', error);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados básicos:', error);
+    } finally {
+      setAppLoading(false);
+    }
+  };
+
+  // Carregar dados do dashboard
 
   const loadDashboardData = async () => {
     try {
       setIsLoadingStats(true);
       
-      const [
-        stats,
-        trend,
-        distribution,
-        performers,
-        gamification,
-        achievements,
-        monthly
-      ] = await Promise.all([
-        DashboardService.getGeneralStats(),
-        DashboardService.getEvaluationTrend(30),
-        DashboardService.getRatingDistribution(),
-        DashboardService.getTopPerformers(10),
-        DashboardService.getGamificationOverview(),
-        DashboardService.getPopularAchievements(5),
-        DashboardService.getMonthlyEvaluationStats(6)
-      ]);
+      // Carregar dados de forma individual para melhor tratamento de erros
+      const endpoints = [
+        { url: '/api/dashboard/stats', setter: setDashboardStats, name: 'stats' },
+        { url: '/api/dashboard/evaluation-trend?days=30', setter: setEvaluationTrend, name: 'trend' },
+        { url: '/api/dashboard/rating-distribution', setter: setRatingDistribution, name: 'distribution' },
+        { url: '/api/dashboard/top-performers?limit=10', setter: setTopPerformers, name: 'performers' },
+        { url: '/api/dashboard/gamification-overview', setter: setGamificationOverview, name: 'gamification' },
+        { url: '/api/dashboard/popular-achievements?limit=5', setter: setPopularAchievements, name: 'achievements' },
+        { url: '/api/dashboard/monthly-stats?months=6', setter: setMonthlyStats, name: 'monthly' },
+        { url: '/api/dashboard/recent-activities?limit=20', setter: setRecentActivities, name: 'activities' }
+      ];
 
-      setDashboardStats(stats);
-      setEvaluationTrend(trend);
-      setRatingDistribution(distribution);
-      setTopPerformers(performers);
-      setGamificationOverview(gamification);
-      setPopularAchievements(achievements);
-      setMonthlyStats(monthly);
+      // Carregar cada endpoint individualmente
+      for (const endpoint of endpoints) {
+        try {
+          const response = await fetch(endpoint.url);
+          if (response.ok) {
+            const data = await response.json();
+            endpoint.setter(data);
+          } else {
+            console.warn(`Falha ao carregar ${endpoint.name}:`, response.status);
+          }
+        } catch (error) {
+          console.error(`Erro ao carregar ${endpoint.name}:`, error);
+        }
+      }
     } catch (error) {
-      console.error('Erro ao carregar dados do dashboard:', error);
+      console.error('Erro geral ao carregar dados do dashboard:', error);
     } finally {
       setIsLoadingStats(false);
     }
   };
 
-  const allAnniversaries = useMemo(() => getUpcomingAnniversaries(attendants), [attendants]);
+  const allAnniversaries = useMemo(() => {
+    if (!attendants || attendants.length === 0) return [];
+    return getUpcomingAnniversaries(attendants);
+  }, [attendants]);
 
   const todayAnniversaries = useMemo(() => allAnniversaries.filter(a => a.daysUntil === 0), [allAnniversaries]);
   const upcomingBirthdays = useMemo(() => allAnniversaries.filter(a => a.type === 'birthday' && a.daysUntil > 0), [allAnniversaries]);
@@ -192,7 +252,7 @@ export default function DashboardPage() {
 
   const moduleMap = useMemo(() => {
     if (!modules) return {};
-    return modules.reduce((acc, module) => {
+    return modules.reduce((acc: Record<string, string>, module: Module) => {
         acc[module.id] = module.name;
         return acc;
     }, {} as Record<string, string>);
@@ -208,16 +268,24 @@ export default function DashboardPage() {
   };
 
 
-  if (authLoading || appLoading || !user) {
+  if (authLoading) {
     return (
         <div className="flex items-center justify-center h-full">
-            <p>Carregando aplicação...</p>
+            <p>Carregando autenticação...</p>
         </div>
     );
   }
 
-  const canManageSystem = user.role === ROLES.ADMIN || user.role === ROLES.SUPERADMIN;
-  const userModules = user.modules?.map(moduleId => moduleMap[moduleId]).filter(Boolean) || [];
+  if (!isAuthenticated || !user) {
+    return (
+        <div className="flex items-center justify-center h-full">
+            <p>Redirecionando para login...</p>
+        </div>
+    );
+  }
+
+  const canManageSystem = user?.role === ROLES.ADMIN || user?.role === ROLES.SUPERADMIN;
+  const userModules = user?.modules?.map((moduleId: string) => moduleMap[moduleId]).filter(Boolean) || [];
 
   const renderAnniversaryGroup = (anniversaries: Anniversary[], type: 'birthday' | 'admission') => {
     const groupedData = groupAnniversariesByMonth(anniversaries.filter(a => a.type === type));
@@ -242,7 +310,7 @@ export default function DashboardPage() {
                 <div key={attendant.id} className="flex items-center justify-between p-2 mx-4 rounded-md border">
                     <Link href={`/dashboard/rh/atendentes/${attendant.id}`} className="flex items-center gap-3 group">
                         <Avatar className="h-10 w-10">
-                            <AvatarImage src={attendant.avatarUrl} alt={attendant.name} />
+                            <AvatarImage src={attendant.avatarUrl || undefined} alt={attendant.name} />
                             <AvatarFallback>{getInitials(attendant.name)}</AvatarFallback>
                         </Avatar>
                         <div>
@@ -284,7 +352,7 @@ export default function DashboardPage() {
                 <div key={attendant.id} className="flex items-center justify-between p-2 mx-4 rounded-md border">
                     <Link href={`/dashboard/rh/atendentes/${attendant.id}`} className="flex items-center gap-3 group">
                         <Avatar className="h-10 w-10">
-                            <AvatarImage src={attendant.avatarUrl} alt={attendant.name} />
+                            <AvatarImage src={attendant.avatarUrl || undefined} alt={attendant.name} />
                             <AvatarFallback>{getInitials(attendant.name)}</AvatarFallback>
                         </Avatar>
                         <div>
@@ -310,11 +378,11 @@ export default function DashboardPage() {
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold font-heading">Dashboard</h1>
-            <p className="text-muted-foreground">Bem-vindo de volta, {user.name}!</p>
+            <p className="text-muted-foreground">Bem-vindo de volta, {user?.name}!</p>
           </div>
           <Badge variant="outline" className="text-sm capitalize flex items-center gap-2">
-              <RoleIcon role={user.role} />
-              Seu nível de acesso: {user.role}
+              <RoleIcon role={user?.role || ''} />
+              Seu nível de acesso: {user?.role}
           </Badge>
         </div>
 
@@ -341,7 +409,7 @@ export default function DashboardPage() {
                          <div key={`${attendant.id}-${type}`} className="flex items-center justify-between p-3 bg-background rounded-md border">
                             <Link href={`/dashboard/rh/atendentes/${attendant.id}`} className="flex items-center gap-3 group">
                                 <Avatar className="h-10 w-10">
-                                    <AvatarImage src={attendant.avatarUrl} alt={attendant.name} />
+                                    <AvatarImage src={attendant.avatarUrl || undefined} alt={attendant.name} />
                                     <AvatarFallback>{getInitials(attendant.name)}</AvatarFallback>
                                 </Avatar>
                                 <div>
@@ -357,6 +425,28 @@ export default function DashboardPage() {
                 </CardContent>
             </Card>
         )}
+
+        {/* Alertas e Notificações */}
+        <DashboardAlerts 
+          alerts={[]} 
+          stats={{
+            totalEvaluations: dashboardStats?.totalEvaluations || 0,
+            totalAttendants: dashboardStats?.totalAttendants || 0,
+            averageRating: dashboardStats?.averageRating || 0,
+            recentTrend: evaluationTrend.length > 1 && 
+              evaluationTrend[evaluationTrend.length - 1]?.averageRating > 
+              evaluationTrend[evaluationTrend.length - 2]?.averageRating ? 'up' : 'down'
+          }}
+        />
+
+        {/* Ações Rápidas */}
+        <QuickActions 
+          userRole={user?.role || ROLES.USER}
+          stats={{
+            activeSeasons: dashboardStats?.activeSeasons || 0,
+            newAchievements: popularAchievements.length
+          }}
+        />
 
         {/* Abas principais do dashboard */}
         <Tabs defaultValue="overview" className="space-y-6">
@@ -384,7 +474,14 @@ export default function DashboardPage() {
               <EvaluationTrendChart data={evaluationTrend} isLoading={isLoadingStats} />
               <RatingDistributionChart data={ratingDistribution} isLoading={isLoadingStats} />
             </div>
-            <MonthlyStatsChart data={monthlyStats} isLoading={isLoadingStats} />
+            <div className="grid lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <MonthlyStatsChart data={monthlyStats} isLoading={isLoadingStats} />
+              </div>
+              <div>
+                <RecentActivity activities={recentActivities} isLoading={isLoadingStats} maxItems={8} />
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="evaluations" className="space-y-6">
@@ -487,7 +584,7 @@ export default function DashboardPage() {
           <CardContent>
               <div className="flex gap-2 mt-2 flex-wrap">
                   {userModules.length > 0 ? (
-                      userModules.map(moduleName => <Badge key={moduleName} className="capitalize">{moduleName}</Badge>)
+                      userModules.map((moduleName: string) => <Badge key={moduleName} className="capitalize">{moduleName}</Badge>)
                   ) : (
                       <p className="text-sm text-muted-foreground">Nenhum módulo atribuído.</p>
                   )}
@@ -536,7 +633,7 @@ export default function DashboardPage() {
               </div>
           </div>
         )}
-        {(user.role === ROLES.SUPERVISOR) && (
+        {(user?.role === ROLES.SUPERVISOR) && (
           <Card>
               <CardHeader>
                   <CardTitle>Visão do Supervisor</CardTitle>
@@ -547,7 +644,7 @@ export default function DashboardPage() {
               </CardContent>
           </Card>
         )}
-        {(user.role === ROLES.USER) && (
+        {(user?.role === ROLES.USER) && (
           <Card>
               <CardHeader>
                   <CardTitle>Painel do Usuário</CardTitle>

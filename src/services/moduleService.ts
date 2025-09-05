@@ -230,4 +230,9 @@ export class ModuleService {
       throw error;
     }
   }
+
+  // Alias para compatibilidade
+  static async getAllModules(): Promise<Module[]> {
+    return this.findAll();
+  }
 }

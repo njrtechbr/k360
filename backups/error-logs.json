@@ -1,5 +1,315 @@
 [
   {
+    "id": "backup_error_1757112836778_9t3uz9eoz",
+    "timestamp": "2025-09-05T22:53:56.778Z",
+    "errorType": "BACKUP_CREATION",
+    "severity": "HIGH",
+    "message": "Erro ao executar pg_dump: spawn pg_dump ENOENT",
+    "stack": "BackupError: Erro ao executar pg_dump: spawn pg_dump ENOENT\n    at _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.filepath.filepath (webpack-internal:///(rsc)/./src/services/backupService.ts:365:27)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.executePgDumpWithRetry (webpack-internal:///(rsc)/./src/services/backupService.ts:345:16)\n    at async _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.maxAttempts (webpack-internal:///(rsc)/./src/services/backupService.ts:77:36)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.createBackup (webpack-internal:///(rsc)/./src/services/backupService.ts:50:16)",
+    "context": {
+      "filepath": "backups\\backup_2025-09-05_22-53-51.sql",
+      "options": {
+        "includeData": true,
+        "includeSchema": true,
+        "compress": true,
+        "createdBy": "cmf5yovrd0000zmd6syh33nk3",
+        "createdByEmail": "superadmin@sistema.com",
+        "backupId": "9e2299dd-6223-425d-a58a-850c5776ccf3"
+      },
+      "operationName": "executePgDump",
+      "attemptNumber": 2
+    },
+    "attemptNumber": 2,
+    "resolved": false
+  },
+  {
+    "id": "backup_error_1757112831760_69f6xpkqz",
+    "timestamp": "2025-09-05T22:53:51.760Z",
+    "errorType": "BACKUP_CREATION",
+    "severity": "HIGH",
+    "message": "Erro ao executar pg_dump: spawn pg_dump ENOENT",
+    "stack": "BackupError: Erro ao executar pg_dump: spawn pg_dump ENOENT\n    at _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.filepath.filepath (webpack-internal:///(rsc)/./src/services/backupService.ts:365:27)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.executePgDumpWithRetry (webpack-internal:///(rsc)/./src/services/backupService.ts:345:16)\n    at async _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.maxAttempts (webpack-internal:///(rsc)/./src/services/backupService.ts:77:36)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.createBackup (webpack-internal:///(rsc)/./src/services/backupService.ts:50:16)",
+    "context": {
+      "filepath": "backups\\backup_2025-09-05_22-53-51.sql",
+      "options": {
+        "includeData": true,
+        "includeSchema": true,
+        "compress": true,
+        "createdBy": "cmf5yovrd0000zmd6syh33nk3",
+        "createdByEmail": "superadmin@sistema.com",
+        "backupId": "9e2299dd-6223-425d-a58a-850c5776ccf3"
+      },
+      "operationName": "executePgDump",
+      "attemptNumber": 1
+    },
+    "attemptNumber": 1,
+    "resolved": false
+  },
+  {
+    "id": "backup_error_1757112521874_61q257cnu",
+    "timestamp": "2025-09-05T22:48:41.874Z",
+    "errorType": "BACKUP_CREATION",
+    "severity": "HIGH",
+    "message": "Erro ao executar pg_dump: spawn pg_dump ENOENT",
+    "stack": "BackupError: Erro ao executar pg_dump: spawn pg_dump ENOENT\n    at _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.filepath.filepath (webpack-internal:///(rsc)/./src/services/backupService.ts:365:27)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.executePgDumpWithRetry (webpack-internal:///(rsc)/./src/services/backupService.ts:345:16)\n    at async _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.maxAttempts (webpack-internal:///(rsc)/./src/services/backupService.ts:77:36)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.createBackup (webpack-internal:///(rsc)/./src/services/backupService.ts:50:16)\n    at async eval (webpack-internal:///(rsc)/./src/app/api/backup/create/route.ts:65:28)\n    at async withBackupSecurity (webpack-internal:///(rsc)/./src/lib/middleware/backupSecurityMiddleware.ts:109:24)\n    at async AppRouteRouteModule.do (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\compiled\\next-server\\app-route.runtime.dev.js:26:34112)\n    at async AppRouteRouteModule.handle (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\compiled\\next-server\\app-route.runtime.dev.js:26:41338)\n    at async doRender (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1518:42)\n    at async DevServer.renderToResponseWithComponentsImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1920:28)\n    at async DevServer.renderPageComponent (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:2408:24)\n    at async DevServer.renderToResponseImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:2445:32)\n    at async DevServer.pipeImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1008:25)\n    at async NextNodeServer.handleCatchallRenderRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\next-server.js:305:17)\n    at async DevServer.handleRequestImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:900:17)\n    at async C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:371:20\n    at async Span.traceAsyncFn (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\trace\\trace.js:157:20)\n    at async DevServer.handleRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:368:24)\n    at async invokeRender (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:237:21)\n    at async handleRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:428:24)\n    at async requestHandlerImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:452:13)\n    at async Server.requestListener (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\start-server.js:158:13)",
+    "context": {
+      "filepath": "backups\\backup_2025-09-05_22-48-26.sql",
+      "options": {
+        "includeData": true,
+        "includeSchema": true,
+        "compress": true,
+        "createdBy": "cmf5yovrd0000zmd6syh33nk3",
+        "createdByEmail": "superadmin@sistema.com"
+      },
+      "operationName": "executePgDump",
+      "attemptNumber": 3
+    },
+    "attemptNumber": 3,
+    "resolved": false
+  },
+  {
+    "id": "backup_error_1757112521874_61q257cnu",
+    "timestamp": "2025-09-05T22:48:41.874Z",
+    "errorType": "BACKUP_CREATION",
+    "severity": "HIGH",
+    "message": "Erro ao executar pg_dump: spawn pg_dump ENOENT",
+    "stack": "BackupError: Erro ao executar pg_dump: spawn pg_dump ENOENT\n    at _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.filepath.filepath (webpack-internal:///(rsc)/./src/services/backupService.ts:365:27)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.executePgDumpWithRetry (webpack-internal:///(rsc)/./src/services/backupService.ts:345:16)\n    at async _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.maxAttempts (webpack-internal:///(rsc)/./src/services/backupService.ts:77:36)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.createBackup (webpack-internal:///(rsc)/./src/services/backupService.ts:50:16)\n    at async eval (webpack-internal:///(rsc)/./src/app/api/backup/create/route.ts:65:28)\n    at async withBackupSecurity (webpack-internal:///(rsc)/./src/lib/middleware/backupSecurityMiddleware.ts:109:24)\n    at async AppRouteRouteModule.do (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\compiled\\next-server\\app-route.runtime.dev.js:26:34112)\n    at async AppRouteRouteModule.handle (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\compiled\\next-server\\app-route.runtime.dev.js:26:41338)\n    at async doRender (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1518:42)\n    at async DevServer.renderToResponseWithComponentsImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1920:28)\n    at async DevServer.renderPageComponent (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:2408:24)\n    at async DevServer.renderToResponseImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:2445:32)\n    at async DevServer.pipeImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1008:25)\n    at async NextNodeServer.handleCatchallRenderRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\next-server.js:305:17)\n    at async DevServer.handleRequestImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:900:17)\n    at async C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:371:20\n    at async Span.traceAsyncFn (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\trace\\trace.js:157:20)\n    at async DevServer.handleRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:368:24)\n    at async invokeRender (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:237:21)\n    at async handleRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:428:24)\n    at async requestHandlerImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:452:13)\n    at async Server.requestListener (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\start-server.js:158:13)",
+    "context": {
+      "filepath": "backups\\backup_2025-09-05_22-48-26.sql",
+      "options": {
+        "includeData": true,
+        "includeSchema": true,
+        "compress": true,
+        "createdBy": "cmf5yovrd0000zmd6syh33nk3",
+        "createdByEmail": "superadmin@sistema.com"
+      },
+      "operationName": "createBackup",
+      "attemptNumber": 3
+    },
+    "attemptNumber": 3,
+    "resolved": false
+  },
+  {
+    "id": "backup_error_1757112511861_gemosb3om",
+    "timestamp": "2025-09-05T22:48:31.861Z",
+    "errorType": "BACKUP_CREATION",
+    "severity": "HIGH",
+    "message": "Erro ao executar pg_dump: spawn pg_dump ENOENT",
+    "stack": "BackupError: Erro ao executar pg_dump: spawn pg_dump ENOENT\n    at _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.filepath.filepath (webpack-internal:///(rsc)/./src/services/backupService.ts:365:27)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.executePgDumpWithRetry (webpack-internal:///(rsc)/./src/services/backupService.ts:345:16)\n    at async _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.maxAttempts (webpack-internal:///(rsc)/./src/services/backupService.ts:77:36)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.createBackup (webpack-internal:///(rsc)/./src/services/backupService.ts:50:16)\n    at async eval (webpack-internal:///(rsc)/./src/app/api/backup/create/route.ts:65:28)\n    at async withBackupSecurity (webpack-internal:///(rsc)/./src/lib/middleware/backupSecurityMiddleware.ts:109:24)\n    at async AppRouteRouteModule.do (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\compiled\\next-server\\app-route.runtime.dev.js:26:34112)\n    at async AppRouteRouteModule.handle (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\compiled\\next-server\\app-route.runtime.dev.js:26:41338)\n    at async doRender (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1518:42)\n    at async DevServer.renderToResponseWithComponentsImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1920:28)\n    at async DevServer.renderPageComponent (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:2408:24)\n    at async DevServer.renderToResponseImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:2445:32)\n    at async DevServer.pipeImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1008:25)\n    at async NextNodeServer.handleCatchallRenderRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\next-server.js:305:17)\n    at async DevServer.handleRequestImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:900:17)\n    at async C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:371:20\n    at async Span.traceAsyncFn (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\trace\\trace.js:157:20)\n    at async DevServer.handleRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:368:24)\n    at async invokeRender (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:237:21)\n    at async handleRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:428:24)\n    at async requestHandlerImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:452:13)\n    at async Server.requestListener (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\start-server.js:158:13)",
+    "context": {
+      "filepath": "backups\\backup_2025-09-05_22-48-26.sql",
+      "options": {
+        "includeData": true,
+        "includeSchema": true,
+        "compress": true,
+        "createdBy": "cmf5yovrd0000zmd6syh33nk3",
+        "createdByEmail": "superadmin@sistema.com"
+      },
+      "operationName": "executePgDump",
+      "attemptNumber": 2
+    },
+    "attemptNumber": 2,
+    "resolved": false
+  },
+  {
+    "id": "backup_error_1757112506856_facbsdzju",
+    "timestamp": "2025-09-05T22:48:26.856Z",
+    "errorType": "BACKUP_CREATION",
+    "severity": "HIGH",
+    "message": "Erro ao executar pg_dump: spawn pg_dump ENOENT",
+    "stack": "BackupError: Erro ao executar pg_dump: spawn pg_dump ENOENT\n    at _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.filepath.filepath (webpack-internal:///(rsc)/./src/services/backupService.ts:365:27)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.executePgDumpWithRetry (webpack-internal:///(rsc)/./src/services/backupService.ts:345:16)\n    at async _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.maxAttempts (webpack-internal:///(rsc)/./src/services/backupService.ts:77:36)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.createBackup (webpack-internal:///(rsc)/./src/services/backupService.ts:50:16)\n    at async eval (webpack-internal:///(rsc)/./src/app/api/backup/create/route.ts:65:28)\n    at async withBackupSecurity (webpack-internal:///(rsc)/./src/lib/middleware/backupSecurityMiddleware.ts:109:24)\n    at async AppRouteRouteModule.do (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\compiled\\next-server\\app-route.runtime.dev.js:26:34112)\n    at async AppRouteRouteModule.handle (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\compiled\\next-server\\app-route.runtime.dev.js:26:41338)\n    at async doRender (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1518:42)\n    at async DevServer.renderToResponseWithComponentsImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1920:28)\n    at async DevServer.renderPageComponent (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:2408:24)\n    at async DevServer.renderToResponseImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:2445:32)\n    at async DevServer.pipeImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1008:25)\n    at async NextNodeServer.handleCatchallRenderRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\next-server.js:305:17)\n    at async DevServer.handleRequestImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:900:17)\n    at async C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:371:20\n    at async Span.traceAsyncFn (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\trace\\trace.js:157:20)\n    at async DevServer.handleRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:368:24)\n    at async invokeRender (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:237:21)\n    at async handleRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:428:24)\n    at async requestHandlerImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:452:13)\n    at async Server.requestListener (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\start-server.js:158:13)",
+    "context": {
+      "filepath": "backups\\backup_2025-09-05_22-48-26.sql",
+      "options": {
+        "includeData": true,
+        "includeSchema": true,
+        "compress": true,
+        "createdBy": "cmf5yovrd0000zmd6syh33nk3",
+        "createdByEmail": "superadmin@sistema.com"
+      },
+      "operationName": "executePgDump",
+      "attemptNumber": 1
+    },
+    "attemptNumber": 1,
+    "resolved": false
+  },
+  {
+    "id": "backup_error_1757112502840_4sh9ghl3z",
+    "timestamp": "2025-09-05T22:48:22.840Z",
+    "errorType": "BACKUP_CREATION",
+    "severity": "HIGH",
+    "message": "Erro ao executar pg_dump: spawn pg_dump ENOENT",
+    "stack": "BackupError: Erro ao executar pg_dump: spawn pg_dump ENOENT\n    at _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.filepath.filepath (webpack-internal:///(rsc)/./src/services/backupService.ts:365:27)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.executePgDumpWithRetry (webpack-internal:///(rsc)/./src/services/backupService.ts:345:16)\n    at async _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.maxAttempts (webpack-internal:///(rsc)/./src/services/backupService.ts:77:36)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.createBackup (webpack-internal:///(rsc)/./src/services/backupService.ts:50:16)\n    at async eval (webpack-internal:///(rsc)/./src/app/api/backup/create/route.ts:65:28)\n    at async withBackupSecurity (webpack-internal:///(rsc)/./src/lib/middleware/backupSecurityMiddleware.ts:109:24)\n    at async AppRouteRouteModule.do (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\compiled\\next-server\\app-route.runtime.dev.js:26:34112)\n    at async AppRouteRouteModule.handle (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\compiled\\next-server\\app-route.runtime.dev.js:26:41338)\n    at async doRender (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1518:42)\n    at async DevServer.renderToResponseWithComponentsImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1920:28)\n    at async DevServer.renderPageComponent (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:2408:24)\n    at async DevServer.renderToResponseImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:2445:32)\n    at async DevServer.pipeImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1008:25)\n    at async NextNodeServer.handleCatchallRenderRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\next-server.js:305:17)\n    at async DevServer.handleRequestImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:900:17)\n    at async C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:371:20\n    at async Span.traceAsyncFn (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\trace\\trace.js:157:20)\n    at async DevServer.handleRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:368:24)\n    at async invokeRender (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:237:21)\n    at async handleRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:428:24)\n    at async requestHandlerImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:452:13)\n    at async Server.requestListener (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\start-server.js:158:13)",
+    "context": {
+      "filepath": "backups\\backup_2025-09-05_22-48-07.sql",
+      "options": {
+        "includeData": true,
+        "includeSchema": true,
+        "compress": true,
+        "createdBy": "cmf5yovrd0000zmd6syh33nk3",
+        "createdByEmail": "superadmin@sistema.com"
+      },
+      "operationName": "executePgDump",
+      "attemptNumber": 3
+    },
+    "attemptNumber": 3,
+    "resolved": false
+  },
+  {
+    "id": "backup_error_1757112502840_4sh9ghl3z",
+    "timestamp": "2025-09-05T22:48:22.840Z",
+    "errorType": "BACKUP_CREATION",
+    "severity": "HIGH",
+    "message": "Erro ao executar pg_dump: spawn pg_dump ENOENT",
+    "stack": "BackupError: Erro ao executar pg_dump: spawn pg_dump ENOENT\n    at _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.filepath.filepath (webpack-internal:///(rsc)/./src/services/backupService.ts:365:27)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.executePgDumpWithRetry (webpack-internal:///(rsc)/./src/services/backupService.ts:345:16)\n    at async _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.maxAttempts (webpack-internal:///(rsc)/./src/services/backupService.ts:77:36)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.createBackup (webpack-internal:///(rsc)/./src/services/backupService.ts:50:16)\n    at async eval (webpack-internal:///(rsc)/./src/app/api/backup/create/route.ts:65:28)\n    at async withBackupSecurity (webpack-internal:///(rsc)/./src/lib/middleware/backupSecurityMiddleware.ts:109:24)\n    at async AppRouteRouteModule.do (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\compiled\\next-server\\app-route.runtime.dev.js:26:34112)\n    at async AppRouteRouteModule.handle (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\compiled\\next-server\\app-route.runtime.dev.js:26:41338)\n    at async doRender (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1518:42)\n    at async DevServer.renderToResponseWithComponentsImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1920:28)\n    at async DevServer.renderPageComponent (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:2408:24)\n    at async DevServer.renderToResponseImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:2445:32)\n    at async DevServer.pipeImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1008:25)\n    at async NextNodeServer.handleCatchallRenderRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\next-server.js:305:17)\n    at async DevServer.handleRequestImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:900:17)\n    at async C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:371:20\n    at async Span.traceAsyncFn (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\trace\\trace.js:157:20)\n    at async DevServer.handleRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:368:24)\n    at async invokeRender (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:237:21)\n    at async handleRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:428:24)\n    at async requestHandlerImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:452:13)\n    at async Server.requestListener (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\start-server.js:158:13)",
+    "context": {
+      "filepath": "backups\\backup_2025-09-05_22-48-07.sql",
+      "options": {
+        "includeData": true,
+        "includeSchema": true,
+        "compress": true,
+        "createdBy": "cmf5yovrd0000zmd6syh33nk3",
+        "createdByEmail": "superadmin@sistema.com"
+      },
+      "operationName": "createBackup",
+      "attemptNumber": 2
+    },
+    "attemptNumber": 2,
+    "resolved": false
+  },
+  {
+    "id": "backup_error_1757112492828_vohf0gknq",
+    "timestamp": "2025-09-05T22:48:12.828Z",
+    "errorType": "BACKUP_CREATION",
+    "severity": "HIGH",
+    "message": "Erro ao executar pg_dump: spawn pg_dump ENOENT",
+    "stack": "BackupError: Erro ao executar pg_dump: spawn pg_dump ENOENT\n    at _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.filepath.filepath (webpack-internal:///(rsc)/./src/services/backupService.ts:365:27)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.executePgDumpWithRetry (webpack-internal:///(rsc)/./src/services/backupService.ts:345:16)\n    at async _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.maxAttempts (webpack-internal:///(rsc)/./src/services/backupService.ts:77:36)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.createBackup (webpack-internal:///(rsc)/./src/services/backupService.ts:50:16)\n    at async eval (webpack-internal:///(rsc)/./src/app/api/backup/create/route.ts:65:28)\n    at async withBackupSecurity (webpack-internal:///(rsc)/./src/lib/middleware/backupSecurityMiddleware.ts:109:24)\n    at async AppRouteRouteModule.do (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\compiled\\next-server\\app-route.runtime.dev.js:26:34112)\n    at async AppRouteRouteModule.handle (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\compiled\\next-server\\app-route.runtime.dev.js:26:41338)\n    at async doRender (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1518:42)\n    at async DevServer.renderToResponseWithComponentsImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1920:28)\n    at async DevServer.renderPageComponent (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:2408:24)\n    at async DevServer.renderToResponseImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:2445:32)\n    at async DevServer.pipeImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1008:25)\n    at async NextNodeServer.handleCatchallRenderRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\next-server.js:305:17)\n    at async DevServer.handleRequestImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:900:17)\n    at async C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:371:20\n    at async Span.traceAsyncFn (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\trace\\trace.js:157:20)\n    at async DevServer.handleRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:368:24)\n    at async invokeRender (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:237:21)\n    at async handleRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:428:24)\n    at async requestHandlerImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:452:13)\n    at async Server.requestListener (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\start-server.js:158:13)",
+    "context": {
+      "filepath": "backups\\backup_2025-09-05_22-48-07.sql",
+      "options": {
+        "includeData": true,
+        "includeSchema": true,
+        "compress": true,
+        "createdBy": "cmf5yovrd0000zmd6syh33nk3",
+        "createdByEmail": "superadmin@sistema.com"
+      },
+      "operationName": "executePgDump",
+      "attemptNumber": 2
+    },
+    "attemptNumber": 2,
+    "resolved": false
+  },
+  {
+    "id": "backup_error_1757112487809_fzb3s158j",
+    "timestamp": "2025-09-05T22:48:07.809Z",
+    "errorType": "BACKUP_CREATION",
+    "severity": "HIGH",
+    "message": "Erro ao executar pg_dump: spawn pg_dump ENOENT",
+    "stack": "BackupError: Erro ao executar pg_dump: spawn pg_dump ENOENT\n    at _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.filepath.filepath (webpack-internal:///(rsc)/./src/services/backupService.ts:365:27)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.executePgDumpWithRetry (webpack-internal:///(rsc)/./src/services/backupService.ts:345:16)\n    at async _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.maxAttempts (webpack-internal:///(rsc)/./src/services/backupService.ts:77:36)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.createBackup (webpack-internal:///(rsc)/./src/services/backupService.ts:50:16)\n    at async eval (webpack-internal:///(rsc)/./src/app/api/backup/create/route.ts:65:28)\n    at async withBackupSecurity (webpack-internal:///(rsc)/./src/lib/middleware/backupSecurityMiddleware.ts:109:24)\n    at async AppRouteRouteModule.do (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\compiled\\next-server\\app-route.runtime.dev.js:26:34112)\n    at async AppRouteRouteModule.handle (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\compiled\\next-server\\app-route.runtime.dev.js:26:41338)\n    at async doRender (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1518:42)\n    at async DevServer.renderToResponseWithComponentsImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1920:28)\n    at async DevServer.renderPageComponent (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:2408:24)\n    at async DevServer.renderToResponseImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:2445:32)\n    at async DevServer.pipeImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1008:25)\n    at async NextNodeServer.handleCatchallRenderRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\next-server.js:305:17)\n    at async DevServer.handleRequestImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:900:17)\n    at async C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:371:20\n    at async Span.traceAsyncFn (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\trace\\trace.js:157:20)\n    at async DevServer.handleRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:368:24)\n    at async invokeRender (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:237:21)\n    at async handleRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:428:24)\n    at async requestHandlerImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:452:13)\n    at async Server.requestListener (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\start-server.js:158:13)",
+    "context": {
+      "filepath": "backups\\backup_2025-09-05_22-48-07.sql",
+      "options": {
+        "includeData": true,
+        "includeSchema": true,
+        "compress": true,
+        "createdBy": "cmf5yovrd0000zmd6syh33nk3",
+        "createdByEmail": "superadmin@sistema.com"
+      },
+      "operationName": "executePgDump",
+      "attemptNumber": 1
+    },
+    "attemptNumber": 1,
+    "resolved": false
+  },
+  {
+    "id": "backup_error_1757112485790_8po4fz2t5",
+    "timestamp": "2025-09-05T22:48:05.790Z",
+    "errorType": "BACKUP_CREATION",
+    "severity": "HIGH",
+    "message": "Erro ao executar pg_dump: spawn pg_dump ENOENT",
+    "stack": "BackupError: Erro ao executar pg_dump: spawn pg_dump ENOENT\n    at _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.filepath.filepath (webpack-internal:///(rsc)/./src/services/backupService.ts:365:27)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.executePgDumpWithRetry (webpack-internal:///(rsc)/./src/services/backupService.ts:345:16)\n    at async _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.maxAttempts (webpack-internal:///(rsc)/./src/services/backupService.ts:77:36)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.createBackup (webpack-internal:///(rsc)/./src/services/backupService.ts:50:16)\n    at async eval (webpack-internal:///(rsc)/./src/app/api/backup/create/route.ts:65:28)\n    at async withBackupSecurity (webpack-internal:///(rsc)/./src/lib/middleware/backupSecurityMiddleware.ts:109:24)\n    at async AppRouteRouteModule.do (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\compiled\\next-server\\app-route.runtime.dev.js:26:34112)\n    at async AppRouteRouteModule.handle (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\compiled\\next-server\\app-route.runtime.dev.js:26:41338)\n    at async doRender (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1518:42)\n    at async DevServer.renderToResponseWithComponentsImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1920:28)\n    at async DevServer.renderPageComponent (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:2408:24)\n    at async DevServer.renderToResponseImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:2445:32)\n    at async DevServer.pipeImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1008:25)\n    at async NextNodeServer.handleCatchallRenderRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\next-server.js:305:17)\n    at async DevServer.handleRequestImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:900:17)\n    at async C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:371:20\n    at async Span.traceAsyncFn (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\trace\\trace.js:157:20)\n    at async DevServer.handleRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:368:24)\n    at async invokeRender (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:237:21)\n    at async handleRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:428:24)\n    at async requestHandlerImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:452:13)\n    at async Server.requestListener (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\start-server.js:158:13)",
+    "context": {
+      "filepath": "backups\\backup_2025-09-05_22-47-50.sql",
+      "options": {
+        "includeData": true,
+        "includeSchema": true,
+        "compress": true,
+        "createdBy": "cmf5yovrd0000zmd6syh33nk3",
+        "createdByEmail": "superadmin@sistema.com"
+      },
+      "operationName": "executePgDump",
+      "attemptNumber": 3
+    },
+    "attemptNumber": 3,
+    "resolved": false
+  },
+  {
+    "id": "backup_error_1757112485790_8po4fz2t5",
+    "timestamp": "2025-09-05T22:48:05.790Z",
+    "errorType": "BACKUP_CREATION",
+    "severity": "HIGH",
+    "message": "Erro ao executar pg_dump: spawn pg_dump ENOENT",
+    "stack": "BackupError: Erro ao executar pg_dump: spawn pg_dump ENOENT\n    at _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.filepath.filepath (webpack-internal:///(rsc)/./src/services/backupService.ts:365:27)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.executePgDumpWithRetry (webpack-internal:///(rsc)/./src/services/backupService.ts:345:16)\n    at async _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.maxAttempts (webpack-internal:///(rsc)/./src/services/backupService.ts:77:36)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.createBackup (webpack-internal:///(rsc)/./src/services/backupService.ts:50:16)\n    at async eval (webpack-internal:///(rsc)/./src/app/api/backup/create/route.ts:65:28)\n    at async withBackupSecurity (webpack-internal:///(rsc)/./src/lib/middleware/backupSecurityMiddleware.ts:109:24)\n    at async AppRouteRouteModule.do (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\compiled\\next-server\\app-route.runtime.dev.js:26:34112)\n    at async AppRouteRouteModule.handle (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\compiled\\next-server\\app-route.runtime.dev.js:26:41338)\n    at async doRender (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1518:42)\n    at async DevServer.renderToResponseWithComponentsImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1920:28)\n    at async DevServer.renderPageComponent (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:2408:24)\n    at async DevServer.renderToResponseImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:2445:32)\n    at async DevServer.pipeImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1008:25)\n    at async NextNodeServer.handleCatchallRenderRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\next-server.js:305:17)\n    at async DevServer.handleRequestImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:900:17)\n    at async C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:371:20\n    at async Span.traceAsyncFn (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\trace\\trace.js:157:20)\n    at async DevServer.handleRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:368:24)\n    at async invokeRender (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:237:21)\n    at async handleRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:428:24)\n    at async requestHandlerImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:452:13)\n    at async Server.requestListener (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\start-server.js:158:13)",
+    "context": {
+      "filepath": "backups\\backup_2025-09-05_22-47-50.sql",
+      "options": {
+        "includeData": true,
+        "includeSchema": true,
+        "compress": true,
+        "createdBy": "cmf5yovrd0000zmd6syh33nk3",
+        "createdByEmail": "superadmin@sistema.com"
+      },
+      "operationName": "createBackup",
+      "attemptNumber": 1
+    },
+    "attemptNumber": 1,
+    "resolved": false
+  },
+  {
+    "id": "backup_error_1757112475777_qclgh5bx2",
+    "timestamp": "2025-09-05T22:47:55.777Z",
+    "errorType": "BACKUP_CREATION",
+    "severity": "HIGH",
+    "message": "Erro ao executar pg_dump: spawn pg_dump ENOENT",
+    "stack": "BackupError: Erro ao executar pg_dump: spawn pg_dump ENOENT\n    at _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.filepath.filepath (webpack-internal:///(rsc)/./src/services/backupService.ts:365:27)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.executePgDumpWithRetry (webpack-internal:///(rsc)/./src/services/backupService.ts:345:16)\n    at async _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.maxAttempts (webpack-internal:///(rsc)/./src/services/backupService.ts:77:36)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.createBackup (webpack-internal:///(rsc)/./src/services/backupService.ts:50:16)\n    at async eval (webpack-internal:///(rsc)/./src/app/api/backup/create/route.ts:65:28)\n    at async withBackupSecurity (webpack-internal:///(rsc)/./src/lib/middleware/backupSecurityMiddleware.ts:109:24)\n    at async AppRouteRouteModule.do (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\compiled\\next-server\\app-route.runtime.dev.js:26:34112)\n    at async AppRouteRouteModule.handle (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\compiled\\next-server\\app-route.runtime.dev.js:26:41338)\n    at async doRender (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1518:42)\n    at async DevServer.renderToResponseWithComponentsImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1920:28)\n    at async DevServer.renderPageComponent (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:2408:24)\n    at async DevServer.renderToResponseImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:2445:32)\n    at async DevServer.pipeImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1008:25)\n    at async NextNodeServer.handleCatchallRenderRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\next-server.js:305:17)\n    at async DevServer.handleRequestImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:900:17)\n    at async C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:371:20\n    at async Span.traceAsyncFn (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\trace\\trace.js:157:20)\n    at async DevServer.handleRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:368:24)\n    at async invokeRender (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:237:21)\n    at async handleRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:428:24)\n    at async requestHandlerImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:452:13)\n    at async Server.requestListener (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\start-server.js:158:13)",
+    "context": {
+      "filepath": "backups\\backup_2025-09-05_22-47-50.sql",
+      "options": {
+        "includeData": true,
+        "includeSchema": true,
+        "compress": true,
+        "createdBy": "cmf5yovrd0000zmd6syh33nk3",
+        "createdByEmail": "superadmin@sistema.com"
+      },
+      "operationName": "executePgDump",
+      "attemptNumber": 2
+    },
+    "attemptNumber": 2,
+    "resolved": false
+  },
+  {
+    "id": "backup_error_1757112470763_i0e7asqkj",
+    "timestamp": "2025-09-05T22:47:50.763Z",
+    "errorType": "BACKUP_CREATION",
+    "severity": "HIGH",
+    "message": "Erro ao executar pg_dump: spawn pg_dump ENOENT",
+    "stack": "BackupError: Erro ao executar pg_dump: spawn pg_dump ENOENT\n    at _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.filepath.filepath (webpack-internal:///(rsc)/./src/services/backupService.ts:365:27)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.executePgDumpWithRetry (webpack-internal:///(rsc)/./src/services/backupService.ts:345:16)\n    at async _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.maxAttempts (webpack-internal:///(rsc)/./src/services/backupService.ts:77:36)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.createBackup (webpack-internal:///(rsc)/./src/services/backupService.ts:50:16)\n    at async eval (webpack-internal:///(rsc)/./src/app/api/backup/create/route.ts:65:28)\n    at async withBackupSecurity (webpack-internal:///(rsc)/./src/lib/middleware/backupSecurityMiddleware.ts:109:24)\n    at async AppRouteRouteModule.do (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\compiled\\next-server\\app-route.runtime.dev.js:26:34112)\n    at async AppRouteRouteModule.handle (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\compiled\\next-server\\app-route.runtime.dev.js:26:41338)\n    at async doRender (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1518:42)\n    at async DevServer.renderToResponseWithComponentsImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1920:28)\n    at async DevServer.renderPageComponent (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:2408:24)\n    at async DevServer.renderToResponseImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:2445:32)\n    at async DevServer.pipeImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:1008:25)\n    at async NextNodeServer.handleCatchallRenderRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\next-server.js:305:17)\n    at async DevServer.handleRequestImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\base-server.js:900:17)\n    at async C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:371:20\n    at async Span.traceAsyncFn (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\trace\\trace.js:157:20)\n    at async DevServer.handleRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\dev\\next-dev-server.js:368:24)\n    at async invokeRender (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:237:21)\n    at async handleRequest (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:428:24)\n    at async requestHandlerImpl (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\router-server.js:452:13)\n    at async Server.requestListener (C:\\Users\\nnvlj\\dev\\k360\\node_modules\\next\\dist\\server\\lib\\start-server.js:158:13)",
+    "context": {
+      "filepath": "backups\\backup_2025-09-05_22-47-50.sql",
+      "options": {
+        "includeData": true,
+        "includeSchema": true,
+        "compress": true,
+        "createdBy": "cmf5yovrd0000zmd6syh33nk3",
+        "createdByEmail": "superadmin@sistema.com"
+      },
+      "operationName": "executePgDump",
+      "attemptNumber": 1
+    },
+    "attemptNumber": 1,
+    "resolved": false
+  },
+  {
     "id": "backup_error_1757110722769_bm5ynxphq",
     "timestamp": "2025-09-05T22:18:42.769Z",
     "errorType": "BACKUP_CREATION",

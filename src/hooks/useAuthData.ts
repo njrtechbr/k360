@@ -1,86 +1,65 @@
+import { useState, useEffect, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
+import type { User, Module, Attendant } from '@/lib/types';
 
-"use client";
-
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useToast } from '@/hooks/use-toast';
-import type { User } from '@/lib/types';
-
-const USERS_STORAGE_KEY = "controle_acesso_users";
-const SESSION_STORAGE_KEY = "controle_acesso_session";
-
-export function useAuthData() {
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
-    const router = useRouter();
-    const { toast } = useToast();
-
-    useEffect(() => {
-        if (typeof window !== "undefined") {
-            const sessionJson = localStorage.getItem(SESSION_STORAGE_KEY);
-            if (sessionJson) {
-                try {
-                    setUser(JSON.parse(sessionJson));
-                } catch (error) {
-                    console.error("Failed to parse session from localStorage", error);
-                    localStorage.removeItem(SESSION_STORAGE_KEY);
-                }
-            }
-            setLoading(false);
-        }
-    }, []);
-
-    const login = async (email: string, password: string): Promise<void> => {
-        try {
-            const response = await fetch('/api/users/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email, password }),
-            });
-
-            const data = await response.json();
-
-            if (response.ok && data.success) {
-                const foundUser = data.user;
-                setUser(foundUser as User);
-                localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(foundUser));
-                toast({
-                    title: "Login bem-sucedido!",
-                    description: `Bem-vindo de volta, ${foundUser.name}.`,
-                });
-                router.push("/dashboard");
-            } else {
-                toast({
-                    variant: "destructive",
-                    title: "Erro de autenticação",
-                    description: data.error || "Email ou senha incorretos.",
-                });
-                throw new Error(data.error || "Credenciais inválidas");
-            }
-        } catch (error: any) {
-            console.error("Erro ao fazer login:", error);
-            toast({
-                variant: "destructive",
-                title: "Erro de autenticação",
-                description: error.message || "Ocorreu um erro ao tentar fazer login.",
-            });
-            throw error;
-        }
-    };
-
-    const logout = () => {
-        setUser(null);
-        localStorage.removeItem(SESSION_STORAGE_KEY);
-        router.push("/login");
-        toast({
-            title: "Logout realizado",
-            description: "Você foi desconectado com sucesso.",
-        });
-    };
-
-    return { user, setUser, loading, login, logout };
+interface AuthData {
+  modules: Module[] | null;
+  attendants: Attendant[] | null;
+  isLoading: boolean;
+  error: string | null;
+  refetch: () => Promise<void>;
 }
 
-    
+export function useAuthData(): AuthData {
+  const { data: session, status } = useSession();
+  const [modules, setModules] = useState<Module[] | null>(null);
+  const [attendants, setAttendants] = useState<Attendant[] | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchData = useCallback(async () => {
+    if (status !== 'authenticated' || !session?.user) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const [modulesResponse, attendantsResponse] = await Promise.all([
+        fetch('/api/modules'),
+        fetch('/api/attendants')
+      ]);
+
+      if (!modulesResponse.ok || !attendantsResponse.ok) {
+        throw new Error('Erro ao carregar dados');
+      }
+
+      const [modulesData, attendantsData] = await Promise.all([
+        modulesResponse.json(),
+        attendantsResponse.json()
+      ]);
+
+      setModules(modulesData);
+      setAttendants(attendantsData);
+    } catch (err) {
+      console.error('Erro ao carregar dados de autenticação:', err);
+      setError(err instanceof Error ? err.message : 'Erro desconhecido');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [session, status]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return {
+    modules,
+    attendants,
+    isLoading,
+    error,
+    refetch: fetchData
+  };
+}

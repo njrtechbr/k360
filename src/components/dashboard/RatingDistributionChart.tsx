@@ -1,6 +1,6 @@
 "use client";
 
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
+import { Bar, BarChart, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3 } from "lucide-react";
@@ -74,7 +74,7 @@ export function RatingDistributionChart({ data, isLoading }: RatingDistributionC
             <ChartTooltip 
               content={
                 <ChartTooltipContent 
-                  formatter={(value, name) => [
+                  formatter={(value) => [
                     `${value} avaliações (${formattedData.find(d => d.count === value)?.percentage.toFixed(1)}%)`,
                     'Quantidade'
                   ]}
