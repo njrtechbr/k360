@@ -322,5 +322,404 @@ describe('/api/gamification/xp-grants', () => {
         sortOrder: 'desc'
       });
     });
+
+    it('deve aplicar filtros de data corretamente', async () => {
+      mockAuthMiddleware.checkAuth.mockResolvedValue({
+        authorized: true,
+        session: {
+          user: {
+            id: 'user-1',
+            email: 'supervisor@test.com',
+            name: 'Supervisor Test',
+            role: 'SUPERVISOR'
+          }
+        }
+      });
+
+      mockXpAvulsoService.findGrantHistory.mockResolvedValue({
+        grants: [],
+        total: 0,
+        page: 1,
+        totalPages: 0
+      } as any);
+
+      const request = new NextRequest(
+        'http://localhost/api/gamification/xp-grants?startDate=2024-01-01&endDate=2024-12-31'
+      );
+
+      await GET(request);
+
+      expect(mockXpAvulsoService.findGrantHistory).toHaveBeenCalledWith({
+        startDate: new Date('2024-01-01T00:00:00.000Z'),
+        endDate: new Date('2024-12-31T00:00:00.000Z'),
+        page: 1,
+        limit: 20,
+        sortBy: 'grantedAt',
+        sortOrder: 'desc'
+      });
+    });
+
+    it('deve aplicar filtros de pontos corretamente', async () => {
+      mockAuthMiddleware.checkAuth.mockResolvedValue({
+        authorized: true,
+        session: {
+          user: {
+            id: 'user-1',
+            email: 'supervisor@test.com',
+            name: 'Supervisor Test',
+            role: 'SUPERVISOR'
+          }
+        }
+      });
+
+      mockXpAvulsoService.findGrantHistory.mockResolvedValue({
+        grants: [],
+        total: 0,
+        page: 1,
+        totalPages: 0
+      } as any);
+
+      const request = new NextRequest(
+        'http://localhost/api/gamification/xp-grants?minPoints=50&maxPoints=200'
+      );
+
+      await GET(request);
+
+      expect(mockXpAvulsoService.findGrantHistory).toHaveBeenCalledWith({
+        minPoints: 50,
+        maxPoints: 200,
+        page: 1,
+        limit: 20,
+        sortBy: 'grantedAt',
+        sortOrder: 'desc'
+      });
+    });
+
+    it('deve retornar erro 401 se não autenticado', async () => {
+      mockAuthMiddleware.checkAuth.mockResolvedValue({
+        authorized: false,
+        error: 'Não autorizado',
+        statusCode: 401
+      });
+
+      const request = new NextRequest('http://localhost/api/gamification/xp-grants');
+
+      const response = await GET(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(401);
+      expect(data.error).toBe('Não autorizado');
+    });
+
+    it('deve tratar erros do serviço', async () => {
+      mockAuthMiddleware.checkAuth.mockResolvedValue({
+        authorized: true,
+        session: {
+          user: {
+            id: 'user-1',
+            email: 'supervisor@test.com',
+            name: 'Supervisor Test',
+            role: 'SUPERVISOR'
+          }
+        }
+      });
+
+      mockXpAvulsoService.findGrantHistory.mockRejectedValue(
+        new Error('Erro no banco de dados')
+      );
+
+      const request = new NextRequest('http://localhost/api/gamification/xp-grants');
+
+      const response = await GET(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(500);
+      expect(data.error).toBe('Erro interno do servidor ao buscar histórico');
+    });
+  });
+
+  describe('Rate Limiting', () => {
+    it('deve aplicar rate limiting no POST', async () => {
+      const { xpGrantRateLimiter } = require('@/lib/rate-limit');
+      xpGrantRateLimiter.checkLimit.mockResolvedValueOnce({
+        allowed: false,
+        remaining: 0,
+        resetTime: Date.now() + 60000
+      });
+
+      mockAuthMiddleware.checkAuth.mockResolvedValue({
+        authorized: true,
+        session: {
+          user: {
+            id: 'user-1',
+            email: 'admin@test.com',
+            name: 'Admin Test',
+            role: 'ADMIN'
+          }
+        }
+      });
+
+      const request = new NextRequest('http://localhost/api/gamification/xp-grants', {
+        method: 'POST',
+        body: JSON.stringify({
+          attendantId: 'att-1',
+          typeId: 'type-1'
+        })
+      });
+
+      const response = await POST(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(429);
+      expect(data.error).toBe('Muitas tentativas de concessão. Tente novamente em alguns instantes.');
+    });
+
+    it('deve aplicar rate limiting no GET', async () => {
+      const { xpAvulsoRateLimiter } = require('@/lib/rate-limit');
+      xpAvulsoRateLimiter.checkLimit.mockResolvedValueOnce({
+        allowed: false,
+        remaining: 0,
+        resetTime: Date.now() + 60000
+      });
+
+      mockAuthMiddleware.checkAuth.mockResolvedValue({
+        authorized: true,
+        session: {
+          user: {
+            id: 'user-1',
+            email: 'supervisor@test.com',
+            name: 'Supervisor Test',
+            role: 'SUPERVISOR'
+          }
+        }
+      });
+
+      const request = new NextRequest('http://localhost/api/gamification/xp-grants');
+
+      const response = await GET(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(429);
+      expect(data.error).toBe('Muitas tentativas. Tente novamente em alguns instantes.');
+    });
+  });
+
+  describe('Validação de Dados', () => {
+    beforeEach(() => {
+      // Reset rate limiter mocks para estes testes
+      mockRateLimit.xpGrantRateLimiter.checkLimit.mockResolvedValue({
+        allowed: true,
+        remaining: 9,
+        resetTime: Date.now() + 60000
+      });
+      mockRateLimit.xpAvulsoRateLimiter.checkLimit.mockResolvedValue({
+        allowed: true,
+        remaining: 29,
+        resetTime: Date.now() + 60000
+      });
+    });
+
+    it('deve validar JSON malformado no POST', async () => {
+      mockAuthMiddleware.checkAuth.mockResolvedValue({
+        authorized: true,
+        session: {
+          user: {
+            id: 'user-1',
+            email: 'admin@test.com',
+            name: 'Admin Test',
+            role: 'ADMIN'
+          }
+        }
+      });
+
+      const request = new NextRequest('http://localhost/api/gamification/xp-grants', {
+        method: 'POST',
+        body: 'invalid json',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const response = await POST(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(data.error).toBe('JSON inválido');
+    });
+
+    it('deve validar campos obrigatórios no POST', async () => {
+      mockAuthMiddleware.checkAuth.mockResolvedValue({
+        authorized: true,
+        session: {
+          user: {
+            id: 'user-1',
+            email: 'admin@test.com',
+            name: 'Admin Test',
+            role: 'ADMIN'
+          }
+        }
+      });
+
+      const request = new NextRequest('http://localhost/api/gamification/xp-grants', {
+        method: 'POST',
+        body: JSON.stringify({}),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const response = await POST(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(data.error).toBe('Dados inválidos');
+      expect(data.details).toBeDefined();
+    });
+
+    it('deve validar parâmetros de query inválidos no GET', async () => {
+      mockAuthMiddleware.checkAuth.mockResolvedValue({
+        authorized: true,
+        session: {
+          user: {
+            id: 'user-1',
+            email: 'supervisor@test.com',
+            name: 'Supervisor Test',
+            role: 'SUPERVISOR'
+          }
+        }
+      });
+
+      const request = new NextRequest(
+        'http://localhost/api/gamification/xp-grants?page=0&limit=0&sortBy=invalid'
+      );
+
+      const response = await GET(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(data.error).toBe('Parâmetros inválidos');
+      expect(data.details).toBeDefined();
+    });
+  });
+
+  describe('Tratamento de Erros Específicos', () => {
+    beforeEach(() => {
+      // Reset rate limiter mocks para estes testes
+      mockRateLimit.xpGrantRateLimiter.checkLimit.mockResolvedValue({
+        allowed: true,
+        remaining: 9,
+        resetTime: Date.now() + 60000
+      });
+      mockRateLimit.xpAvulsoRateLimiter.checkLimit.mockResolvedValue({
+        allowed: true,
+        remaining: 29,
+        resetTime: Date.now() + 60000
+      });
+    });
+
+    it('deve tratar erro de temporada inativa no POST', async () => {
+      mockAuthMiddleware.checkAuth.mockResolvedValue({
+        authorized: true,
+        session: {
+          user: {
+            id: 'user-1',
+            email: 'admin@test.com',
+            name: 'Admin Test',
+            role: 'ADMIN'
+          }
+        }
+      });
+
+      mockXpAvulsoService.grantXp.mockRejectedValue(
+        new Error('Não há temporada ativa para conceder XP')
+      );
+
+      const request = new NextRequest('http://localhost/api/gamification/xp-grants', {
+        method: 'POST',
+        body: JSON.stringify({
+          attendantId: 'att-1',
+          typeId: 'type-1'
+        }),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const response = await POST(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(data.error).toBe('Não há temporada ativa para conceder XP');
+    });
+
+    it('deve tratar erro de limite de concessão no POST', async () => {
+      mockAuthMiddleware.checkAuth.mockResolvedValue({
+        authorized: true,
+        session: {
+          user: {
+            id: 'user-1',
+            email: 'admin@test.com',
+            name: 'Admin Test',
+            role: 'ADMIN'
+          }
+        }
+      });
+
+      mockXpAvulsoService.grantXp.mockRejectedValue(
+        new Error('Limite diário de concessões atingido (50)')
+      );
+
+      const request = new NextRequest('http://localhost/api/gamification/xp-grants', {
+        method: 'POST',
+        body: JSON.stringify({
+          attendantId: 'att-1',
+          typeId: 'type-1'
+        }),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const response = await POST(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(429);
+      expect(data.error).toBe('Limite diário de concessões atingido (50)');
+    });
+
+    it('deve tratar erro de atendente não encontrado no POST', async () => {
+      mockAuthMiddleware.checkAuth.mockResolvedValue({
+        authorized: true,
+        session: {
+          user: {
+            id: 'user-1',
+            email: 'admin@test.com',
+            name: 'Admin Test',
+            role: 'ADMIN'
+          }
+        }
+      });
+
+      mockXpAvulsoService.grantXp.mockRejectedValue(
+        new Error('Atendente não encontrado')
+      );
+
+      const request = new NextRequest('http://localhost/api/gamification/xp-grants', {
+        method: 'POST',
+        body: JSON.stringify({
+          attendantId: 'att-inexistente',
+          typeId: 'type-1'
+        }),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const response = await POST(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(404);
+      expect(data.error).toBe('Atendente não encontrado');
+    });
   });
 });

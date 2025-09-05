@@ -449,8 +449,16 @@ export const analyzeEvaluationFlow = defineFlow(
 #### Pontuação (XP)
 - **XP por avaliação** baseado na nota (configurável)
 - **Multiplicadores sazonais** aplicados automaticamente
-- **XP avulso** concedido por administradores
+- **XP avulso** concedido por administradores através de tipos pré-cadastrados
 - **XP de conquistas** ao desbloquear achievements
+
+#### Sistema de XP Avulso
+- **Tipos pré-cadastrados** com valores específicos de pontos
+- **6 tipos padrão**: Excelência no Atendimento (10pts), Iniciativa (8pts), Trabalho em Equipe (6pts), Melhoria de Processo (12pts), Pontualidade Exemplar (5pts), Resolução de Problemas (15pts)
+- **Concessão manual** por administradores com justificativa opcional
+- **Auditoria completa** de todas as concessões
+- **Integração total** com rankings, conquistas e progressão de níveis
+- **Interface dedicada** para gerenciamento e histórico
 
 #### Sistema de Níveis
 ```typescript

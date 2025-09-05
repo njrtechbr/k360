@@ -100,6 +100,44 @@ const INITIAL_XP_TYPES = [
   }
 ];
 
+const INITIAL_SEASONS = [
+  {
+    name: 'Temporada Agosto 2025',
+    startDate: new Date('2025-08-01T00:00:00.000Z'),
+    endDate: new Date('2025-08-31T23:59:59.999Z'),
+    active: false,
+    xpMultiplier: 1.2
+  },
+  {
+    name: 'Temporada Setembro 2025',
+    startDate: new Date('2025-09-01T00:00:00.000Z'),
+    endDate: new Date('2025-09-30T23:59:59.999Z'),
+    active: false,
+    xpMultiplier: 1.2
+  },
+  {
+    name: 'Temporada Outubro 2025',
+    startDate: new Date('2025-10-01T00:00:00.000Z'),
+    endDate: new Date('2025-10-31T23:59:59.999Z'),
+    active: false,
+    xpMultiplier: 1.2
+  },
+  {
+    name: 'Temporada Novembro 2025',
+    startDate: new Date('2025-11-01T00:00:00.000Z'),
+    endDate: new Date('2025-11-30T23:59:59.999Z'),
+    active: false,
+    xpMultiplier: 1.2
+  },
+  {
+    name: 'Temporada Dezembro 2025',
+    startDate: new Date('2025-12-01T00:00:00.000Z'),
+    endDate: new Date('2025-12-31T23:59:59.999Z'),
+    active: true,
+    xpMultiplier: 1.5
+  }
+];
+
 async function main() {
   console.log('🌱 Iniciando seed do banco de dados...');
 
@@ -256,6 +294,26 @@ async function main() {
     console.log(`✅ Tipo de XP criado: ${xpType.name} (${xpType.points} pontos)`);
   }
 
+  // Seed das temporadas de gamificação
+  console.log('📅 Criando temporadas de gamificação...');
+  for (const season of INITIAL_SEASONS) {
+    const createdSeason = await prisma.gamificationSeason.upsert({
+      where: { name: season.name },
+      update: {},
+      create: {
+        name: season.name,
+        startDate: season.startDate,
+        endDate: season.endDate,
+        active: season.active,
+        xpMultiplier: season.xpMultiplier
+      }
+    });
+    console.log(`✅ Temporada criada: ${season.name}`);
+    console.log(`   📆 Período: ${season.startDate.toLocaleDateString('pt-BR')} - ${season.endDate.toLocaleDateString('pt-BR')}`);
+    console.log(`   🔢 Multiplicador XP: ${season.xpMultiplier}x`);
+    console.log(`   ${season.active ? '🟢 Ativa' : '🔴 Inativa'}`);
+  }
+
   console.log('🎉 Seed concluído com sucesso!');
   console.log('');
   console.log('📊 Resumo do que foi criado:');
@@ -266,6 +324,7 @@ async function main() {
   console.log(`   🏆 ${INITIAL_ACHIEVEMENTS.length} conquistas`);
   console.log(`   🎖️ ${INITIAL_LEVEL_REWARDS.length} recompensas de nível`);
   console.log(`   ⚡ ${INITIAL_XP_TYPES.length} tipos de XP avulso`);
+  console.log(`   📅 ${INITIAL_SEASONS.length} temporadas de gamificação`);
   console.log(`   🎮 1 configuração de gamificação`);
   console.log('');
   console.log('🔐 Credenciais de acesso:');

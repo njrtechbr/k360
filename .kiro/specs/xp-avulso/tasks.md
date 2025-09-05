@@ -265,28 +265,46 @@
     - Adicionar destaque para conquistas desbloqueadas via XP avulso
     - _Requirements: 4.3, 4.4_
 
-- [-] 9. Implementar testes unitários
+- [x] 9. Implementar testes unitários
 
 
 
 
-  - [-] 9.1 Criar testes para XpAvulsoService
+
+
+
+
+
+  - [x] 9.1 Criar testes para XpAvulsoService
+
 
 
 
     - Testar todas as operações CRUD de tipos de XP
+
+
+
     - Implementar testes de concessão de XP com diferentes cenários
     - Testar validações e tratamento de erros
     - Verificar integração com GamificationService
     - _Requirements: 1.1, 1.2, 2.1, 2.2_
 
-  - [ ] 9.2 Testar API endpoints
+
+
+
+
+
+  - [x] 9.2 Testar API endpoints
+
+
 
 
     - Criar testes de integração para todos os endpoints
     - Testar autenticação e autorização
     - Verificar validações de dados e tratamento de erros
     - Testar rate limiting e segurança
+
+
     - _Requirements: 6.1, 6.2, 6.3_
 
 - [ ] 10. Criar dados iniciais e documentação
