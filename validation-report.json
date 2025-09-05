@@ -1,0 +1,83 @@
+{
+  "timestamp": "2025-09-05T14:22:12.845Z",
+  "summary": {
+    "total_checks": 10,
+    "passed": 7,
+    "warnings": 1,
+    "failed": 0,
+    "errors": 0
+  },
+  "details": {
+    "integrity": [
+      {
+        "check": "XpGrant-XpEvent Consistency",
+        "status": "PASS",
+        "details": "0 registros órfãos encontrados",
+        "timestamp": "2025-09-05T14:22:12.832Z"
+      },
+      {
+        "check": "Active XP Types",
+        "status": "PASS",
+        "details": "6 tipos ativos encontrados",
+        "timestamp": "2025-09-05T14:22:12.834Z"
+      },
+      {
+        "check": "Active Seasons",
+        "status": "PASS",
+        "details": "1 temporadas ativas (esperado: 1)",
+        "timestamp": "2025-09-05T14:22:12.835Z"
+      },
+      {
+        "check": "Multiplier Application",
+        "status": "INFO",
+        "details": "0 eventos com multiplicadores aplicados",
+        "timestamp": "2025-09-05T14:22:12.838Z"
+      }
+    ],
+    "performance": [
+      {
+        "operation": "Find Active XP Types",
+        "duration": 2,
+        "status": "PASS",
+        "threshold": "< 100ms",
+        "timestamp": "2025-09-05T14:22:12.840Z"
+      },
+      {
+        "operation": "Grant History Query",
+        "duration": 1,
+        "status": "PASS",
+        "threshold": "< 200ms",
+        "timestamp": "2025-09-05T14:22:12.841Z"
+      },
+      {
+        "operation": "Statistics Aggregation",
+        "duration": 0,
+        "status": "PASS",
+        "threshold": "< 500ms",
+        "timestamp": "2025-09-05T14:22:12.841Z"
+      }
+    ],
+    "backup": [
+      {
+        "check": "Backup Directory",
+        "status": "WARN",
+        "details": "Diretório não encontrado",
+        "path": "C:\\Users\\nnvlj\\dev\\k360\\backups",
+        "timestamp": "2025-09-05T14:22:12.842Z"
+      },
+      {
+        "check": "Critical Data Count",
+        "status": "PASS",
+        "details": "Types: 6, Grants: 0, Events: 1",
+        "timestamp": "2025-09-05T14:22:12.844Z"
+      },
+      {
+        "check": "Recent Activity",
+        "status": "INFO",
+        "details": "0 concessões nas últimas 24h",
+        "timestamp": "2025-09-05T14:22:12.844Z"
+      }
+    ],
+    "errors": []
+  }
+}
