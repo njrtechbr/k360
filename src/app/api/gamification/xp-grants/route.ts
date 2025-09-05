@@ -70,16 +70,15 @@ export async function POST(request: NextRequest) {
 
     // Registrar log de auditoria
     await AuditLogger.logAdminAction(
-      'XP_GRANT_CREATED',
       session.user.id,
+      'XP_GRANT_CREATED',
       {
         grantId: xpGrant.id,
         attendantId: grantData.attendantId,
         typeId: grantData.typeId,
         points: xpGrant.points,
         justification: grantData.justification
-      },
-      request
+      }
     );
 
     // Preparar dados de resposta incluindo informações de notificação
