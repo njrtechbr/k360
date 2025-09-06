@@ -1,5 +1,235 @@
 [
   {
+    "id": "backup_error_1757114499459_rgee6vog4",
+    "timestamp": "2025-09-05T23:21:39.459Z",
+    "errorType": "BACKUP_CREATION",
+    "severity": "HIGH",
+    "message": "Erro ao executar pg_dump: spawn pg_dump ENOENT",
+    "stack": "BackupError: Erro ao executar pg_dump: spawn pg_dump ENOENT\n    at _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.filepath.filepath (webpack-internal:///(rsc)/./src/services/backupService.ts:365:27)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.executePgDumpWithRetry (webpack-internal:///(rsc)/./src/services/backupService.ts:345:16)\n    at async _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.maxAttempts (webpack-internal:///(rsc)/./src/services/backupService.ts:77:36)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.createBackup (webpack-internal:///(rsc)/./src/services/backupService.ts:50:16)",
+    "context": {
+      "filepath": "backups\\backup_2025-09-05_23-21-34.sql",
+      "options": {
+        "includeData": true,
+        "includeSchema": true,
+        "compress": true,
+        "createdBy": "cmf5yovrd0000zmd6syh33nk3",
+        "createdByEmail": "superadmin@sistema.com",
+        "backupId": "25bf439c-1cc9-444e-95ce-a1428c33c7af"
+      },
+      "operationName": "executePgDump",
+      "attemptNumber": 2
+    },
+    "attemptNumber": 2,
+    "resolved": false
+  },
+  {
+    "id": "backup_error_1757114494449_t701rtln7",
+    "timestamp": "2025-09-05T23:21:34.449Z",
+    "errorType": "BACKUP_CREATION",
+    "severity": "HIGH",
+    "message": "Erro ao executar pg_dump: spawn pg_dump ENOENT",
+    "stack": "BackupError: Erro ao executar pg_dump: spawn pg_dump ENOENT\n    at _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.filepath.filepath (webpack-internal:///(rsc)/./src/services/backupService.ts:365:27)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.executePgDumpWithRetry (webpack-internal:///(rsc)/./src/services/backupService.ts:345:16)\n    at async _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.maxAttempts (webpack-internal:///(rsc)/./src/services/backupService.ts:77:36)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.createBackup (webpack-internal:///(rsc)/./src/services/backupService.ts:50:16)",
+    "context": {
+      "filepath": "backups\\backup_2025-09-05_23-21-34.sql",
+      "options": {
+        "includeData": true,
+        "includeSchema": true,
+        "compress": true,
+        "createdBy": "cmf5yovrd0000zmd6syh33nk3",
+        "createdByEmail": "superadmin@sistema.com",
+        "backupId": "25bf439c-1cc9-444e-95ce-a1428c33c7af"
+      },
+      "operationName": "executePgDump",
+      "attemptNumber": 1
+    },
+    "attemptNumber": 1,
+    "resolved": false
+  },
+  {
+    "id": "backup_error_1757114490441_2y3ywic6p",
+    "timestamp": "2025-09-05T23:21:30.441Z",
+    "errorType": "BACKUP_CREATION",
+    "severity": "HIGH",
+    "message": "Erro ao executar pg_dump: spawn pg_dump ENOENT",
+    "stack": "BackupError: Erro ao executar pg_dump: spawn pg_dump ENOENT\n    at _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.filepath.filepath (webpack-internal:///(rsc)/./src/services/backupService.ts:365:27)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.executePgDumpWithRetry (webpack-internal:///(rsc)/./src/services/backupService.ts:345:16)\n    at async _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.maxAttempts (webpack-internal:///(rsc)/./src/services/backupService.ts:77:36)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.createBackup (webpack-internal:///(rsc)/./src/services/backupService.ts:50:16)",
+    "context": {
+      "filepath": "backups\\backup_2025-09-05_23-21-15.sql",
+      "options": {
+        "includeData": true,
+        "includeSchema": true,
+        "compress": true,
+        "createdBy": "cmf5yovrd0000zmd6syh33nk3",
+        "createdByEmail": "superadmin@sistema.com",
+        "backupId": "25bf439c-1cc9-444e-95ce-a1428c33c7af"
+      },
+      "operationName": "executePgDump",
+      "attemptNumber": 3
+    },
+    "attemptNumber": 3,
+    "resolved": false
+  },
+  {
+    "id": "backup_error_1757114490441_2y3ywic6p",
+    "timestamp": "2025-09-05T23:21:30.441Z",
+    "errorType": "BACKUP_CREATION",
+    "severity": "HIGH",
+    "message": "Erro ao executar pg_dump: spawn pg_dump ENOENT",
+    "stack": "BackupError: Erro ao executar pg_dump: spawn pg_dump ENOENT\n    at _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.filepath.filepath (webpack-internal:///(rsc)/./src/services/backupService.ts:365:27)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.executePgDumpWithRetry (webpack-internal:///(rsc)/./src/services/backupService.ts:345:16)\n    at async _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.maxAttempts (webpack-internal:///(rsc)/./src/services/backupService.ts:77:36)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.createBackup (webpack-internal:///(rsc)/./src/services/backupService.ts:50:16)",
+    "context": {
+      "filepath": "backups\\backup_2025-09-05_23-21-15.sql",
+      "options": {
+        "includeData": true,
+        "includeSchema": true,
+        "compress": true,
+        "createdBy": "cmf5yovrd0000zmd6syh33nk3",
+        "createdByEmail": "superadmin@sistema.com",
+        "backupId": "25bf439c-1cc9-444e-95ce-a1428c33c7af"
+      },
+      "operationName": "createBackup",
+      "attemptNumber": 2
+    },
+    "attemptNumber": 2,
+    "resolved": false
+  },
+  {
+    "id": "backup_error_1757114480423_n1je6nvrq",
+    "timestamp": "2025-09-05T23:21:20.423Z",
+    "errorType": "BACKUP_CREATION",
+    "severity": "HIGH",
+    "message": "Erro ao executar pg_dump: spawn pg_dump ENOENT",
+    "stack": "BackupError: Erro ao executar pg_dump: spawn pg_dump ENOENT\n    at _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.filepath.filepath (webpack-internal:///(rsc)/./src/services/backupService.ts:365:27)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.executePgDumpWithRetry (webpack-internal:///(rsc)/./src/services/backupService.ts:345:16)\n    at async _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.maxAttempts (webpack-internal:///(rsc)/./src/services/backupService.ts:77:36)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.createBackup (webpack-internal:///(rsc)/./src/services/backupService.ts:50:16)",
+    "context": {
+      "filepath": "backups\\backup_2025-09-05_23-21-15.sql",
+      "options": {
+        "includeData": true,
+        "includeSchema": true,
+        "compress": true,
+        "createdBy": "cmf5yovrd0000zmd6syh33nk3",
+        "createdByEmail": "superadmin@sistema.com",
+        "backupId": "25bf439c-1cc9-444e-95ce-a1428c33c7af"
+      },
+      "operationName": "executePgDump",
+      "attemptNumber": 2
+    },
+    "attemptNumber": 2,
+    "resolved": false
+  },
+  {
+    "id": "backup_error_1757114475411_abryjq69a",
+    "timestamp": "2025-09-05T23:21:15.411Z",
+    "errorType": "BACKUP_CREATION",
+    "severity": "HIGH",
+    "message": "Erro ao executar pg_dump: spawn pg_dump ENOENT",
+    "stack": "BackupError: Erro ao executar pg_dump: spawn pg_dump ENOENT\n    at _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.filepath.filepath (webpack-internal:///(rsc)/./src/services/backupService.ts:365:27)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.executePgDumpWithRetry (webpack-internal:///(rsc)/./src/services/backupService.ts:345:16)\n    at async _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.maxAttempts (webpack-internal:///(rsc)/./src/services/backupService.ts:77:36)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.createBackup (webpack-internal:///(rsc)/./src/services/backupService.ts:50:16)",
+    "context": {
+      "filepath": "backups\\backup_2025-09-05_23-21-15.sql",
+      "options": {
+        "includeData": true,
+        "includeSchema": true,
+        "compress": true,
+        "createdBy": "cmf5yovrd0000zmd6syh33nk3",
+        "createdByEmail": "superadmin@sistema.com",
+        "backupId": "25bf439c-1cc9-444e-95ce-a1428c33c7af"
+      },
+      "operationName": "executePgDump",
+      "attemptNumber": 1
+    },
+    "attemptNumber": 1,
+    "resolved": false
+  },
+  {
+    "id": "backup_error_1757114473390_yghthj14g",
+    "timestamp": "2025-09-05T23:21:13.390Z",
+    "errorType": "BACKUP_CREATION",
+    "severity": "HIGH",
+    "message": "Erro ao executar pg_dump: spawn pg_dump ENOENT",
+    "stack": "BackupError: Erro ao executar pg_dump: spawn pg_dump ENOENT\n    at _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.filepath.filepath (webpack-internal:///(rsc)/./src/services/backupService.ts:365:27)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.executePgDumpWithRetry (webpack-internal:///(rsc)/./src/services/backupService.ts:345:16)\n    at async _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.maxAttempts (webpack-internal:///(rsc)/./src/services/backupService.ts:77:36)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.createBackup (webpack-internal:///(rsc)/./src/services/backupService.ts:50:16)",
+    "context": {
+      "filepath": "backups\\backup_2025-09-05_23-20-58.sql",
+      "options": {
+        "includeData": true,
+        "includeSchema": true,
+        "compress": true,
+        "createdBy": "cmf5yovrd0000zmd6syh33nk3",
+        "createdByEmail": "superadmin@sistema.com",
+        "backupId": "25bf439c-1cc9-444e-95ce-a1428c33c7af"
+      },
+      "operationName": "executePgDump",
+      "attemptNumber": 3
+    },
+    "attemptNumber": 3,
+    "resolved": false
+  },
+  {
+    "id": "backup_error_1757114473390_yghthj14g",
+    "timestamp": "2025-09-05T23:21:13.390Z",
+    "errorType": "BACKUP_CREATION",
+    "severity": "HIGH",
+    "message": "Erro ao executar pg_dump: spawn pg_dump ENOENT",
+    "stack": "BackupError: Erro ao executar pg_dump: spawn pg_dump ENOENT\n    at _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.filepath.filepath (webpack-internal:///(rsc)/./src/services/backupService.ts:365:27)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.executePgDumpWithRetry (webpack-internal:///(rsc)/./src/services/backupService.ts:345:16)\n    at async _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.maxAttempts (webpack-internal:///(rsc)/./src/services/backupService.ts:77:36)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.createBackup (webpack-internal:///(rsc)/./src/services/backupService.ts:50:16)",
+    "context": {
+      "filepath": "backups\\backup_2025-09-05_23-20-58.sql",
+      "options": {
+        "includeData": true,
+        "includeSchema": true,
+        "compress": true,
+        "createdBy": "cmf5yovrd0000zmd6syh33nk3",
+        "createdByEmail": "superadmin@sistema.com",
+        "backupId": "25bf439c-1cc9-444e-95ce-a1428c33c7af"
+      },
+      "operationName": "createBackup",
+      "attemptNumber": 1
+    },
+    "attemptNumber": 1,
+    "resolved": false
+  },
+  {
+    "id": "backup_error_1757114463378_75d5rl2zm",
+    "timestamp": "2025-09-05T23:21:03.378Z",
+    "errorType": "BACKUP_CREATION",
+    "severity": "HIGH",
+    "message": "Erro ao executar pg_dump: spawn pg_dump ENOENT",
+    "stack": "BackupError: Erro ao executar pg_dump: spawn pg_dump ENOENT\n    at _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.filepath.filepath (webpack-internal:///(rsc)/./src/services/backupService.ts:365:27)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.executePgDumpWithRetry (webpack-internal:///(rsc)/./src/services/backupService.ts:345:16)\n    at async _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.maxAttempts (webpack-internal:///(rsc)/./src/services/backupService.ts:77:36)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.createBackup (webpack-internal:///(rsc)/./src/services/backupService.ts:50:16)",
+    "context": {
+      "filepath": "backups\\backup_2025-09-05_23-20-58.sql",
+      "options": {
+        "includeData": true,
+        "includeSchema": true,
+        "compress": true,
+        "createdBy": "cmf5yovrd0000zmd6syh33nk3",
+        "createdByEmail": "superadmin@sistema.com",
+        "backupId": "25bf439c-1cc9-444e-95ce-a1428c33c7af"
+      },
+      "operationName": "executePgDump",
+      "attemptNumber": 2
+    },
+    "attemptNumber": 2,
+    "resolved": false
+  },
+  {
+    "id": "backup_error_1757114458363_mjk09prny",
+    "timestamp": "2025-09-05T23:20:58.363Z",
+    "errorType": "BACKUP_CREATION",
+    "severity": "HIGH",
+    "message": "Erro ao executar pg_dump: spawn pg_dump ENOENT",
+    "stack": "BackupError: Erro ao executar pg_dump: spawn pg_dump ENOENT\n    at _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.filepath.filepath (webpack-internal:///(rsc)/./src/services/backupService.ts:365:27)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.executePgDumpWithRetry (webpack-internal:///(rsc)/./src/services/backupService.ts:345:16)\n    at async _backupErrorHandler__WEBPACK_IMPORTED_MODULE_5__.BackupErrorHandler.executeWithRetry.maxAttempts (webpack-internal:///(rsc)/./src/services/backupService.ts:77:36)\n    at async BackupErrorHandler.executeWithRetry (webpack-internal:///(rsc)/./src/services/backupErrorHandler.ts:220:32)\n    at async BackupService.createBackup (webpack-internal:///(rsc)/./src/services/backupService.ts:50:16)",
+    "context": {
+      "filepath": "backups\\backup_2025-09-05_23-20-58.sql",
+      "options": {
+        "includeData": true,
+        "includeSchema": true,
+        "compress": true,
+        "createdBy": "cmf5yovrd0000zmd6syh33nk3",
+        "createdByEmail": "superadmin@sistema.com",
+        "backupId": "25bf439c-1cc9-444e-95ce-a1428c33c7af"
+      },
+      "operationName": "executePgDump",
+      "attemptNumber": 1
+    },
+    "attemptNumber": 1,
+    "resolved": false
+  },
+  {
     "id": "backup_error_1757113047158_1l8lqi9ax",
     "timestamp": "2025-09-05T22:57:27.158Z",
     "errorType": "BACKUP_CREATION",
