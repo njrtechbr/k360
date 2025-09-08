@@ -1,6 +1,10 @@
 import { PrismaClient } from '@prisma/client';
 import { INITIAL_ACHIEVEMENTS, INITIAL_LEVEL_REWARDS } from '../src/lib/achievements';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
+import dotenv from 'dotenv';
+
+// Carrega as variáveis de ambiente
+dotenv.config();
 
 const prisma = new PrismaClient();
 

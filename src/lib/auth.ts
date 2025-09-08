@@ -24,7 +24,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          const user = await UserService.verifyPassword(
+          const user = await UserService.verifyCredentials(
             credentials.email,
             credentials.password
           );

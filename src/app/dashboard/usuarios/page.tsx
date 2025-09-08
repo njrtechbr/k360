@@ -51,8 +51,8 @@ const addFormSchema = z.object({
 
 
 export default function UsuariosPage() {
-  const { user, isAuthenticated, authLoading, appLoading, allUsers, modules, updateUser, deleteUser } = useAuth();
-  const { createUser } = usePrisma();
+  const { user, isAuthenticated, authLoading, appLoading, modules } = useAuth();
+  const { allUsers, createUser, updateUser, deleteUser } = usePrisma();
   const router = useRouter();
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -99,12 +99,12 @@ export default function UsuariosPage() {
     }
   }, [selectedUser, editForm]);
 
-  const activeModules = useMemo(() => modules.filter(m => m.active), [modules]);
+  const activeModules = useMemo(() => modules?.filter(m => m.active) || [], [modules]);
   const moduleMap = useMemo(() => {
-    return modules.reduce((acc, module) => {
+    return modules?.reduce((acc, module) => {
         acc[module.id] = module.name;
         return acc;
-    }, {} as Record<string, string>);
+    }, {} as Record<string, string>) || {};
   }, [modules]);
 
   async function onAddSubmit(values: z.infer<typeof addFormSchema>) {
@@ -160,7 +160,7 @@ export default function UsuariosPage() {
     );
   }
   
-  const sortedUsers = [...allUsers].sort((a, b) => a.name.localeCompare(b.name));
+  const sortedUsers = [...(allUsers || [])].sort((a, b) => a.name.localeCompare(b.name));
 
   const availableRoles = Object.values(ROLES).filter(role => {
     if (user?.role === ROLES.SUPERADMIN) return true;

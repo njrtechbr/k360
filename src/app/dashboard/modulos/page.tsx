@@ -2,6 +2,7 @@
 "use client";
 
 import { useAuth } from "@/hooks/useAuth";
+import { usePrisma } from "@/providers/PrismaProvider";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -34,7 +35,8 @@ const formSchema = z.object({
 });
 
 export default function ModulosPage() {
-  const { user, isAuthenticated, loading, modules, addModule, updateModule, toggleModuleStatus, deleteModule } = useAuth();
+  const { user, isAuthenticated, authLoading, modules } = useAuth();
+  const { addModule, updateModule, toggleModuleStatus, deleteModule } = usePrisma();
   const router = useRouter();
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -52,10 +54,10 @@ export default function ModulosPage() {
   });
 
   useEffect(() => {
-    if (!loading && (!isAuthenticated || (user?.role !== ROLES.ADMIN && user?.role !== ROLES.SUPERADMIN))) {
+    if (!authLoading && (!isAuthenticated || (user?.role !== ROLES.ADMIN && user?.role !== ROLES.SUPERADMIN))) {
       router.push("/dashboard");
     }
-  }, [isAuthenticated, loading, router, user]);
+  }, [isAuthenticated, authLoading, router, user]);
 
   useEffect(() => {
     if (selectedModule) {
@@ -114,11 +116,11 @@ export default function ModulosPage() {
     setTimeout(() => onToggleStatus(), 0);
   }
 
-  if (loading || !user) {
+  if (authLoading || !user) {
     return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
   }
   
-  const sortedModules = [...modules].sort((a, b) => a.name.localeCompare(b.name));
+  const sortedModules = [...(modules || [])].sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <div className="space-y-8">
