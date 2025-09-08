@@ -23,8 +23,8 @@ export default function RHPage() {
         return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
     }
 
-    const activeAttendants = attendants.filter(a => a.status === 'Ativo').length;
-    const totalAttendants = attendants.length;
+    const activeAttendants = attendants?.filter(a => a.status === 'Ativo').length || 0;
+    const totalAttendants = attendants?.length || 0;
 
     return (
         <div className="space-y-8">
