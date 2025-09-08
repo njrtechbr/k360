@@ -83,6 +83,13 @@ export class SeasonsService {
   }
 
   /**
+   * Alias para getDaysRemaining (compatibilidade)
+   */
+  static getRemainingDays(season: GamificationSeason): number {
+    return this.getDaysRemaining(season);
+  }
+
+  /**
    * Calcula dias desde o início de uma temporada
    */
   static getDaysSinceStart(season: GamificationSeason): number {
@@ -96,10 +103,17 @@ export class SeasonsService {
    * Calcula a duração total de uma temporada em dias
    */
   static getSeasonDuration(season: GamificationSeason): number {
-    const startDate = parseISO(season.startDate);
-    const endDate = parseISO(season.endDate);
+    const startDate = season.startDate instanceof Date ? season.startDate : parseISO(season.startDate);
+    const endDate = season.endDate instanceof Date ? season.endDate : parseISO(season.endDate);
     
     return differenceInDays(endDate, startDate);
+  }
+
+  /**
+   * Alias para getSeasonDuration (compatibilidade)
+   */
+  static getTotalDuration(season: GamificationSeason): number {
+    return this.getSeasonDuration(season);
   }
 
   /**
@@ -191,6 +205,13 @@ export class SeasonsService {
   }
 
   /**
+   * Alias para sortSeasonsByStartDate (compatibilidade)
+   */
+  static sortSeasons(seasons: GamificationSeason[]): GamificationSeason[] {
+    return this.sortSeasonsByStartDate(seasons, false); // Mais recentes primeiro
+  }
+
+  /**
    * Filtra temporadas por status
    */
   static filterSeasonsByStatus(
@@ -214,6 +235,16 @@ export class SeasonsService {
           return false;
       }
     });
+  }
+
+  /**
+   * Alias para filterSeasonsByStatus (compatibilidade)
+   */
+  static filterByStatus(
+    seasons: GamificationSeason[],
+    status: 'active' | 'upcoming' | 'past'
+  ): GamificationSeason[] {
+    return this.filterSeasonsByStatus(seasons, status);
   }
 
   /**
