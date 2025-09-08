@@ -10,16 +10,16 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 export default function RHPage() {
-    const { user, isAuthenticated, loading, attendants } = useAuth();
+    const { user, isAuthenticated, authLoading, appLoading, attendants } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
-        if (!loading && !isAuthenticated) {
+        if (!authLoading && !isAuthenticated) {
             router.push("/login");
         }
-    }, [isAuthenticated, loading, router]);
+    }, [isAuthenticated, authLoading, router]);
     
-    if (loading || !user) {
+    if (authLoading || appLoading || !user) {
         return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
     }
 
