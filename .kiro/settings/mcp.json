@@ -4,6 +4,16 @@
       "command": "npx",
       "args": [
         "@playwright/mcp@latest"
+      ],
+      "disabled": false,
+      "autoApprove": [
+        "*",
+        "browser_click",
+        "browser_navigate_back",
+        "browser_navigate",
+        "browser_wait_for",
+        "browser_close",
+        "browser_type"
       ]
     }
   }
