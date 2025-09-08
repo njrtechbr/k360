@@ -3,12 +3,7 @@
     "playwright": {
       "command": "npx",
       "args": [
-        "-y",
-        "@executeautomation/playwright-mcp-server"
-      ],
-      "disabled": false,
-      "autoApprove": [
-        "playwright_navigate"
+        "@playwright/mcp@latest"
       ]
     }
   }
