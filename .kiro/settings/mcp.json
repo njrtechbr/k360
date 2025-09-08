@@ -6,10 +6,6 @@
         "-y",
         "@executeautomation/playwright-mcp-server"
       ],
-      "env": {
-        "PLAYWRIGHT_BROWSERS_PATH": "0",
-        "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
-      },
       "disabled": false,
       "autoApprove": [
         "playwright_navigate"
