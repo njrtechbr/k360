@@ -1,6 +1,7 @@
 "use client";
 
-import { useAuth } from "@/hooks/useAuth";
+import { useSession } from "next-auth/react";
+import { usePrisma } from "@/providers/PrismaProvider";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,8 +22,13 @@ const getMedal = (rank: number) => {
 };
 
 export default function NiveisPage() {
-    const { user, isAuthenticated, loading, attendants, seasonXpEvents } = useAuth();
+    const { data: session, status } = useSession();
+    const { attendants, seasonXpEvents, appLoading } = usePrisma();
     const router = useRouter();
+
+    const user = session?.user;
+    const isAuthenticated = !!session;
+    const loading = status === "loading" || appLoading;
 
     useEffect(() => {
         if (!loading && !isAuthenticated) {
@@ -33,12 +39,20 @@ export default function NiveisPage() {
     const leaderboard = useMemo(() => {
         const xpByAttendant = new Map<string, number>();
 
-        seasonXpEvents.forEach(event => {
-            const currentXp = xpByAttendant.get(event.attendantId) || 0;
-            xpByAttendant.set(event.attendantId, currentXp + event.points);
-        });
+        // Verificação de segurança para seasonXpEvents
+        if (seasonXpEvents.data && Array.isArray(seasonXpEvents.data)) {
+            seasonXpEvents.data.forEach(event => {
+                const currentXp = xpByAttendant.get(event.attendantId) || 0;
+                xpByAttendant.set(event.attendantId, currentXp + event.points);
+            });
+        }
         
-        return attendants
+        // Verificação de segurança para attendants
+        if (!attendants.data || !Array.isArray(attendants.data)) {
+            return [];
+        }
+        
+        return attendants.data
             .map(attendant => {
                 const totalScore = xpByAttendant.get(attendant.id) || 0;
                 const levelData = getLevelFromXp(totalScore);
@@ -53,7 +67,7 @@ export default function NiveisPage() {
             })
             .sort((a, b) => b.score - a.score);
 
-    }, [attendants, seasonXpEvents]);
+    }, [attendants.data, seasonXpEvents.data]);
 
     if (loading || !user) {
         return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
