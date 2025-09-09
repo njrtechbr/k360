@@ -1934,25 +1934,7 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
       setActiveSeason(null);
       setNextSeason(null);
     }
-  }, [
-    session, 
-    status, 
-    fetchAllData,
-    attendantsState,
-    evaluationsState,
-    allUsersState,
-    modulesState,
-    attendantImportsState,
-    evaluationImportsState,
-    funcoesState,
-    setoresState,
-    gamificationConfigState,
-    achievementsState,
-    levelRewardsState,
-    seasonsState,
-    xpEventsState,
-    seasonXpEventsState
-  ]);
+  }, [session, status]); // Removido fetchAllData e estados das dependências para evitar loop
   
   // Provide context value
   const contextValue: PrismaContextType = {
