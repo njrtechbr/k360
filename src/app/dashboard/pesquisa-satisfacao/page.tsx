@@ -45,7 +45,7 @@ export default function PesquisaSatisfacaoPage() {
             />
             
             {/* Cards de Navegação */}
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                  <Card>
                     <CardHeader>
                         <CardTitle>Dashboard de Avaliações</CardTitle>
@@ -76,6 +76,23 @@ export default function PesquisaSatisfacaoPage() {
                             <Link href="/dashboard/pesquisa-satisfacao/avaliacoes">
                                 <ListChecks className="mr-2 h-4 w-4" />
                                 Ver Histórico
+                            </Link>
+                        </Button>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Relatórios de Satisfação</CardTitle>
+                        <CardDescription>Visualize relatórios completos com gráficos e métricas detalhadas.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground mb-4">
+                           Acesse relatórios avançados com filtros e opções de exportação.
+                        </p>
+                        <Button asChild>
+                            <Link href="/dashboard/pesquisa-satisfacao/relatorios">
+                                <TrendingUp className="mr-2 h-4 w-4" />
+                                Ver Relatórios
                             </Link>
                         </Button>
                     </CardContent>

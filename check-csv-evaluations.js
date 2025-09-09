@@ -14,7 +14,7 @@ const csvSeptemberIds = [
 async function checkCsvEvaluations() {
   try {
     console.log('🔍 Verificando se as avaliações do CSV já estão no banco...\n');
-    
+
     for (const id of csvSeptemberIds) {
       const evaluation = await prisma.evaluation.findUnique({
         where: { id },
@@ -27,24 +27,24 @@ async function checkCsvEvaluations() {
           }
         }
       });
-      
+
       if (evaluation) {
         console.log(`✅ ${id} - JÁ EXISTE: ${evaluation.attendant.name} (${evaluation.nota} estrelas)`);
       } else {
         console.log(`❌ ${id} - NÃO ENCONTRADA`);
       }
     }
-    
+
     console.log('\n📊 Resumo:');
     const existingCount = await prisma.evaluation.count({
       where: {
         id: { in: csvSeptemberIds }
       }
     });
-    
+
     console.log(`- Avaliações do CSV já no banco: ${existingCount}/${csvSeptemberIds.length}`);
     console.log(`- Avaliações novas para importar: ${csvSeptemberIds.length - existingCount}`);
-    
+
   } catch (error) {
     console.error('Erro:', error.message);
   } finally {

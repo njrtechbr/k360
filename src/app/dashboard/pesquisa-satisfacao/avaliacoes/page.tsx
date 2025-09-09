@@ -7,7 +7,8 @@ import { useEffect } from "react";
 import { useEvaluations } from "@/hooks/survey";
 import { EvaluationsList } from "@/components/survey";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, Plus } from "lucide-react";
 
 export default function AvaliacoesPage() {
     const { user, isAuthenticated, loading: authLoading, attendants } = useAuth();
@@ -59,6 +60,13 @@ export default function AvaliacoesPage() {
                         Gerencie e visualize todas as avaliações de satisfação
                     </p>
                 </div>
+                <Button
+                    onClick={() => router.push("/dashboard/pesquisa-satisfacao/avaliacoes/nova")}
+                    className="flex items-center gap-2"
+                >
+                    <Plus className="h-4 w-4" />
+                    Nova Avaliação
+                </Button>
             </div>
 
             <Card className="shadow-lg">

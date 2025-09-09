@@ -3,6 +3,7 @@ export { default as SurveyForm } from './SurveyForm';
 export { default as RatingStars, RatingDisplay, useRating } from './RatingStars';
 export { default as EvaluationCard, CompactEvaluationCard, SimpleEvaluationCard } from './EvaluationCard';
 export { default as EvaluationsList } from './EvaluationsList';
+export { EvaluationForm } from './EvaluationForm';
 export { default as SentimentBadge, ConfidenceBadge, SentimentAnalysis } from './SentimentBadge';
 export { default as SurveyStats } from './SurveyStats';
 export { default as AttendantProfile } from './AttendantProfile';

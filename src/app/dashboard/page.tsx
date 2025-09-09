@@ -155,20 +155,7 @@ export default function DashboardPage() {
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
   
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push("/login");
-    }
-  }, [authLoading, isAuthenticated, router]);
-
   // Carregar dados básicos
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      loadBasicData();
-      loadDashboardData();
-    }
-  }, [isAuthenticated, user, loadBasicData, loadDashboardData]);
-
   const loadBasicData = useCallback(async () => {
     try {
       setAppLoading(true);
@@ -202,7 +189,6 @@ export default function DashboardPage() {
   }, []);
 
   // Carregar dados do dashboard
-
   const loadDashboardData = useCallback(async () => {
     try {
       setIsLoadingStats(true);
@@ -239,6 +225,20 @@ export default function DashboardPage() {
       setIsLoadingStats(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push("/login");
+    }
+  }, [authLoading, isAuthenticated, router]);
+
+  // Carregar dados básicos
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      loadBasicData();
+      loadDashboardData();
+    }
+  }, [isAuthenticated, user, loadBasicData, loadDashboardData]);
 
   const allAnniversaries = useMemo(() => {
     if (!attendants || attendants.length === 0) return [];
