@@ -3,7 +3,7 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ShieldAlert, ShieldCheck, ShieldHalf, UserIcon, Wrench, Users, Gift, Building2, Cake, CalendarDays, PartyPopper, BarChart3, TrendingUp } from "lucide-react";
@@ -167,9 +167,9 @@ export default function DashboardPage() {
       loadBasicData();
       loadDashboardData();
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, loadBasicData, loadDashboardData]);
 
-  const loadBasicData = async () => {
+  const loadBasicData = useCallback(async () => {
     try {
       setAppLoading(true);
       
@@ -199,11 +199,11 @@ export default function DashboardPage() {
     } finally {
       setAppLoading(false);
     }
-  };
+  }, []);
 
   // Carregar dados do dashboard
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     try {
       setIsLoadingStats(true);
       
@@ -238,7 +238,7 @@ export default function DashboardPage() {
     } finally {
       setIsLoadingStats(false);
     }
-  };
+  }, []);
 
   const allAnniversaries = useMemo(() => {
     if (!attendants || attendants.length === 0) return [];
