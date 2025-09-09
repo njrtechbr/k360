@@ -90,6 +90,7 @@ model Attendant {
   import               AttendantImport?      @relation(fields: [importId], references: [id])
   evaluations          Evaluation[]
   unlockedAchievements UnlockedAchievement[]
+  xpEvents             XpEvent[]
   xpGrants             XpGrant[]
 }
 
@@ -117,6 +118,7 @@ model XpEvent {
   type        String
   relatedId   String
   seasonId    String?
+  attendant   Attendant           @relation(fields: [attendantId], references: [id], onDelete: Cascade)
   season      GamificationSeason? @relation(fields: [seasonId], references: [id], onDelete: SetNull)
   xpGrant     XpGrant?
   createdAt   DateTime            @default(now())

@@ -9,7 +9,7 @@ import { PanelLeft } from "lucide-react"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import {
   Tooltip,
   TooltipContent,
@@ -136,6 +136,7 @@ const Sidebar = React.forwardRef<
             className="w-72 bg-sidebar p-0 text-sidebar-foreground z-[9999]"
             side="left"
           >
+            <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
             <div className="flex h-full w-full flex-col">{children}</div>
           </SheetContent>
         </Sheet>

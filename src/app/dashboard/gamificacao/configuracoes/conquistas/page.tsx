@@ -1,6 +1,7 @@
 "use client";
 
-import { useAuth } from "@/hooks/useAuth";
+import { usePrisma } from "@/providers/PrismaProvider";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,8 +44,13 @@ interface AttendantAchievementStatus {
 }
 
 export default function ConquistasConfigPage() {
-  const { user, isAuthenticated, loading, attendants, seasons, xpEvents, evaluations } = useAuth();
+  const { data: session, status } = useSession();
+  const { attendants, seasons, xpEvents, evaluations, appLoading } = usePrisma();
   const router = useRouter();
+  
+  const user = session?.user;
+  const isAuthenticated = !!session;
+  const loading = status === "loading" || appLoading;
   
   const [achievements, setAchievements] = useState<AchievementConfig[]>([]);
   const [unlockedAchievements, setUnlockedAchievements] = useState<UnlockedAchievement[]>([]);
@@ -60,9 +66,9 @@ export default function ConquistasConfigPage() {
 
   // Encontrar temporada atual
   useEffect(() => {
-    if (seasons && seasons.length > 0) {
+    if (seasons.data && seasons.data.length > 0) {
       const now = new Date();
-      const current = seasons.find(season => {
+      const current = seasons.data.find(season => {
         const start = new Date(season.startDate);
         const end = new Date(season.endDate);
         return now >= start && now <= end;

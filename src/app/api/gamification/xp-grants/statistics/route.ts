@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verificar autenticação e autorização (SUPERVISOR, ADMIN e SUPERADMIN podem ver estatísticas)
-    const authResult = await AuthMiddleware.checkAuth(request, AuthConfigs.supervisorOrAbove);
+    const authResult = await AuthMiddleware.checkAuth(request, AuthConfigs.supervisorAndAbove);
 
     if (!authResult.authorized) {
       return NextResponse.json(

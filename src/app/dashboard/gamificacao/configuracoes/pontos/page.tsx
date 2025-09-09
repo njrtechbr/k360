@@ -1,7 +1,8 @@
 
 "use client";
 
-import { useAuth } from "@/hooks/useAuth";
+import { usePrisma } from "@/providers/PrismaProvider";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -30,13 +31,18 @@ const formSchema = z.object({
 });
 
 export default function GamificacaoPontosPage() {
-  const { user, isAuthenticated, loading, gamificationConfig, updateGamificationConfig } = useAuth();
+  const { data: session, status } = useSession();
+  const { gamificationConfig, updateGamificationConfig, appLoading } = usePrisma();
   const router = useRouter();
+  
+  const user = session?.user;
+  const isAuthenticated = !!session;
+  const loading = status === "loading" || appLoading;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      ...gamificationConfig.ratingScores,
+      ...gamificationConfig.data?.ratingScores,
     },
   });
 
@@ -47,10 +53,12 @@ export default function GamificacaoPontosPage() {
   }, [isAuthenticated, loading, router, user]);
 
   useEffect(() => {
-    form.reset({
-      ...gamificationConfig.ratingScores,
-    });
-  }, [gamificationConfig, form]);
+    if (gamificationConfig.data?.ratingScores) {
+      form.reset({
+        ...gamificationConfig.data.ratingScores,
+      });
+    }
+  }, [gamificationConfig.data, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {

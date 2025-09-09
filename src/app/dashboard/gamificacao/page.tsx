@@ -89,7 +89,7 @@ export default function GamificacaoPage() {
         fetchCurrentSeasonAchievements();
     }, [activeSeason]);
     
-    const globalMultiplier = gamificationConfig.globalXpMultiplier || 1;
+    const globalMultiplier = gamificationConfig.data?.globalXpMultiplier || 1;
     const seasonMultiplier = activeSeason?.xpMultiplier ?? 1;
     const totalMultiplier = globalMultiplier * seasonMultiplier;
 
@@ -97,8 +97,8 @@ export default function GamificacaoPage() {
         const statsByAttendant = new Map<string, { score: number; evaluationCount: number }>();
 
         // Verificação de segurança para seasonXpEvents
-        if (seasonXpEvents && Array.isArray(seasonXpEvents)) {
-            seasonXpEvents.forEach(event => {
+        if (seasonXpEvents.data && Array.isArray(seasonXpEvents.data)) {
+            seasonXpEvents.data.forEach(event => {
                 let currentStats = statsByAttendant.get(event.attendantId);
                 if (!currentStats) {
                     currentStats = { score: 0, evaluationCount: 0 };
@@ -114,11 +114,11 @@ export default function GamificacaoPage() {
         }
 
         // Verificação de segurança para attendants
-        if (!attendants || !Array.isArray(attendants)) {
+        if (!attendants.data || !Array.isArray(attendants.data)) {
             return [];
         }
 
-        return attendants
+        return attendants.data
             .map(attendant => {
                 const stats = statsByAttendant.get(attendant.id);
                 return {
@@ -130,18 +130,18 @@ export default function GamificacaoPage() {
             .filter(att => att.score > 0 || att.evaluationCount > 0)
             .sort((a, b) => b.score - a.score);
 
-    }, [attendants, seasonXpEvents]);
+    }, [attendants.data, seasonXpEvents.data]);
 
      const achievementStats: AchievementStat[] = useMemo(() => {
         // Verificações de segurança para arrays
-        if (!achievements || !Array.isArray(achievements)) {
+        if (!achievements.data || !Array.isArray(achievements.data)) {
             return [];
         }
-        if (!attendants || !Array.isArray(attendants)) {
+        if (!attendants.data || !Array.isArray(attendants.data)) {
             return [];
         }
 
-        return achievements
+        return achievements.data
             .filter(ach => ach.active)
             .map(achievement => {
                 // Buscar conquistas desbloqueadas na temporada atual
@@ -153,17 +153,17 @@ export default function GamificacaoPage() {
                     unlockedInCurrentSeason.map(unlock => unlock.attendantId)
                 );
                 
-                const unlockedBy = attendants.filter(att => unlockedByAttendantIds.has(att.id));
+                const unlockedBy = attendants.data.filter(att => unlockedByAttendantIds.has(att.id));
 
                 return {
                     ...achievement,
                     unlockedCount: unlockedBy.length,
-                    totalAttendants: attendants.length,
-                    progress: attendants.length > 0 ? (unlockedBy.length / attendants.length) * 100 : 0,
+                    totalAttendants: attendants.data.length,
+                    progress: attendants.data.length > 0 ? (unlockedBy.length / attendants.data.length) * 100 : 0,
                     unlockedBy,
                 };
             });
-    }, [attendants, achievements, currentSeasonAchievements]);
+    }, [attendants.data, achievements.data, currentSeasonAchievements]);
 
     const handleAchievementClick = (achievement: AchievementStat) => {
         setSelectedAchievement(achievement);
@@ -176,7 +176,7 @@ export default function GamificacaoPage() {
     
     const canManageSystem = user.role === ROLES.ADMIN || user.role === ROLES.SUPERADMIN;
 
-    const ratingScores = gamificationConfig.ratingScores;
+    const ratingScores = gamificationConfig.data?.ratingScores;
 
     return (
         <div className="space-y-8">
@@ -323,7 +323,7 @@ export default function GamificacaoPage() {
                                     <StarIcon className="h-4 w-4 text-yellow-400 fill-yellow-400"/> 5 Estrelas
                                 </div>
                                 <div className="flex items-center gap-1 font-bold text-green-600 dark:text-green-400">
-                                    <TrendingUp size={16}/> +{Math.round(getScoreFromRating(5, ratingScores) * totalMultiplier)} XP
+                                    <TrendingUp size={16}/> +{ratingScores ? Math.round(getScoreFromRating(5, ratingScores) * totalMultiplier) : 0} XP
                                 </div>
                             </div>
                              <div className="flex justify-between items-center p-2 rounded-md bg-lime-50 dark:bg-lime-950">
@@ -331,7 +331,7 @@ export default function GamificacaoPage() {
                                     <StarIcon className="h-4 w-4 text-yellow-400 fill-yellow-400"/> 4 Estrelas
                                 </div>
                                 <div className="flex items-center gap-1 font-bold text-lime-600 dark:text-lime-400">
-                                     <TrendingUp size={16}/> +{Math.round(getScoreFromRating(4, ratingScores) * totalMultiplier)} XP
+                                     <TrendingUp size={16}/> +{ratingScores ? Math.round(getScoreFromRating(4, ratingScores) * totalMultiplier) : 0} XP
                                 </div>
                             </div>
                              <div className="flex justify-between items-center p-2 rounded-md bg-blue-50 dark:bg-blue-950">
@@ -339,7 +339,7 @@ export default function GamificacaoPage() {
                                     <StarIcon className="h-4 w-4 text-yellow-400 fill-yellow-400"/> 3 Estrelas
                                 </div>
                                 <div className="flex items-center gap-1 font-bold text-blue-600 dark:text-blue-400">
-                                    <TrendingUp size={16}/> +{Math.round(getScoreFromRating(3, ratingScores) * totalMultiplier)} XP
+                                    <TrendingUp size={16}/> +{ratingScores ? Math.round(getScoreFromRating(3, ratingScores) * totalMultiplier) : 0} XP
                                 </div>
                             </div>
                              <div className="flex justify-between items-center p-2 rounded-md bg-orange-50 dark:bg-orange-950">
@@ -347,7 +347,7 @@ export default function GamificacaoPage() {
                                     <StarIcon className="h-4 w-4 text-yellow-400 fill-yellow-400"/> 2 Estrelas
                                 </div>
                                 <div className="flex items-center gap-1 font-bold text-orange-600 dark:text-orange-400">
-                                    <TrendingDown size={16}/> {Math.round(getScoreFromRating(2, ratingScores) * totalMultiplier)} XP
+                                    <TrendingDown size={16}/> {ratingScores ? Math.round(getScoreFromRating(2, ratingScores) * totalMultiplier) : 0} XP
                                 </div>
                             </div>
                              <div className="flex justify-between items-center p-2 rounded-md bg-red-50 dark:bg-red-950">
@@ -355,7 +355,7 @@ export default function GamificacaoPage() {
                                     <StarIcon className="h-4 w-4 text-yellow-400 fill-yellow-400"/> 1 Estrela
                                 </div>
                                 <div className="flex items-center gap-1 font-bold text-red-600 dark:text-red-400">
-                                    <TrendingDown size={16}/> {Math.round(getScoreFromRating(1, ratingScores) * totalMultiplier)} XP
+                                    <TrendingDown size={16}/> {ratingScores ? Math.round(getScoreFromRating(1, ratingScores) * totalMultiplier) : 0} XP
                                 </div>
                             </div>
                         </CardContent>

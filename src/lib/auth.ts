@@ -1,8 +1,7 @@
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "./prisma";
-import { UserService } from "@/services/userService";
+import bcrypt from "bcryptjs";
 
 export const authOptions: NextAuthOptions = {
   session: {
@@ -24,12 +23,18 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          const user = await UserService.verifyCredentials(
-            credentials.email,
-            credentials.password
-          );
+          // Buscar usuário diretamente no banco
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.email }
+          });
 
-          if (!user) {
+          if (!user || !user.password) {
+            return null;
+          }
+
+          // Verificar senha
+          const isValidPassword = await bcrypt.compare(credentials.password, user.password);
+          if (!isValidPassword) {
             return null;
           }
 

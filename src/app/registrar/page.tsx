@@ -67,7 +67,7 @@ export default function RegisterPage() {
     }
   }
 
-  const activeModules = modules.filter(m => m.active);
+  const activeModules = modules?.filter(m => m.active) || [];
 
   // Users registering publicly should only be able to select USER or SUPERVISOR roles.
   // Admin roles should be assigned by other admins.

@@ -1,7 +1,8 @@
 
 "use client";
 
-import { useAuth } from "@/hooks/useAuth";
+import { usePrisma } from "@/providers/PrismaProvider";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -36,14 +37,19 @@ const formSchema = z.object({
 });
 
 export default function GamificacaoMultiplicadoresPage() {
-  const { user, isAuthenticated, loading, gamificationConfig, updateGamificationConfig, seasons, updateSeason } = useAuth();
+  const { data: session, status } = useSession();
+  const { gamificationConfig, updateGamificationConfig, seasons, updateSeason, appLoading } = usePrisma();
   const router = useRouter();
+  
+  const user = session?.user;
+  const isAuthenticated = !!session;
+  const loading = status === "loading" || appLoading;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      globalXpMultiplier: gamificationConfig.globalXpMultiplier || 1,
-      seasons: seasons.map(s => ({ id: s.id, xpMultiplier: s.xpMultiplier })),
+      globalXpMultiplier: gamificationConfig.data?.globalXpMultiplier || 1,
+      seasons: seasons.data?.map(s => ({ id: s.id, xpMultiplier: s.xpMultiplier })) || [],
     },
   });
 
@@ -59,11 +65,13 @@ export default function GamificacaoMultiplicadoresPage() {
   }, [isAuthenticated, loading, router, user]);
 
   useEffect(() => {
-    form.reset({
-      globalXpMultiplier: gamificationConfig.globalXpMultiplier || 1,
-      seasons: seasons.map(s => ({ id: s.id, xpMultiplier: s.xpMultiplier })),
-    });
-  }, [gamificationConfig, seasons, form]);
+    if (gamificationConfig.data && seasons.data) {
+      form.reset({
+        globalXpMultiplier: gamificationConfig.data.globalXpMultiplier || 1,
+        seasons: seasons.data.map(s => ({ id: s.id, xpMultiplier: s.xpMultiplier })),
+      });
+    }
+  }, [gamificationConfig.data, seasons.data, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {

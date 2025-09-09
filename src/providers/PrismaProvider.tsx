@@ -735,9 +735,7 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
       });
     }
   }, [
-    attendantsState,
-    evaluationsState,
-    modulesState,
+    session,
     fetchEntityData,
     toast
   ]);
@@ -777,7 +775,7 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
       seasonXpEventsState.setData(EMPTY_XP_EVENT_ARRAY);
       console.log('📅 Nenhuma temporada ativa');
     }
-  }, [seasonsState.data, xpEventsState.data, seasonXpEventsState]);
+  }, [seasonsState.data, xpEventsState.data]);
   
   // Authentication functions - TODO: Create API routes
   const login = useCallback(async (email: string, password: string) => {

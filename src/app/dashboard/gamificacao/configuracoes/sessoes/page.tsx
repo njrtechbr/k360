@@ -1,7 +1,8 @@
 
 "use client";
 
-import { useAuth } from "@/hooks/useAuth";
+import { usePrisma } from "@/providers/PrismaProvider";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
@@ -60,9 +61,14 @@ const formSchema = z.object({
 });
 
 export default function ConfigurarSessoesPage() {
-    const { user, isAuthenticated, loading, seasons, addGamificationSeason, updateGamificationSeason, deleteGamificationSeason } = useAuth();
+    const { data: session, status } = useSession();
+    const { seasons, addGamificationSeason, updateGamificationSeason, deleteGamificationSeason, appLoading } = usePrisma();
     const router = useRouter();
     const { toast } = useToast();
+    
+    const user = session?.user;
+    const isAuthenticated = !!session;
+    const loading = status === "loading" || appLoading;
 
     const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -76,25 +82,40 @@ export default function ConfigurarSessoesPage() {
 
     // Calcular estatísticas das temporadas
     const seasonStats = useMemo(() => {
+        if (!seasons.data || !Array.isArray(seasons.data)) {
+            return {
+                total: 0,
+                active: 0,
+                upcoming: 0,
+                past: 0,
+                draft: 0,
+                activeSeason: null
+            };
+        }
+        
         const now = new Date();
-        const active = seasons.find(s => s.active);
-        const upcoming = seasons.filter(s => !s.active && new Date(s.startDate) > now);
-        const past = seasons.filter(s => !s.active && new Date(s.endDate) < now);
-        const draft = seasons.filter(s => !s.active && new Date(s.startDate) <= now && new Date(s.endDate) >= now);
+        const active = seasons.data.find(s => s.active);
+        const upcoming = seasons.data.filter(s => !s.active && new Date(s.startDate) > now);
+        const past = seasons.data.filter(s => !s.active && new Date(s.endDate) < now);
+        const draft = seasons.data.filter(s => !s.active && new Date(s.startDate) <= now && new Date(s.endDate) >= now);
         
         return {
-            total: seasons.length,
+            total: seasons.data.length,
             active: active ? 1 : 0,
             upcoming: upcoming.length,
             past: past.length,
             draft: draft.length,
             activeSeason: active
         };
-    }, [seasons]);
+    }, [seasons.data]);
 
     // Verificar conflitos de período
     const checkPeriodConflict = (startDate: Date, endDate: Date, excludeId?: string) => {
-        return seasons.find(season => {
+        if (!seasons.data || !Array.isArray(seasons.data)) {
+            return null;
+        }
+        
+        return seasons.data.find(season => {
             if (excludeId && season.id === excludeId) return false;
             
             const seasonStart = new Date(season.startDate);
@@ -303,7 +324,7 @@ export default function ConfigurarSessoesPage() {
         return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
     }
 
-    const sortedSeasons = [...seasons].sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+    const sortedSeasons = seasons.data ? [...seasons.data].sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()) : [];
     
     const getSeasonStatus = (season: GamificationSeason) => {
         const now = new Date();

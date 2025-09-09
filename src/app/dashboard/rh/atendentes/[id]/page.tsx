@@ -2,7 +2,8 @@
 
 "use client";
 
-import { useAuth } from "@/hooks/useAuth";
+import { usePrisma } from "@/providers/PrismaProvider";
+import { useSession } from "next-auth/react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -141,7 +142,11 @@ const StatCard = ({ icon, label, value, description, color = "default" }: {
 export default function AttendantProfilePage() {
     const { id } = useParams();
     const router = useRouter();
-    const { attendants, evaluations, loading, user, xpEvents, seasons } = useAuth();
+    const { data: session, status } = useSession();
+    const { attendants, evaluations, xpEvents, seasons, appLoading } = usePrisma();
+    
+    const user = session?.user;
+    const loading = status === "loading" || appLoading;
     const [achievements, setAchievements] = useState<AchievementConfig[]>([]);
     const [unlockedAchievements, setUnlockedAchievements] = useState<UnlockedAchievement[]>([]);
 

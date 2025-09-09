@@ -1,7 +1,8 @@
 
 "use client";
 
-import { useAuth } from "@/hooks/useAuth";
+import { usePrisma } from "@/providers/PrismaProvider";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,21 +25,26 @@ const getMedal = (rank: number) => {
 };
 
 export default function HistoricoTemporadasPage() {
-    const { user, isAuthenticated, loading, attendants, xpEvents, seasons } = useAuth();
+    const { data: session, status } = useSession();
+    const { attendants, xpEvents, seasons, appLoading } = usePrisma();
     const router = useRouter();
+    
+    const user = session?.user;
+    const isAuthenticated = !!session;
+    const loading = status === "loading" || appLoading;
     
     const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null);
     const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
 
     // Incluir apenas temporadas finalizadas para o histórico
     const availableSeasons = useMemo(() => {
-        if (!seasons || !Array.isArray(seasons)) return [];
+        if (!seasons.data || !Array.isArray(seasons.data)) return [];
         
         const now = new Date();
-        return seasons
+        return seasons.data
             .filter(s => new Date(s.endDate) < now) // Apenas temporadas finalizadas
             .sort((a, b) => new Date(b.endDate).getTime() - new Date(a.endDate).getTime());
-    }, [seasons]);
+    }, [seasons.data]);
 
 
 
