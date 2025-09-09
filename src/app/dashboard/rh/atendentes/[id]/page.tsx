@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { getLevelFromXp } from "@/lib/xp";
 import type { XpEvent, UnlockedAchievement, AchievementConfig } from "@/lib/types";
 import XpAvulsoToast from "@/components/gamification/notifications/XpAvulsoToast";
+import { safeFindInArray, isValidAttendant } from "@/lib/data-validation";
 
 const RatingStars = ({ rating, className }: { rating: number, className?: string }) => {
     const totalStars = 5;
@@ -163,7 +164,21 @@ export default function AttendantProfilePage() {
         return Math.min(100, Math.max(0, Math.round(percentage)));
     };
 
-    const attendant = useMemo(() => attendants.find(a => a.id === id), [attendants, id]);
+    // Validação segura para encontrar o atendente
+    const attendant = useMemo(() => {
+        // Verificar se attendants existe e é um array válido
+        if (!attendants || !Array.isArray(attendants)) {
+            console.warn('AttendantProfilePage: attendants é null, undefined ou não é um array', attendants);
+            return undefined;
+        }
+
+        // Usar safeFindInArray para busca segura
+        return safeFindInArray(
+            attendants,
+            (a) => a.id === id,
+            isValidAttendant
+        );
+    }, [attendants, id]);
     
     // Buscar conquistas
     useEffect(() => {
@@ -193,9 +208,11 @@ export default function AttendantProfilePage() {
         }
     }, [id]);
 
-    // Calcular estatísticas completas
+    // Calcular estatísticas completas com validação robusta
     const stats = useMemo(() => {
-        if (!attendant || !xpEvents || !evaluations || !seasons) {
+        // Validação de dados essenciais
+        if (!attendant) {
+            console.warn('AttendantProfilePage: attendant não encontrado ou inválido');
             return {
                 totalXp: 0,
                 totalEvaluations: 0,
@@ -208,15 +225,24 @@ export default function AttendantProfilePage() {
             };
         }
 
-        // XP total
-        const attendantXpEvents = xpEvents.filter(e => e.attendantId === id);
+        // Validação segura dos arrays de dados
+        const safeXpEvents = Array.isArray(xpEvents) ? xpEvents : [];
+        const safeEvaluations = Array.isArray(evaluations) ? evaluations : [];
+        const safeSeasons = Array.isArray(seasons) ? seasons : [];
+
+        if (safeXpEvents.length === 0 && safeEvaluations.length === 0 && safeSeasons.length === 0) {
+            console.info('AttendantProfilePage: nenhum dado de gamificação disponível ainda');
+        }
+
+        // XP total com validação segura
+        const attendantXpEvents = safeXpEvents.filter(e => e && e.attendantId === id);
         const totalXp = attendantXpEvents.reduce((sum, e) => sum + (e.points || 0), 0);
         
-        // Avaliações do atendente
-        const attendantEvaluations = evaluations.filter(e => e.attendantId === id);
+        // Avaliações do atendente com validação segura
+        const attendantEvaluations = safeEvaluations.filter(e => e && e.attendantId === id);
         const totalEvaluations = attendantEvaluations.length;
         const averageRating = totalEvaluations > 0 
-            ? attendantEvaluations.reduce((sum, e) => sum + e.nota, 0) / totalEvaluations 
+            ? attendantEvaluations.reduce((sum, e) => sum + (e.nota || 0), 0) / totalEvaluations 
             : 0;
 
         // Nível atual
@@ -255,9 +281,9 @@ export default function AttendantProfilePage() {
             }
         }
 
-        // Preparar dados das temporadas
+        // Preparar dados das temporadas com validação segura
         const now = new Date();
-        const sortedSeasons = [...seasons].sort((a, b) => 
+        const sortedSeasons = [...safeSeasons].sort((a, b) => 
             new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
         );
 
@@ -394,15 +420,52 @@ export default function AttendantProfilePage() {
         }
     }, [loading, user, router]);
 
+    // Estados de loading e erro com validação robusta
     if (loading) {
-        return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
+        return (
+            <div className="flex items-center justify-center h-full">
+                <div className="text-center space-y-2">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    <p>Carregando dados do atendente...</p>
+                </div>
+            </div>
+        );
     }
 
+    // Verificação de dados de atendentes
+    if (!attendants || !Array.isArray(attendants)) {
+        return (
+            <div className="text-center space-y-4">
+                <h1 className="text-2xl font-bold text-destructive">Erro ao carregar dados</h1>
+                <p className="text-muted-foreground">
+                    Não foi possível carregar a lista de atendentes. Verifique sua conexão e tente novamente.
+                </p>
+                <div className="flex gap-2 justify-center">
+                    <Button variant="outline" onClick={() => window.location.reload()}>
+                        Tentar novamente
+                    </Button>
+                    <Button asChild>
+                        <Link href="/dashboard/rh/atendentes">
+                            <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para a lista
+                        </Link>
+                    </Button>
+                </div>
+            </div>
+        );
+    }
+
+    // Verificação se o atendente específico foi encontrado
     if (!attendant) {
         return (
-            <div className="text-center">
+            <div className="text-center space-y-4">
                 <h1 className="text-2xl font-bold">Atendente não encontrado</h1>
-                <p className="text-muted-foreground">O atendente que você está procurando não existe ou foi removido.</p>
+                <p className="text-muted-foreground">
+                    O atendente com ID "{id}" não foi encontrado ou pode ter sido removido.
+                </p>
+                <div className="bg-muted p-4 rounded-lg text-sm">
+                    <p><strong>ID procurado:</strong> {id}</p>
+                    <p><strong>Total de atendentes:</strong> {attendants.length}</p>
+                </div>
                 <Button asChild className="mt-4">
                     <Link href="/dashboard/rh/atendentes">
                         <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para a lista
@@ -505,7 +568,10 @@ export default function AttendantProfilePage() {
                                 .sort((a, b) => new Date(b.unlockedAt).getTime() - new Date(a.unlockedAt).getTime())
                                 .slice(0, 12)
                                 .map(unlocked => {
-                                    const achievement = achievements.find(a => a.id === unlocked.achievementId);
+                                    // Validação segura para encontrar a conquista
+                                    const achievement = Array.isArray(achievements) 
+                                        ? achievements.find(a => a && a.id === unlocked.achievementId)
+                                        : null;
                                     if (!achievement) return null;
                                     
                                     return (

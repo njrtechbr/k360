@@ -1,11 +1,23 @@
 "use client";
 
-import type { ReactNode } from "react";
 import React, { useCallback, useEffect, useState, createContext, useContext } from "react";
+import type { ReactNode } from "react";
 import type { User, Role, Module, Attendant, Evaluation, EvaluationImport, AttendantImport, Funcao, Setor, GamificationConfig, Achievement, LevelReward, GamificationSeason, XpEvent } from "@/lib/types";
 import { ROLES } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { useSession } from "next-auth/react";
+import { useSafeState } from "@/hooks/useSafeState";
+import { 
+  validateAttendantArray, 
+  validateEvaluationArray, 
+  validateImportStatus,
+  isValidArray,
+  DEFAULT_IMPORT_STATUS,
+  EMPTY_ATTENDANT_ARRAY,
+  EMPTY_EVALUATION_ARRAY,
+  EMPTY_XP_EVENT_ARRAY,
+  type SafeDataState
+} from "@/lib/data-validation";
 
 import { INITIAL_ACHIEVEMENTS, INITIAL_LEVEL_REWARDS } from "@/lib/achievements";
 import { getScoreFromRating } from "@/lib/gamification";
@@ -60,28 +72,47 @@ interface PrismaContextType {
   updateProfile: (userData: Partial<User>) => Promise<void>;
   hasSuperAdmin: () => Promise<boolean>;
   
-  // All Users
-  allUsers: User[];
+  // Estados seguros para todas as entidades
+  attendants: SafeDataState<Attendant[]>;
+  evaluations: SafeDataState<Evaluation[]>;
+  allUsers: SafeDataState<User[]>;
+  modules: SafeDataState<Module[]>;
+  attendantImports: SafeDataState<AttendantImport[]>;
+  evaluationImports: SafeDataState<EvaluationImport[]>;
+  funcoes: SafeDataState<Funcao[]>;
+  setores: SafeDataState<Setor[]>;
+  gamificationConfig: SafeDataState<GamificationConfig>;
+  achievements: SafeDataState<Achievement[]>;
+  levelRewards: SafeDataState<LevelReward[]>;
+  seasons: SafeDataState<GamificationSeason[]>;
+  xpEvents: SafeDataState<XpEvent[]>;
+  seasonXpEvents: SafeDataState<XpEvent[]>;
+  
+  // Estados derivados
+  activeSeason: GamificationSeason | null;
+  nextSeason: GamificationSeason | null;
+  
+  // Indicadores globais
+  hasAnyError: boolean;
+  isAnyLoading: boolean;
+  
+  // User management
   createUser: (userData: { name: string; email: string; password: string; role: Role; modules: string[] }) => Promise<User>;
   updateUser: (userId: string, userData: { name: string; role: Role; modules: string[] }) => Promise<User>;
   deleteUser: (userId: string) => Promise<void>;
   
-  // Modules
-  modules: Module[];
+  // Module management
   addModule: (moduleData: Omit<Module, 'id' | 'active'>) => Promise<void>;
   updateModule: (moduleId: string, moduleData: Partial<Omit<Module, 'id' | 'active'>>) => Promise<void>;
   toggleModuleStatus: (moduleId: string) => Promise<void>;
   deleteModule: (moduleId: string) => Promise<void>;
   
-  // Attendants
-  attendants: Attendant[];
+  // Attendant management
   addAttendant: (attendantData: Omit<Attendant, 'id'>) => Promise<Attendant>;
   updateAttendant: (attendantId: string, attendantData: Partial<Omit<Attendant, 'id'>>) => Promise<void>;
   deleteAttendants: (attendantIds: string[]) => Promise<void>;
   
-  // RH Config
-  funcoes: Funcao[];
-  setores: Setor[];
+  // RH Config management
   addFuncao: (funcao: string) => Promise<void>;
   updateFuncao: (oldFuncao: string, newFuncao: string) => Promise<void>;
   deleteFuncao: (funcao: string) => Promise<void>;
@@ -89,36 +120,25 @@ interface PrismaContextType {
   updateSetor: (oldSetor: string, newSetor: string) => Promise<void>;
   deleteSetor: (setor: string) => Promise<void>;
 
-  // Evaluations
-  evaluations: Evaluation[];
+  // Evaluation management
   addEvaluation: (evaluationData: Omit<Evaluation, 'id' | 'xpGained' | 'importId'>) => Promise<Evaluation>;
   deleteEvaluations: (evaluationIds: string[], title: string) => Promise<void>;
   
-  // Imports
-  attendantImports: AttendantImport[];
-  evaluationImports: EvaluationImport[];
+  // Import management
   importAttendants: (attendants: Omit<Attendant, 'id' | 'importId'>[], fileName: string, userId: string) => Promise<void>;
   importEvaluations: (evaluations: Omit<Evaluation, 'id' | 'importId' | 'xpGained'>[], fileName: string) => Promise<void>;
   importWhatsAppEvaluations: (evaluations: Omit<Evaluation, 'id' | 'xpGained' | 'importId'>[], agentMap: Record<string, string>, fileName: string) => Promise<void>;
   deleteAttendantImport: (importId: string) => Promise<void>;
   deleteEvaluationImport: (importId: string) => Promise<void>;
   
-  // Gamification
-  gamificationConfig: GamificationConfig;
-  achievements: Achievement[];
-  levelRewards: LevelReward[];
-  seasons: GamificationSeason[];
-  activeSeason: GamificationSeason | null;
-  nextSeason: GamificationSeason | null;
+  // Gamification management
   updateGamificationConfig: (config: Partial<GamificationConfig>) => Promise<void>;
   updateAchievement: (id: string, data: Partial<Omit<Achievement, 'id' | 'icon' | 'color' | 'isUnlocked'>>) => Promise<void>;
   addGamificationSeason: (season: Omit<GamificationSeason, 'id'>) => Promise<void>;
   updateGamificationSeason: (seasonId: string, seasonData: Partial<Omit<GamificationSeason, 'id'>>) => Promise<void>;
   deleteGamificationSeason: (seasonId: string) => Promise<void>;
   
-  // XP Events
-  xpEvents: XpEvent[];
-  seasonXpEvents: XpEvent[];
+  // XP Events management
   addXpEvent: (xpEvent: Omit<XpEvent, 'id'>) => Promise<void>;
   deleteXpEvent: (xpEventId: string) => Promise<void>;
   resetXpEvents: () => Promise<void>;
@@ -132,8 +152,9 @@ interface PrismaContextType {
   importStatus: ImportStatus;
   setImportStatus: React.Dispatch<React.SetStateAction<ImportStatus>>;
   
-  // Data Refresh
+  // Data Refresh com retry automático
   fetchAllData: () => Promise<void>;
+  retryFailedRequests: () => Promise<void>;
 }
 
 const PrismaContext = createContext<PrismaContextType | null>(null);
@@ -148,23 +169,143 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
   const [appLoading, setAppLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   
-  // Data State
-  const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [modules, setModules] = useState<Module[]>([]);
-  const [attendants, setAttendants] = useState<Attendant[]>([]);
-  const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
-  const [attendantImports, setAttendantImports] = useState<AttendantImport[]>([]);
-  const [evaluationImports, setEvaluationImports] = useState<EvaluationImport[]>([]);
-  const [funcoes, setFuncoes] = useState<Funcao[]>([]);
-  const [setores, setSetores] = useState<Setor[]>([]);
-  const [gamificationConfig, setGamificationConfig] = useState<GamificationConfig>(INITIAL_GAMIFICATION_CONFIG);
-  const [achievements, setAchievements] = useState<Achievement[]>(INITIAL_ACHIEVEMENTS);
-  const [levelRewards, setLevelRewards] = useState<LevelReward[]>(INITIAL_LEVEL_REWARDS);
-  const [seasons, setSeasons] = useState<GamificationSeason[]>([]);
+  // Estados seguros usando useSafeState para todas as entidades
+  const attendantsState = useSafeState({
+    initialValue: EMPTY_ATTENDANT_ARRAY,
+    validator: (data): data is Attendant[] => isValidArray(data),
+    fallback: EMPTY_ATTENDANT_ARRAY,
+    enableWarnings: true
+  });
+
+  const evaluationsState = useSafeState({
+    initialValue: EMPTY_EVALUATION_ARRAY,
+    validator: (data): data is Evaluation[] => isValidArray(data),
+    fallback: EMPTY_EVALUATION_ARRAY,
+    enableWarnings: true
+  });
+
+  const allUsersState = useSafeState({
+    initialValue: [] as User[],
+    validator: (data): data is User[] => isValidArray(data),
+    fallback: [] as User[],
+    enableWarnings: true
+  });
+
+  const modulesState = useSafeState({
+    initialValue: [] as Module[],
+    validator: (data): data is Module[] => isValidArray(data),
+    fallback: [] as Module[],
+    enableWarnings: true
+  });
+
+  const attendantImportsState = useSafeState({
+    initialValue: [] as AttendantImport[],
+    validator: (data): data is AttendantImport[] => isValidArray(data),
+    fallback: [] as AttendantImport[],
+    enableWarnings: true
+  });
+
+  const evaluationImportsState = useSafeState({
+    initialValue: [] as EvaluationImport[],
+    validator: (data): data is EvaluationImport[] => isValidArray(data),
+    fallback: [] as EvaluationImport[],
+    enableWarnings: true
+  });
+
+  const funcoesState = useSafeState({
+    initialValue: [] as Funcao[],
+    validator: (data): data is Funcao[] => isValidArray(data),
+    fallback: [] as Funcao[],
+    enableWarnings: true
+  });
+
+  const setoresState = useSafeState({
+    initialValue: [] as Setor[],
+    validator: (data): data is Setor[] => isValidArray(data),
+    fallback: [] as Setor[],
+    enableWarnings: true
+  });
+
+  const gamificationConfigState = useSafeState({
+    initialValue: INITIAL_GAMIFICATION_CONFIG,
+    validator: (data): data is GamificationConfig => data !== null && typeof data === 'object',
+    fallback: INITIAL_GAMIFICATION_CONFIG,
+    enableWarnings: true
+  });
+
+  const achievementsState = useSafeState({
+    initialValue: INITIAL_ACHIEVEMENTS,
+    validator: (data): data is Achievement[] => isValidArray(data),
+    fallback: INITIAL_ACHIEVEMENTS,
+    enableWarnings: true
+  });
+
+  const levelRewardsState = useSafeState({
+    initialValue: INITIAL_LEVEL_REWARDS,
+    validator: (data): data is LevelReward[] => isValidArray(data),
+    fallback: INITIAL_LEVEL_REWARDS,
+    enableWarnings: true
+  });
+
+  const seasonsState = useSafeState({
+    initialValue: [] as GamificationSeason[],
+    validator: (data): data is GamificationSeason[] => isValidArray(data),
+    fallback: [] as GamificationSeason[],
+    enableWarnings: true
+  });
+
+  const xpEventsState = useSafeState({
+    initialValue: EMPTY_XP_EVENT_ARRAY,
+    validator: (data): data is XpEvent[] => isValidArray(data),
+    fallback: EMPTY_XP_EVENT_ARRAY,
+    enableWarnings: true
+  });
+
+  const seasonXpEventsState = useSafeState({
+    initialValue: EMPTY_XP_EVENT_ARRAY,
+    validator: (data): data is XpEvent[] => isValidArray(data),
+    fallback: EMPTY_XP_EVENT_ARRAY,
+    enableWarnings: true
+  });
+
+  // Estados derivados
   const [activeSeason, setActiveSeason] = useState<GamificationSeason | null>(null);
   const [nextSeason, setNextSeason] = useState<GamificationSeason | null>(null);
-  const [xpEvents, setXpEvents] = useState<XpEvent[]>([]);
-  const [seasonXpEvents, setSeasonXpEvents] = useState<XpEvent[]>([]);
+
+  // Indicadores globais
+  const hasAnyError = [
+    attendantsState.error,
+    evaluationsState.error,
+    allUsersState.error,
+    modulesState.error,
+    attendantImportsState.error,
+    evaluationImportsState.error,
+    funcoesState.error,
+    setoresState.error,
+    gamificationConfigState.error,
+    achievementsState.error,
+    levelRewardsState.error,
+    seasonsState.error,
+    xpEventsState.error,
+    seasonXpEventsState.error
+  ].some(error => error !== null);
+
+  const isAnyLoading = [
+    attendantsState.loading,
+    evaluationsState.loading,
+    allUsersState.loading,
+    modulesState.loading,
+    attendantImportsState.loading,
+    evaluationImportsState.loading,
+    funcoesState.loading,
+    setoresState.loading,
+    gamificationConfigState.loading,
+    achievementsState.loading,
+    levelRewardsState.loading,
+    seasonsState.loading,
+    xpEventsState.loading,
+    seasonXpEventsState.loading
+  ].some(loading => loading);
   
   // Import Status
   const [importStatus, setImportStatus] = useState<ImportStatus>({
@@ -185,144 +326,428 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
     lastResult: null
   });
   
-  // Fetch all data from API routes
+  // Função auxiliar para fazer fetch com retry automático
+  const fetchWithRetry = useCallback(async (
+    url: string, 
+    options: RequestInit = {}, 
+    maxRetries: number = 3,
+    retryDelay: number = 1000
+  ): Promise<Response> => {
+    let lastError: Error | null = null;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await fetch(url, {
+          ...options,
+          headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+          }
+        });
+        
+        // Se a resposta for bem-sucedida, retorna
+        if (response.ok) {
+          return response;
+        }
+        
+        // Se for erro 4xx (cliente), não tenta novamente
+        if (response.status >= 400 && response.status < 500) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        // Para erros 5xx (servidor), tenta novamente
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error('Erro desconhecido');
+        
+        console.warn(`Tentativa ${attempt}/${maxRetries} falhou para ${url}:`, lastError.message);
+        
+        // Se não é a última tentativa, aguarda antes de tentar novamente
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
+        }
+      }
+    }
+    
+    throw lastError || new Error('Falha após múltiplas tentativas');
+  }, []);
+
+  // Função para buscar dados de uma entidade específica com tratamento de erro
+  const fetchEntityData = useCallback(async (
+    url: string,
+    entityName: string,
+    setState: (data: any) => void,
+    setLoading: (loading: boolean) => void,
+    setError: (error: string | null) => void,
+    validator?: (data: unknown) => boolean,
+    fallback?: any
+  ): Promise<void> => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetchWithRetry(url);
+      const data = await response.json();
+      
+      // Validar dados se validator foi fornecido
+      if (validator && !validator(data)) {
+        console.warn(`Dados inválidos recebidos para ${entityName}:`, data);
+        if (fallback !== undefined) {
+          setState(fallback);
+        }
+        setError(`Dados inválidos recebidos para ${entityName}`);
+        return;
+      }
+      
+      setState(data);
+      console.log(`✅ ${entityName} carregados com sucesso:`, Array.isArray(data) ? `${data.length} itens` : 'dados carregados');
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      console.error(`❌ Erro ao carregar ${entityName}:`, errorMessage);
+      
+      setError(`Erro ao carregar ${entityName}: ${errorMessage}`);
+      
+      // Usar fallback se fornecido
+      if (fallback !== undefined) {
+        setState(fallback);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchWithRetry]);
+
+  // Fetch all data from API routes com tratamento robusto de erros
   const fetchAllData = useCallback(async () => {
     try {
       setAppLoading(true);
       
       // Só buscar dados se o usuário estiver autenticado
       if (!session?.user) {
+        console.log('👤 Usuário não autenticado, limpando dados...');
+        
+        // Limpar todos os estados quando não autenticado
+        attendantsState.setData(EMPTY_ATTENDANT_ARRAY);
+        evaluationsState.setData(EMPTY_EVALUATION_ARRAY);
+        allUsersState.setData([]);
+        modulesState.setData([]);
+        attendantImportsState.setData([]);
+        evaluationImportsState.setData([]);
+        funcoesState.setData([]);
+        setoresState.setData([]);
+        gamificationConfigState.setData(INITIAL_GAMIFICATION_CONFIG);
+        achievementsState.setData(INITIAL_ACHIEVEMENTS);
+        levelRewardsState.setData(INITIAL_LEVEL_REWARDS);
+        seasonsState.setData([]);
+        xpEventsState.setData(EMPTY_XP_EVENT_ARRAY);
+        seasonXpEventsState.setData(EMPTY_XP_EVENT_ARRAY);
+        
         setAppLoading(false);
         return;
       }
 
+      console.log('🔄 Iniciando carregamento de dados...');
       const userRole = session.user.role as Role;
+      
+      // Buscar dados em paralelo para melhor performance
+      const fetchPromises: Promise<void>[] = [];
       
       // Fetch users from API - apenas para ADMIN e SUPERADMIN
       if (['ADMIN', 'SUPERADMIN'].includes(userRole)) {
-        const usersResponse = await fetch('/api/users');
-        
-        if (usersResponse.ok) {
-          const usersData = await usersResponse.json();
-          setAllUsers(usersData);
-        } else {
-          // Se não conseguir buscar usuários (ex: sem permissão), limpar a lista
-          setAllUsers([]);
-        }
+        fetchPromises.push(
+          fetchEntityData(
+            '/api/users',
+            'usuários',
+            allUsersState.setData,
+            allUsersState.setLoading,
+            allUsersState.setError,
+            (data) => isValidArray(data),
+            []
+          )
+        );
       } else {
         // Usuários sem permissão não precisam da lista de usuários
-        setAllUsers([]);
+        allUsersState.setData([]);
       }
       
-      // Fetch modules from API
-      const modulesResponse = await fetch('/api/modules');
-      if (modulesResponse.ok) {
-        const modulesData = await modulesResponse.json();
-        setModules(modulesData);
-      }
+      // Fetch modules
+      fetchPromises.push(
+        fetchEntityData(
+          '/api/modules',
+          'módulos',
+          modulesState.setData,
+          modulesState.setLoading,
+          modulesState.setError,
+          (data) => isValidArray(data),
+          []
+        )
+      );
       
-      // Fetch attendants from API
-      const attendantsResponse = await fetch('/api/attendants');
-      if (attendantsResponse.ok) {
-        const attendantsData = await attendantsResponse.json();
-        setAttendants(attendantsData);
-      }
+      // Fetch attendants
+      fetchPromises.push(
+        fetchEntityData(
+          '/api/attendants',
+          'atendentes',
+          attendantsState.setData,
+          attendantsState.setLoading,
+          attendantsState.setError,
+          (data) => isValidArray(data),
+          EMPTY_ATTENDANT_ARRAY
+        )
+      );
       
-      // Fetch funcoes from API
-      const funcoesResponse = await fetch('/api/funcoes');
-      if (funcoesResponse.ok) {
-        const funcoesData = await funcoesResponse.json();
-        setFuncoes(funcoesData);
-      }
+      // Fetch funcoes
+      fetchPromises.push(
+        fetchEntityData(
+          '/api/funcoes',
+          'funções',
+          funcoesState.setData,
+          funcoesState.setLoading,
+          funcoesState.setError,
+          (data) => isValidArray(data),
+          []
+        )
+      );
       
-      // Fetch setores from API
-      const setoresResponse = await fetch('/api/setores');
-      if (setoresResponse.ok) {
-        const setoresData = await setoresResponse.json();
-        setSetores(setoresData);
-      }
+      // Fetch setores
+      fetchPromises.push(
+        fetchEntityData(
+          '/api/setores',
+          'setores',
+          setoresState.setData,
+          setoresState.setLoading,
+          setoresState.setError,
+          (data) => isValidArray(data),
+          []
+        )
+      );
       
-      // Fetch attendant imports from API
-      const attendantImportsResponse = await fetch('/api/attendants/imports');
-      if (attendantImportsResponse.ok) {
-        const attendantImportsData = await attendantImportsResponse.json();
-        setAttendantImports(attendantImportsData);
-      }
+      // Fetch attendant imports
+      fetchPromises.push(
+        fetchEntityData(
+          '/api/attendants/imports',
+          'importações de atendentes',
+          attendantImportsState.setData,
+          attendantImportsState.setLoading,
+          attendantImportsState.setError,
+          (data) => isValidArray(data),
+          []
+        )
+      );
       
-      // Fetch evaluation imports from API
-      const evaluationImportsResponse = await fetch('/api/evaluations/imports');
-      if (evaluationImportsResponse.ok) {
-        const evaluationImportsData = await evaluationImportsResponse.json();
-        setEvaluationImports(evaluationImportsData);
-      }
+      // Fetch evaluation imports
+      fetchPromises.push(
+        fetchEntityData(
+          '/api/evaluations/imports',
+          'importações de avaliações',
+          evaluationImportsState.setData,
+          evaluationImportsState.setLoading,
+          evaluationImportsState.setError,
+          (data) => isValidArray(data),
+          []
+        )
+      );
       
-      // Fetch evaluations from API
-      const evaluationsResponse = await fetch('/api/evaluations');
-      if (evaluationsResponse.ok) {
-        const evaluationsData = await evaluationsResponse.json();
-        setEvaluations(evaluationsData);
-      }
+      // Fetch evaluations
+      fetchPromises.push(
+        fetchEntityData(
+          '/api/evaluations',
+          'avaliações',
+          evaluationsState.setData,
+          evaluationsState.setLoading,
+          evaluationsState.setError,
+          (data) => isValidArray(data),
+          EMPTY_EVALUATION_ARRAY
+        )
+      );
       
-      // Fetch gamification config from API
-      const gamificationResponse = await fetch('/api/gamification', {
-        headers: {
-          'x-internal-request': 'true'
-        }
-      });
-      if (gamificationResponse.ok) {
-        const gamificationData = await gamificationResponse.json();
-        setGamificationConfig(gamificationData);
-        setAchievements(gamificationData.achievements || INITIAL_ACHIEVEMENTS);
-        setLevelRewards(gamificationData.levelRewards || INITIAL_LEVEL_REWARDS);
-        setSeasons(gamificationData.seasons || []);
-      } else {
-        // Fallback to default config if API fails
-        setGamificationConfig(INITIAL_GAMIFICATION_CONFIG);
-        setAchievements(INITIAL_ACHIEVEMENTS);
-        setLevelRewards(INITIAL_LEVEL_REWARDS);
-        setSeasons([]);
-      }
+      // Fetch gamification config
+      fetchPromises.push(
+        (async () => {
+          gamificationConfigState.setLoading(true);
+          gamificationConfigState.setError(null);
+          
+          try {
+            const response = await fetchWithRetry('/api/gamification', {
+              headers: { 'x-internal-request': 'true' }
+            });
+            const gamificationData = await response.json();
+            
+            gamificationConfigState.setData(gamificationData);
+            achievementsState.setData(gamificationData.achievements || INITIAL_ACHIEVEMENTS);
+            levelRewardsState.setData(gamificationData.levelRewards || INITIAL_LEVEL_REWARDS);
+            seasonsState.setData(gamificationData.seasons || []);
+            
+            console.log('✅ Configuração de gamificação carregada com sucesso');
+            
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+            console.error('❌ Erro ao carregar configuração de gamificação:', errorMessage);
+            
+            // Fallback to default config if API fails
+            gamificationConfigState.setData(INITIAL_GAMIFICATION_CONFIG);
+            achievementsState.setData(INITIAL_ACHIEVEMENTS);
+            levelRewardsState.setData(INITIAL_LEVEL_REWARDS);
+            seasonsState.setData([]);
+            
+            gamificationConfigState.setError(`Erro ao carregar gamificação: ${errorMessage}`);
+          } finally {
+            gamificationConfigState.setLoading(false);
+          }
+        })()
+      );
       
-      // Fetch XP events from API (aumentar limite para pegar todos os eventos)
-      const xpEventsResponse = await fetch('/api/gamification/xp-events?limit=10000');
-      if (xpEventsResponse.ok) {
-        const xpEventsData = await xpEventsResponse.json();
-        // A API retorna um objeto com a propriedade 'events'
-        const events = xpEventsData.events || xpEventsData;
-        // Ensure events is always an array to prevent filter errors
-        const eventsArray = Array.isArray(events) ? events : [];
-        
-        // Debug: log dos dados carregados
-        console.log('🔍 XP Events carregados:', eventsArray.length);
-        if (eventsArray.length > 0) {
-          const eventsBySeason = {};
-          eventsArray.forEach(event => {
-            const seasonId = event.seasonId || 'sem-temporada';
-            eventsBySeason[seasonId] = (eventsBySeason[seasonId] || 0) + 1;
-          });
-          console.log('📊 Eventos por temporada:', eventsBySeason);
-        }
-        
-        setXpEvents(eventsArray);
-      } else {
-        console.error('Failed to fetch XP events:', xpEventsResponse.statusText);
-        setXpEvents([]);
-      }
+      // Fetch XP events
+      fetchPromises.push(
+        (async () => {
+          xpEventsState.setLoading(true);
+          xpEventsState.setError(null);
+          
+          try {
+            const response = await fetchWithRetry('/api/gamification/xp-events?limit=10000');
+            const xpEventsData = await response.json();
+            
+            // A API retorna um objeto com a propriedade 'events'
+            const events = xpEventsData.events || xpEventsData;
+            const eventsArray = Array.isArray(events) ? events : [];
+            
+            xpEventsState.setData(eventsArray);
+            
+            console.log('✅ Eventos XP carregados com sucesso:', eventsArray.length);
+            if (eventsArray.length > 0) {
+              const eventsBySeason: Record<string, number> = {};
+              eventsArray.forEach((event: any) => {
+                const seasonId = event.seasonId || 'sem-temporada';
+                eventsBySeason[seasonId] = (eventsBySeason[seasonId] || 0) + 1;
+              });
+              console.log('📊 Eventos por temporada:', eventsBySeason);
+            }
+            
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+            console.error('❌ Erro ao carregar eventos XP:', errorMessage);
+            
+            xpEventsState.setData(EMPTY_XP_EVENT_ARRAY);
+            xpEventsState.setError(`Erro ao carregar eventos XP: ${errorMessage}`);
+          } finally {
+            xpEventsState.setLoading(false);
+          }
+        })()
+      );
+      
+      // Aguardar todas as requisições
+      await Promise.allSettled(fetchPromises);
+      
+      console.log('🎉 Carregamento de dados concluído');
+      
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("❌ Erro geral ao carregar dados:", error);
       toast({
         title: "Erro ao carregar dados",
-        description: "Ocorreu um erro ao carregar os dados. Por favor, tente novamente.",
+        description: "Ocorreu um erro ao carregar os dados. Algumas funcionalidades podem estar limitadas.",
         variant: "destructive"
       });
     } finally {
       setAppLoading(false);
     }
-  }, [toast, session]);
+  }, [
+    toast, 
+    session, 
+    fetchEntityData, 
+    fetchWithRetry,
+    attendantsState,
+    evaluationsState,
+    allUsersState,
+    modulesState,
+    attendantImportsState,
+    evaluationImportsState,
+    funcoesState,
+    setoresState,
+    gamificationConfigState,
+    achievementsState,
+    levelRewardsState,
+    seasonsState,
+    xpEventsState,
+    seasonXpEventsState
+  ]);
+
+  // Função para tentar novamente apenas as requisições que falharam
+  const retryFailedRequests = useCallback(async () => {
+    console.log('🔄 Tentando novamente requisições que falharam...');
+    
+    const retryPromises: Promise<void>[] = [];
+    
+    if (attendantsState.error) {
+      retryPromises.push(
+        fetchEntityData(
+          '/api/attendants',
+          'atendentes',
+          attendantsState.setData,
+          attendantsState.setLoading,
+          attendantsState.setError,
+          (data) => isValidArray(data),
+          EMPTY_ATTENDANT_ARRAY
+        )
+      );
+    }
+    
+    if (evaluationsState.error) {
+      retryPromises.push(
+        fetchEntityData(
+          '/api/evaluations',
+          'avaliações',
+          evaluationsState.setData,
+          evaluationsState.setLoading,
+          evaluationsState.setError,
+          (data) => isValidArray(data),
+          EMPTY_EVALUATION_ARRAY
+        )
+      );
+    }
+    
+    if (modulesState.error) {
+      retryPromises.push(
+        fetchEntityData(
+          '/api/modules',
+          'módulos',
+          modulesState.setData,
+          modulesState.setLoading,
+          modulesState.setError,
+          (data) => isValidArray(data),
+          []
+        )
+      );
+    }
+    
+    // Adicionar outras entidades conforme necessário...
+    
+    if (retryPromises.length > 0) {
+      await Promise.allSettled(retryPromises);
+      toast({
+        title: "Tentativa de reconexão",
+        description: `Tentando reconectar ${retryPromises.length} serviços que falharam.`
+      });
+    } else {
+      toast({
+        title: "Nenhuma falha detectada",
+        description: "Todos os serviços estão funcionando corretamente."
+      });
+    }
+  }, [
+    attendantsState,
+    evaluationsState,
+    modulesState,
+    fetchEntityData,
+    toast
+  ]);
   
   // Calculate active season and filter XP events by season
   useEffect(() => {
     const now = new Date();
+    const seasons = seasonsState.data;
+    const xpEvents = xpEventsState.data;
+    
     const currentActiveSeason = seasons.find(s => s.active && new Date(s.startDate) <= now && new Date(s.endDate) >= now) || null;
     setActiveSeason(currentActiveSeason);
     
@@ -334,16 +759,25 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
     if (currentActiveSeason) {
       const seasonStart = new Date(currentActiveSeason.startDate);
       const seasonEnd = new Date(currentActiveSeason.endDate);
-      // Ensure xpEvents is an array before filtering
-      const filteredEvents = Array.isArray(xpEvents) ? xpEvents.filter(e => {
-        const eventDate = new Date(e.date);
-        return eventDate >= seasonStart && eventDate <= seasonEnd;
-      }) : [];
-      setSeasonXpEvents(filteredEvents);
+      
+      // Filtrar eventos XP da temporada ativa de forma segura
+      const filteredEvents = xpEvents.filter(e => {
+        try {
+          const eventDate = new Date(e.date);
+          return eventDate >= seasonStart && eventDate <= seasonEnd;
+        } catch (error) {
+          console.warn('Evento XP com data inválida:', e);
+          return false;
+        }
+      });
+      
+      seasonXpEventsState.setData(filteredEvents);
+      console.log(`📅 Temporada ativa: ${currentActiveSeason.name}, eventos: ${filteredEvents.length}`);
     } else {
-      setSeasonXpEvents([]);
+      seasonXpEventsState.setData(EMPTY_XP_EVENT_ARRAY);
+      console.log('📅 Nenhuma temporada ativa');
     }
-  }, [seasons, xpEvents]);
+  }, [seasonsState.data, xpEventsState.data, seasonXpEventsState]);
   
   // Authentication functions - TODO: Create API routes
   const login = useCallback(async (email: string, password: string) => {
@@ -449,10 +883,12 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
 
       const updatedUser = await response.json();
       
-      // Atualizar estado local
-      setAllUsers(prev => prev.map(user => 
+      // Atualizar estado local usando estado seguro
+      const currentUsers = allUsersState.data;
+      const updatedUsers = currentUsers.map(user => 
         user.id === userId ? updatedUser : user
-      ));
+      );
+      allUsersState.setData(updatedUsers);
       
       toast({
         title: "Usuário atualizado!",
@@ -471,7 +907,7 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsProcessing(false);
     }
-  }, [toast]);
+  }, [toast, allUsersState]);
   
   const deleteUser = useCallback(async (userId: string) => {
     setIsProcessing(true);
@@ -489,8 +925,10 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
         throw new Error(errorData.error || 'Erro ao remover usuário');
       }
 
-      // Atualizar estado local
-      setAllUsers(prev => prev.filter(user => user.id !== userId));
+      // Atualizar estado local usando estado seguro
+      const currentUsers = allUsersState.data;
+      const filteredUsers = currentUsers.filter(user => user.id !== userId);
+      allUsersState.setData(filteredUsers);
       
       toast({
         title: "Usuário removido!",
@@ -507,7 +945,7 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsProcessing(false);
     }
-  }, [toast]);
+  }, [toast, allUsersState]);
 
   const createUser = useCallback(async (userData: { name: string; email: string; password: string; role: Role; modules: string[] }) => {
     setIsProcessing(true);
@@ -527,8 +965,9 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
 
       const newUser = await response.json();
       
-      // Atualizar estado local
-      setAllUsers(prev => [...prev, newUser]);
+      // Atualizar estado local usando estado seguro
+      const currentUsers = allUsersState.data;
+      allUsersState.setData([...currentUsers, newUser]);
       
       toast({
         title: "Usuário criado!",
@@ -547,7 +986,7 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsProcessing(false);
     }
-  }, [toast]);
+  }, [toast, allUsersState]);
   
   // Module management
   const addModule = useCallback(async (moduleData: Omit<Module, 'id' | 'active'>) => {
@@ -566,8 +1005,9 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
       
       const newModule = await response.json();
       
-      // Update local state
-      setModules(prev => [...prev, newModule]);
+      // Update local state usando estado seguro
+      const currentModules = modulesState.data;
+      modulesState.setData([...currentModules, newModule]);
       
       toast({ title: "Módulo adicionado!" });
     } catch (error) {
@@ -578,7 +1018,7 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
         variant: "destructive"
       });
     }
-  }, [toast]);
+  }, [toast, modulesState]);
   
   const updateModule = useCallback(async (moduleId: string, moduleData: Partial<Omit<Module, 'id' | 'active'>>) => {
     try {
@@ -594,10 +1034,12 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
         throw new Error('Failed to update module');
       }
       
-      // Update local state
-      setModules(prev => prev.map(m => 
+      // Update local state usando estado seguro
+      const currentModules = modulesState.data;
+      const updatedModules = currentModules.map(m => 
         m.id === moduleId ? { ...m, ...moduleData } : m
-      ));
+      );
+      modulesState.setData(updatedModules);
       
       toast({ title: "Módulo atualizado!" });
     } catch (error) {
@@ -608,11 +1050,12 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
         variant: "destructive"
       });
     }
-  }, [toast]);
+  }, [toast, modulesState]);
   
   const toggleModuleStatus = useCallback(async (moduleId: string) => {
     try {
-      const module = modules.find(m => m.id === moduleId);
+      const currentModules = modulesState.data;
+      const module = currentModules.find(m => m.id === moduleId);
       if (!module) return;
       
       const response = await fetch(`/api/modules/${moduleId}`, {
@@ -627,10 +1070,11 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
         throw new Error('Failed to toggle module status');
       }
       
-      // Update local state
-      setModules(prev => prev.map(m => 
+      // Update local state usando estado seguro
+      const updatedModules = currentModules.map(m => 
         m.id === moduleId ? { ...m, active: !m.active } : m
-      ));
+      );
+      modulesState.setData(updatedModules);
       
       toast({ title: `Módulo ${module.active ? 'desativado' : 'ativado'}!` });
     } catch (error) {
@@ -641,7 +1085,7 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
         variant: "destructive"
       });
     }
-  }, [modules, toast]);
+  }, [modulesState, toast]);
   
   const deleteModule = useCallback(async (moduleId: string) => {
     try {
@@ -653,8 +1097,10 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
         throw new Error('Failed to delete module');
       }
       
-      // Update local state
-      setModules(prev => prev.filter(m => m.id !== moduleId));
+      // Update local state usando estado seguro
+      const currentModules = modulesState.data;
+      const filteredModules = currentModules.filter(m => m.id !== moduleId);
+      modulesState.setData(filteredModules);
       
       toast({ title: "Módulo removido!" });
     } catch (error) {
@@ -665,7 +1111,7 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
         variant: "destructive"
       });
     }
-  }, [toast]);
+  }, [toast, modulesState]);
   
   // Attendant management - TODO: Create API routes
   const addAttendant = useCallback(async (attendantData: Omit<Attendant, 'id'>) => {
@@ -701,8 +1147,9 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
         throw new Error('Failed to add funcao');
       }
       
-      // Update local state
-      setFuncoes(prev => [...prev, funcao]);
+      // Update local state usando estado seguro
+      const currentFuncoes = funcoesState.data;
+      funcoesState.setData([...currentFuncoes, funcao]);
       
       toast({ title: "Função adicionada com sucesso!" });
     } catch (error) {
@@ -714,7 +1161,7 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
       });
       throw error;
     }
-  }, [toast]);
+  }, [toast, funcoesState]);
   
   const updateFuncao = useCallback(async (oldFuncao: string, newFuncao: string) => {
     console.log('Update funcao not implemented yet');
@@ -740,8 +1187,9 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
         throw new Error('Failed to add setor');
       }
       
-      // Update local state
-      setSetores(prev => [...prev, setor]);
+      // Update local state usando estado seguro
+      const currentSetores = setoresState.data;
+      setoresState.setData([...currentSetores, setor]);
       
       toast({ title: "Setor adicionado com sucesso!" });
     } catch (error) {
@@ -753,7 +1201,7 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
       });
       throw error;
     }
-  }, [toast]);
+  }, [toast, setoresState]);
   
   const updateSetor = useCallback(async (oldSetor: string, newSetor: string) => {
     console.log('Update setor not implemented yet');
@@ -1140,23 +1588,25 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
         throw new Error(errorData.error || 'Erro ao atualizar configuração');
       }
 
-      // Atualizar estado local
+      // Atualizar estado local usando estados seguros
+      const currentConfig = gamificationConfigState.data;
+      
       if (config.ratingScores) {
-        setGamificationConfig(prev => ({
-          ...prev,
-          ratingScores: config.ratingScores!
-        }));
+        gamificationConfigState.setData({
+          ...currentConfig,
+          ratingScores: config.ratingScores
+        });
       }
 
       if (config.globalXpMultiplier !== undefined) {
-        setGamificationConfig(prev => ({
-          ...prev,
-          globalXpMultiplier: config.globalXpMultiplier!
-        }));
+        gamificationConfigState.setData({
+          ...currentConfig,
+          globalXpMultiplier: config.globalXpMultiplier
+        });
       }
 
       if (config.seasons) {
-        setSeasons(config.seasons);
+        seasonsState.setData(config.seasons);
       }
 
       // Recarregar dados para garantir sincronização
@@ -1178,7 +1628,7 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsProcessing(false);
     }
-  }, [toast, fetchAllData]);
+  }, [toast, fetchAllData, gamificationConfigState, seasonsState]);
   
   const updateAchievement = useCallback(async (id: string, data: Partial<Omit<Achievement, 'id' | 'icon' | 'color' | 'isUnlocked'>>) => {
     try {
@@ -1200,19 +1650,21 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
       const updatedAchievement = await response.json();
       console.log('GAMIFICATION: Achievement updated successfully', updatedAchievement);
       
-      // Update local state with the response from API
-      const updatedAchievements = achievements.map(ach => 
+      // Update local state using safe states
+      const currentAchievements = achievementsState.data;
+      const updatedAchievements = currentAchievements.map(ach => 
         ach.id === id ? { ...ach, ...data } : ach
       );
       
-      setAchievements(updatedAchievements);
+      achievementsState.setData(updatedAchievements);
       
       // Update gamification config with new achievements
+      const currentConfig = gamificationConfigState.data;
       const updatedConfig = {
-        ...gamificationConfig,
+        ...currentConfig,
         achievements: updatedAchievements
       };
-      setGamificationConfig(updatedConfig);
+      gamificationConfigState.setData(updatedConfig);
       
       toast({
         title: "Conquista Atualizada!",
@@ -1227,7 +1679,7 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
       });
       throw error;
     }
-  }, [achievements, gamificationConfig, toast]);
+  }, [achievementsState, gamificationConfigState, toast]);
   
   const addGamificationSeason = useCallback(async (season: Omit<GamificationSeason, 'id'>) => {
     try {
@@ -1246,8 +1698,9 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
 
       const newSeason = await response.json();
       
-      // Atualizar estado local
-      setSeasons(prev => [...prev, newSeason]);
+      // Atualizar estado local usando estado seguro
+      const currentSeasons = seasonsState.data;
+      seasonsState.setData([...currentSeasons, newSeason]);
       
       toast({ 
         title: "Temporada criada!", 
@@ -1262,7 +1715,7 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
       });
       throw error;
     }
-  }, [toast]);
+  }, [toast, seasonsState]);
   
   const updateGamificationSeason = useCallback(async (seasonId: string, seasonData: Partial<Omit<GamificationSeason, 'id'>>) => {
     try {
@@ -1281,10 +1734,12 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
 
       const updatedSeason = await response.json();
       
-      // Atualizar estado local
-      setSeasons(prev => prev.map(season => 
+      // Atualizar estado local usando estado seguro
+      const currentSeasons = seasonsState.data;
+      const updatedSeasons = currentSeasons.map(season => 
         season.id === seasonId ? updatedSeason : season
-      ));
+      );
+      seasonsState.setData(updatedSeasons);
       
       toast({ 
         title: "Temporada atualizada!", 
@@ -1299,7 +1754,7 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
       });
       throw error;
     }
-  }, [toast]);
+  }, [toast, seasonsState]);
   
   const deleteGamificationSeason = useCallback(async (seasonId: string) => {
     try {
@@ -1312,8 +1767,10 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
         throw new Error(errorData.error || 'Erro ao remover temporada');
       }
       
-      // Atualizar estado local
-      setSeasons(prev => prev.filter(season => season.id !== seasonId));
+      // Atualizar estado local usando estado seguro
+      const currentSeasons = seasonsState.data;
+      const filteredSeasons = currentSeasons.filter(season => season.id !== seasonId);
+      seasonsState.setData(filteredSeasons);
       
       toast({ 
         title: "Temporada removida!", 
@@ -1328,7 +1785,7 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
       });
       throw error;
     }
-  }, [toast]);
+  }, [toast, seasonsState]);
   
   // XP Events management - TODO: Create API routes
   const addXpEvent = useCallback(async (xpEvent: Omit<XpEvent, 'id'>) => {
@@ -1378,9 +1835,9 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
         logs: [...prev.logs, `${result.deletedXpEvents} eventos XP removidos.`, `${result.deletedAchievements} conquistas resetadas.`]
       }));
 
-      // Atualizar dados locais
-      setXpEvents([]);
-      setSeasonXpEvents([]);
+      // Atualizar dados locais usando estados seguros
+      xpEventsState.setData(EMPTY_XP_EVENT_ARRAY);
+      seasonXpEventsState.setData(EMPTY_XP_EVENT_ARRAY);
       
       // Recarregar todos os dados
       await fetchAllData();
@@ -1415,7 +1872,7 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsProcessing(false);
     }
-  }, [toast, fetchAllData, setImportStatus]);
+  }, [toast, fetchAllData, setImportStatus, xpEventsState, seasonXpEventsState]);
   
   // AI Analysis
   const startAnalysis = useCallback(async () => {
@@ -1441,6 +1898,8 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
     setAuthLoading(false);
     
     if (session?.user && status === 'authenticated') {
+      console.log('👤 Usuário autenticado:', session.user.email, 'Role:', session.user.role);
+      
       setUser({
         id: session.user.id,
         name: session.user.name,
@@ -1452,18 +1911,48 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
       // Load all data only when fully authenticated
       fetchAllData();
     } else {
+      console.log('👤 Usuário não autenticado, limpando estados...');
+      
       setUser(null);
-      // Limpar dados quando não autenticado
-      setAllUsers([]);
-      setModules([]);
-      setAttendants([]);
-      setEvaluations([]);
-      setAttendantImports([]);
-      setEvaluationImports([]);
-      setFuncoes([]);
-      setSetores([]);
+      
+      // Limpar dados quando não autenticado usando os novos estados seguros
+      attendantsState.reset();
+      evaluationsState.reset();
+      allUsersState.reset();
+      modulesState.reset();
+      attendantImportsState.reset();
+      evaluationImportsState.reset();
+      funcoesState.reset();
+      setoresState.reset();
+      gamificationConfigState.reset();
+      achievementsState.reset();
+      levelRewardsState.reset();
+      seasonsState.reset();
+      xpEventsState.reset();
+      seasonXpEventsState.reset();
+      
+      setActiveSeason(null);
+      setNextSeason(null);
     }
-  }, [session, status, fetchAllData]);
+  }, [
+    session, 
+    status, 
+    fetchAllData,
+    attendantsState,
+    evaluationsState,
+    allUsersState,
+    modulesState,
+    attendantImportsState,
+    evaluationImportsState,
+    funcoesState,
+    setoresState,
+    gamificationConfigState,
+    achievementsState,
+    levelRewardsState,
+    seasonsState,
+    xpEventsState,
+    seasonXpEventsState
+  ]);
   
   // Provide context value
   const contextValue: PrismaContextType = {
@@ -1477,50 +1966,116 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
     register,
     updateProfile,
     hasSuperAdmin,
-    allUsers,
+    
+    // Estados seguros para todas as entidades
+    attendants: {
+      data: attendantsState.data,
+      loading: attendantsState.loading,
+      error: attendantsState.error
+    },
+    evaluations: {
+      data: evaluationsState.data,
+      loading: evaluationsState.loading,
+      error: evaluationsState.error
+    },
+    allUsers: {
+      data: allUsersState.data,
+      loading: allUsersState.loading,
+      error: allUsersState.error
+    },
+    modules: {
+      data: modulesState.data,
+      loading: modulesState.loading,
+      error: modulesState.error
+    },
+    attendantImports: {
+      data: attendantImportsState.data,
+      loading: attendantImportsState.loading,
+      error: attendantImportsState.error
+    },
+    evaluationImports: {
+      data: evaluationImportsState.data,
+      loading: evaluationImportsState.loading,
+      error: evaluationImportsState.error
+    },
+    funcoes: {
+      data: funcoesState.data,
+      loading: funcoesState.loading,
+      error: funcoesState.error
+    },
+    setores: {
+      data: setoresState.data,
+      loading: setoresState.loading,
+      error: setoresState.error
+    },
+    gamificationConfig: {
+      data: gamificationConfigState.data,
+      loading: gamificationConfigState.loading,
+      error: gamificationConfigState.error
+    },
+    achievements: {
+      data: achievementsState.data,
+      loading: achievementsState.loading,
+      error: achievementsState.error
+    },
+    levelRewards: {
+      data: levelRewardsState.data,
+      loading: levelRewardsState.loading,
+      error: levelRewardsState.error
+    },
+    seasons: {
+      data: seasonsState.data,
+      loading: seasonsState.loading,
+      error: seasonsState.error
+    },
+    xpEvents: {
+      data: xpEventsState.data,
+      loading: xpEventsState.loading,
+      error: xpEventsState.error
+    },
+    seasonXpEvents: {
+      data: seasonXpEventsState.data,
+      loading: seasonXpEventsState.loading,
+      error: seasonXpEventsState.error
+    },
+    
+    // Estados derivados
+    activeSeason,
+    nextSeason,
+    
+    // Indicadores globais
+    hasAnyError,
+    isAnyLoading,
+    
+    // Funções de gerenciamento
     createUser,
     updateUser,
     deleteUser,
-    modules,
     addModule,
     updateModule,
     toggleModuleStatus,
     deleteModule,
-    attendants,
     addAttendant,
     updateAttendant,
     deleteAttendants,
-    funcoes,
-    setores,
     addFuncao,
     updateFuncao,
     deleteFuncao,
     addSetor,
     updateSetor,
     deleteSetor,
-    evaluations,
     addEvaluation,
     deleteEvaluations,
-    attendantImports,
-    evaluationImports,
     importAttendants,
     importEvaluations,
     importWhatsAppEvaluations,
     deleteAttendantImport,
     deleteEvaluationImport,
-    gamificationConfig,
-    achievements,
-    levelRewards,
-    seasons,
-    activeSeason,
-    nextSeason,
     updateGamificationConfig,
     updateAchievement,
     addGamificationSeason,
     updateGamificationSeason,
     deleteGamificationSeason,
-    xpEvents,
-    seasonXpEvents,
     addXpEvent,
     deleteXpEvent,
     resetXpEvents,
@@ -1529,7 +2084,8 @@ export const PrismaProvider = ({ children }: { children: ReactNode }) => {
     stopAnalysis,
     importStatus,
     setImportStatus,
-    fetchAllData
+    fetchAllData,
+    retryFailedRequests
   };
   
   return (

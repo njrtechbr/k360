@@ -17,6 +17,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ATTENDANT_STATUS, type Attendant } from "@/lib/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import ImportProgressModal from "@/components/ImportProgressModal";
+import { DataValidator, LoadingCard, ErrorTable } from "@/components/ui/data-validator";
+import { 
+  validateAttendantArray, 
+  safeMapArray, 
+  isValidAttendant,
+  EMPTY_ATTENDANT_ARRAY 
+} from "@/lib/data-validation";
+import { useSafeState, validators } from "@/hooks/useSafeState";
 
 type CsvRow = {
     name: string;
@@ -46,12 +54,67 @@ export default function ImportarAtendentesPage() {
     const router = useRouter();
     const { toast } = useToast();
 
+    // Estados seguros para dados da página
+    const attendantsState = useSafeState({
+        initialValue: EMPTY_ATTENDANT_ARRAY,
+        validator: validators.isArray,
+        fallback: EMPTY_ATTENDANT_ARRAY,
+        enableWarnings: true
+    });
+
+    const funcoesState = useSafeState({
+        initialValue: [] as string[],
+        validator: validators.isArray,
+        fallback: [] as string[],
+        enableWarnings: true
+    });
+
+    const setoresState = useSafeState({
+        initialValue: [] as string[],
+        validator: validators.isArray,
+        fallback: [] as string[],
+        enableWarnings: true
+    });
+
     const [file, setFile] = useState<File | null>(null);
     const [importConfig, setImportConfig] = useState<ImportConfig[]>([]);
     const [isParsing, setIsParsing] = useState(false);
 
-    const existingEmails = useMemo(() => new Set(attendants.map(a => a.email.toLowerCase())), [attendants]);
-    const existingCpfs = useMemo(() => new Set(attendants.map(a => a.cpf)), [attendants]);
+    // Atualizar estados seguros quando dados do useAuth mudarem
+    useEffect(() => {
+        attendantsState.setData(attendants);
+    }, [attendants]);
+
+    useEffect(() => {
+        funcoesState.setData(funcoes);
+    }, [funcoes]);
+
+    useEffect(() => {
+        setoresState.setData(setores);
+    }, [setores]);
+
+    // Memoização segura dos dados existentes
+    const existingEmails = useMemo(() => {
+        return safeMapArray(
+            attendantsState.data,
+            (attendant: Attendant) => attendant.email?.toLowerCase() || '',
+            isValidAttendant
+        ).reduce((set, email) => {
+            if (email) set.add(email);
+            return set;
+        }, new Set<string>());
+    }, [attendantsState.data]);
+
+    const existingCpfs = useMemo(() => {
+        return safeMapArray(
+            attendantsState.data,
+            (attendant: Attendant) => attendant.cpf || '',
+            isValidAttendant
+        ).reduce((set, cpf) => {
+            if (cpf) set.add(cpf);
+            return set;
+        }, new Set<string>());
+    }, [attendantsState.data]);
 
     useEffect(() => {
         if (!loading && !isAuthenticated) {
@@ -75,8 +138,14 @@ export default function ImportarAtendentesPage() {
             complete: (results) => {
                 const validData = results.data.filter(row => row.name && row.email && row.cpf);
                 const config: ImportConfig[] = validData.map(row => {
-                    const isDuplicate = existingEmails.has(row.email.toLowerCase()) || existingCpfs.has(row.cpf);
-                    const preSelectedFuncao = funcoes.find(f => f.toLowerCase() === row.role?.toLowerCase());
+                    const isDuplicate = existingEmails.has(row.email?.toLowerCase() || '') || existingCpfs.has(row.cpf || '');
+                    
+                    // Busca segura por função pré-selecionada
+                    const preSelectedFuncao = safeMapArray(
+                        funcoesState.data,
+                        (f: string) => f,
+                        (item): item is string => typeof item === 'string'
+                    ).find(f => f.toLowerCase() === row.role?.toLowerCase());
 
                     return {
                         csvRow: row,
@@ -181,8 +250,33 @@ export default function ImportarAtendentesPage() {
         }
     };
     
-    if (loading) {
-        return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
+    // Estados de loading e erro
+    if (loading || attendantsState.loading || funcoesState.loading || setoresState.loading) {
+        return (
+            <div className="space-y-8">
+                <h1 className="text-3xl font-bold">Importar Atendentes de CSV</h1>
+                <LoadingCard />
+            </div>
+        );
+    }
+
+    // Verificar se há erros críticos nos dados
+    const hasDataErrors = attendantsState.error || funcoesState.error || setoresState.error;
+    if (hasDataErrors) {
+        return (
+            <div className="space-y-8">
+                <h1 className="text-3xl font-bold">Importar Atendentes de CSV</h1>
+                <ErrorTable 
+                    error={`Erro ao carregar dados necessários: ${attendantsState.error || funcoesState.error || setoresState.error}`}
+                    onRetry={() => {
+                        attendantsState.clearError();
+                        funcoesState.clearError();
+                        setoresState.clearError();
+                        window.location.reload();
+                    }}
+                />
+            </div>
+        );
     }
     
     const hasDataToConfigure = importConfig.length > 0;
@@ -194,7 +288,17 @@ export default function ImportarAtendentesPage() {
             <ImportProgressModal />
             <h1 className="text-3xl font-bold">Importar Atendentes de CSV</h1>
             
-            <div className="grid lg:grid-cols-3 gap-8 items-start">
+            <DataValidator
+                data={attendantsState.data}
+                fallback={EMPTY_ATTENDANT_ARRAY}
+                loading={attendantsState.loading}
+                error={attendantsState.error}
+                validator={validators.isArray}
+                emptyMessage="Nenhum atendente encontrado. Você pode importar novos atendentes usando o formulário abaixo."
+                treatEmptyArrayAsEmpty={false} // Não mostrar estado vazio para permitir importação
+            >
+                {(validAttendants) => (
+                    <div className="grid lg:grid-cols-3 gap-8 items-start">
                  <Card className="lg:col-span-1 shadow-lg">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2"><FileUp /> 1. Upload do Arquivo CSV</CardTitle>
@@ -260,7 +364,13 @@ export default function ImportarAtendentesPage() {
                                                         <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                                                         <SelectContent>
                                                             <SelectItem value="Sem Função">Sem Função</SelectItem>
-                                                            {funcoes.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                                                            {safeMapArray(
+                                                                funcoesState.data,
+                                                                (f: string) => (
+                                                                    <SelectItem key={f} value={f}>{f}</SelectItem>
+                                                                ),
+                                                                (item): item is string => typeof item === 'string'
+                                                            )}
                                                         </SelectContent>
                                                     </Select>
                                                 </TableCell>
@@ -273,7 +383,13 @@ export default function ImportarAtendentesPage() {
                                                         <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                                                         <SelectContent>
                                                             <SelectItem value="Sem Setor">Sem Setor</SelectItem>
-                                                            {setores.map(s => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}
+                                                            {safeMapArray(
+                                                                setoresState.data,
+                                                                (s: string) => (
+                                                                    <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>
+                                                                ),
+                                                                (item): item is string => typeof item === 'string'
+                                                            )}
                                                         </SelectContent>
                                                     </Select>
                                                 </TableCell>
@@ -293,8 +409,10 @@ export default function ImportarAtendentesPage() {
                             }
                         </CardFooter>
                     </Card>
+                    )}
+                    </div>
                 )}
-            </div>
+            </DataValidator>
         </div>
     );
 }

@@ -20,6 +20,7 @@ import { RatingStars, SentimentBadge, AnalysisProgress } from "@/components/surv
 import SentimentAnalysisPanel from '@/components/survey/SentimentAnalysisPanel';
 import SentimentInsights from '@/components/survey/SentimentInsights';
 import SentimentFilters, { SentimentFilterOptions, AttendantOption } from '@/components/survey/SentimentFilters';
+import { safeReduceArray, safeMapArray, isValidAttendant, isValidEvaluation } from "@/lib/data-validation";
 
 export default function AnaliseSentimentoPage() {
     const { user, isAuthenticated, loading, evaluations, attendants, runAiAnalysis, aiAnalysisResults, lastAiAnalysis, isAiAnalysisRunning, analysisProgress, isProgressModalOpen, setIsProgressModalOpen } = useAuth();
@@ -34,17 +35,27 @@ export default function AnaliseSentimentoPage() {
     }, [isAuthenticated, loading, router]);
 
     const attendantMap = useMemo(() => {
-        return attendants.reduce((acc, attendant) => {
-            acc[attendant.id] = attendant.name;
-            return acc;
-        }, {} as Record<string, string>);
+        return safeReduceArray(
+            attendants,
+            (acc, attendant) => {
+                acc[attendant.id] = attendant.name;
+                return acc;
+            },
+            {} as Record<string, string>,
+            isValidAttendant
+        );
     }, [attendants]);
 
     const evaluationMap = useMemo(() => {
-        return evaluations.reduce((acc, ev) => {
-            acc[ev.id] = ev;
-            return acc;
-        }, {} as Record<string, typeof evaluations[0]>);
+        return safeReduceArray(
+            evaluations,
+            (acc, ev) => {
+                acc[ev.id] = ev;
+                return acc;
+            },
+            {} as Record<string, any>,
+            isValidEvaluation
+        );
     }, [evaluations]);
     
     const allAnalysisWithDetails = useMemo(() => {
@@ -144,21 +155,38 @@ export default function AnaliseSentimentoPage() {
 
     // Preparar opções de atendentes para o filtro
     const attendantOptions: AttendantOption[] = useMemo(() => {
-        return attendants.map(attendant => {
-            const totalAnalyses = allAnalysisWithDetails.filter(a => 
-                a.evaluation.attendantId === attendant.id
-            ).length;
-            
-            return {
-                id: attendant.id,
-                name: attendant.name,
-                totalAnalyses
-            };
-        }).filter(option => option.totalAnalyses > 0);
+        return safeMapArray(
+            attendants,
+            (attendant) => {
+                const totalAnalyses = allAnalysisWithDetails.filter(a => 
+                    a.evaluation.attendantId === attendant.id
+                ).length;
+                
+                return {
+                    id: attendant.id,
+                    name: attendant.name,
+                    totalAnalyses
+                };
+            },
+            isValidAttendant
+        ).filter(option => option.totalAnalyses > 0);
     }, [attendants, allAnalysisWithDetails]);
 
     if (loading || !user) {
         return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
+    }
+
+    // Validação adicional de dados críticos
+    if (!Array.isArray(attendants)) {
+        console.warn('AnaliseSentimentoPage: attendants não é um array válido', attendants);
+    }
+
+    if (!Array.isArray(evaluations)) {
+        console.warn('AnaliseSentimentoPage: evaluations não é um array válido', evaluations);
+    }
+
+    if (!Array.isArray(aiAnalysisResults)) {
+        console.warn('AnaliseSentimentoPage: aiAnalysisResults não é um array válido', aiAnalysisResults);
     }
     
     const canRunAnalysis = user.role === ROLES.SUPERVISOR || user.role === ROLES.ADMIN || user.role === ROLES.SUPERADMIN;
@@ -181,15 +209,18 @@ export default function AnaliseSentimentoPage() {
                 
                 {/* Componente de progresso da análise */}
                 <AnalysisProgress
-                    totalEvaluations={evaluations.length}
-                    analyzedCount={aiAnalysisResults.length}
-                    pendingCount={evaluations.length - aiAnalysisResults.length}
+                    totalEvaluations={Array.isArray(evaluations) ? evaluations.length : 0}
+                    analyzedCount={Array.isArray(aiAnalysisResults) ? aiAnalysisResults.length : 0}
+                    pendingCount={Array.isArray(evaluations) && Array.isArray(aiAnalysisResults) 
+                        ? evaluations.length - aiAnalysisResults.length 
+                        : 0
+                    }
                     sentimentDistribution={{
-                        positive: filteredAnalyses.filter(a => a.sentiment === 'Positivo').length,
-                        negative: filteredAnalyses.filter(a => a.sentiment === 'Negativo').length,
-                        neutral: filteredAnalyses.filter(a => a.sentiment === 'Neutro').length
+                        positive: Array.isArray(filteredAnalyses) ? filteredAnalyses.filter(a => a.sentiment === 'Positivo').length : 0,
+                        negative: Array.isArray(filteredAnalyses) ? filteredAnalyses.filter(a => a.sentiment === 'Negativo').length : 0,
+                        neutral: Array.isArray(filteredAnalyses) ? filteredAnalyses.filter(a => a.sentiment === 'Neutro').length : 0
                     }}
-                    recentAnalyses={sortedAnalysis.slice(0, 3)}
+                    recentAnalyses={Array.isArray(sortedAnalysis) ? sortedAnalysis.slice(0, 3) : []}
                     onStartAnalysis={canRunAnalysis ? runAiAnalysis : undefined}
                     isRunning={isAiAnalysisRunning}
                     lastAnalysis={lastAiAnalysis}
@@ -213,8 +244,8 @@ export default function AnaliseSentimentoPage() {
 
                     <TabsContent value="overview" className="space-y-6">
                         <SentimentAnalysisPanel 
-                            analyses={filteredAnalyses}
-                            attendantMap={attendantMap}
+                            analyses={Array.isArray(filteredAnalyses) ? filteredAnalyses : []}
+                            attendantMap={attendantMap || {}}
                         />
                     </TabsContent>
 

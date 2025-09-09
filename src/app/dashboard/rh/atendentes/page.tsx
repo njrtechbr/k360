@@ -2,32 +2,34 @@
 "use client";
 
 import { useAuth } from "@/hooks/useAuth";
+import { usePrisma } from "@/providers/PrismaProvider";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { type Attendant } from "@/lib/types";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, AlertTriangle } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import AttendantForm from "@/components/rh/AttendantForm";
 import AttendantTable from "@/components/rh/AttendantTable";
 import QRCodeDialog from "@/components/rh/QRCodeDialog";
+import { validateAttendantArray } from "@/lib/data-validation";
 
 export default function AtendentesPage() {
+  const { user, isAuthenticated, authLoading } = useAuth();
   const { 
-    user, 
-    isAuthenticated, 
-    appLoading, 
-    authLoading, 
+    appLoading,
     attendants, 
     addAttendant, 
     updateAttendant, 
     deleteAttendants, 
     funcoes, 
-    setores 
-  } = useAuth();
+    setores,
+    fetchAllData
+  } = usePrisma();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -36,6 +38,21 @@ export default function AtendentesPage() {
   const [isQrCodeDialogOpen, setIsQrCodeDialogOpen] = useState(false);
   const [selectedAttendant, setSelectedAttendant] = useState<Attendant | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Validação segura dos dados de attendants com memoização
+  const validatedAttendants = useMemo(() => {
+    const validation = validateAttendantArray(attendants);
+    
+    if (!validation.isValid && validation.errors.length > 0) {
+      console.warn('AtendentesPage: Problemas na validação de attendants:', validation.errors);
+    }
+    
+    return validation.data || [];
+  }, [attendants]);
+
+  // Estados derivados para melhor controle
+  const hasAttendantsData = validatedAttendants.length > 0;
+  const isLoading = appLoading || authLoading;
   
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -118,9 +135,36 @@ export default function AtendentesPage() {
     setIsQrCodeDialogOpen(true);
   };
 
+  const handleRetryData = async () => {
+    try {
+      await fetchAllData();
+      toast({
+        title: "Dados atualizados",
+        description: "Os dados foram recarregados com sucesso."
+      });
+    } catch (error) {
+      console.error('Erro ao recarregar dados:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao recarregar",
+        description: "Não foi possível recarregar os dados. Tente novamente."
+      });
+    }
+  };
+
+  // Loading state - mostra enquanto autentica ou carrega dados iniciais
   if (authLoading || !user) {
-    return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    );
   }
+
+
 
   return (
     <div className="space-y-8">
@@ -146,12 +190,14 @@ export default function AtendentesPage() {
         </CardHeader>
         <CardContent>
           <AttendantTable
-            attendants={attendants}
-            isLoading={appLoading}
+            attendants={validatedAttendants}
+            isLoading={isLoading}
+            error={null}
             onEdit={handleEdit}
             onDelete={handleDelete}
             onQrCode={handleQrCode}
             onCopyLink={handleCopyLink}
+            onRetry={handleRetryData}
           />
         </CardContent>
       </Card>
