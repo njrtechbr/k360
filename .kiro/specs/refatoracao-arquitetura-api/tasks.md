@@ -11,31 +11,59 @@
   - Create base API hooks (useApiQuery, useApiMutation) for data fetching
   - _Requirements: 1.1, 6.1, 6.2, 6.3_
 
-- [ ] 2. Create Missing API Endpoints
+- [x] 2. Create Missing API Endpoints
 
-- [ ] 2.1 Implement XP Avulso API endpoints
+
+
+
+
+- [x] 2.1 Implement XP Avulso API endpoints
+
+
   - Create `/api/gamification/xp-grants` route with CRUD operations
   - Implement XP grant creation, listing, and deletion endpoints
   - Add validation schemas for XP grant operations
   - _Requirements: 5.3, 5.5_
 
-- [ ] 2.2 Enhance Gamification Season API
+- [x] 2.2 Enhance Gamification Season API
+
+
+
+
+
+
 
   - Create `/api/gamification/seasons/active` endpoint for current season
   - Implement season management endpoints if missing
   - Add season filtering and status management
   - _Requirements: 4.5, 5.4_
+- [x] 2.3 Verify and enhance RH Config APIs
 
-- [ ] 2.3 Verify and enhance RH Config APIs
+
+
+
+- [x] 2.3 Verify and enhance RH Config APIs
+
+
 
   - Ensure `/api/funcoes` has complete CRUD operations
   - Ensure `/api/setores` has complete CRUD operations  
   - Add bulk operations for funcoes and setores if needed
   - _Requirements: 5.1, 5.2_
+- [x] 3. Migrate Core Services to API Clients
+
+
+
 
 - [ ] 3. Migrate Core Services to API Clients
 
-- [ ] 3.1 Refactor UserService to use APIs
+- [x] 3.1 Refactor UserService to use APIs
+
+
+
+
+
+
 
   - Convert `userService.ts` to use `/api/users` endpoints
   - Replace Prisma calls with HTTP requests using fetch/axios
@@ -43,41 +71,74 @@
   - Add proper error handling and response parsing
   - _Requirements: 2.1, 7.2_
 
-- [ ] 3.2 Refactor AttendantService to use APIs
+
+- [x] 3.2 Refactor AttendantService to use APIs
+
+
+
+
+
 
   - Convert `attendantService.ts` to use `/api/attendants` endpoints
   - Replace all Prisma operations with API calls
   - Handle attendant import operations through API
   - Maintain data validation and error handling
   - _Requirements: 2.2, 7.2_
-
 - [ ] 3.3 Refactor EvaluationService to use APIs
+
+
+
+
+- [x] 3.3 Refactor EvaluationService to use APIs
+
+
 
   - Convert `evaluationService.ts` to use `/api/evaluations` endpoints
   - Replace Prisma calls with API requests
   - Handle evaluation imports and analysis through APIs
   - Maintain XP calculation logic in API layer
   - _Requirements: 2.3, 7.2_
-
 - [ ] 3.4 Refactor ModuleService to use APIs
+
+
+- [x] 3.4 Refactor ModuleService to use APIs
+
+
 
   - Convert `moduleService.ts` to use `/api/modules` endpoints
   - Replace direct Prisma access with HTTP requests
   - Maintain module status management functionality
   - Add proper error handling for module operations
+
+
   - _Requirements: 2.5, 7.2_
 
-- [ ] 4. Refactor Gamification Services
 
-- [ ] 4.1 Refactor GamificationService to use APIs
+- [x] 4. Refactor Gamification Services
+
+
+
+
+
+
+- [x] 4.1 Refactor GamificationService to use APIs
+
+
+
 
   - Convert `gamificationService.ts` to use `/api/gamification` endpoints
+
   - Replace Prisma calls with API requests for XP events, achievements
   - Maintain season management through API calls
+
   - Handle achievement processing through API layer
   - _Requirements: 2.4, 7.2_
 
-- [ ] 4.2 Refactor XpAvulsoService to use APIs
+- [x] 4.2 Refactor XpAvulsoService to use APIs
+
+
+
+
 
   - Convert `xpAvulsoService.ts` to use `/api/gamification/xp-grants`
   - Replace direct Prisma access with API calls
@@ -85,7 +146,9 @@
   - Handle XP configuration through API endpoints
   - _Requirements: 2.7, 7.2_
 
-- [ ] 4.3 Refactor RhService to use APIs
+- [x] 4.3 Refactor RhService to use APIs
+
+
 
   - Convert `rhService.ts` to use `/api/funcoes` and `/api/setores`
   - Replace Prisma operations with HTTP requests
