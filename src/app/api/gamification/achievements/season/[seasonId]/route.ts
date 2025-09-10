@@ -7,10 +7,10 @@ const prisma = new PrismaClient();
 // Buscar conquistas desbloqueadas de uma temporada específica
 export async function GET(
   request: NextRequest,
-  { params }: { params: { seasonId: string } }
+  { params }: { params: Promise<{ seasonId: string }> }
 ) {
   try {
-    const { seasonId } = params;
+    const { seasonId } = await params;
 
     if (!seasonId) {
       return NextResponse.json(

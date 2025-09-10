@@ -1,6 +1,7 @@
 "use client";
 
-import { useAuth } from "@/hooks/useAuth";
+import { useSession } from "next-auth/react";
+import { usePrisma } from "@/providers/PrismaProvider";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,9 +25,14 @@ const getMedal = (rank: number) => {
 };
 
 export default function EscalaNiveisPage() {
-    const { user, isAuthenticated, loading, attendants, seasonXpEvents, activeSeason, nextSeason } = useAuth();
+    const { data: session, status } = useSession();
+    const { attendants, seasonXpEvents, activeSeason, nextSeason, appLoading } = usePrisma();
     const router = useRouter();
     const [activeTab, setActiveTab] = useState("overview");
+
+    const user = session?.user;
+    const isAuthenticated = !!session;
+    const loading = status === "loading" || appLoading;
 
     useEffect(() => {
         if (!loading && !isAuthenticated) {
@@ -37,12 +43,20 @@ export default function EscalaNiveisPage() {
     const leaderboard = useMemo(() => {
         const xpByAttendant = new Map<string, number>();
 
-        seasonXpEvents.forEach(event => {
-            const currentXp = xpByAttendant.get(event.attendantId) || 0;
-            xpByAttendant.set(event.attendantId, currentXp + event.points);
-        });
+        // Verificação de segurança para seasonXpEvents
+        if (seasonXpEvents.data && Array.isArray(seasonXpEvents.data)) {
+            seasonXpEvents.data.forEach(event => {
+                const currentXp = xpByAttendant.get(event.attendantId) || 0;
+                xpByAttendant.set(event.attendantId, currentXp + event.points);
+            });
+        }
 
-        return attendants
+        // Verificação de segurança para attendants
+        if (!attendants.data || !Array.isArray(attendants.data)) {
+            return [];
+        }
+
+        return attendants.data
             .map(attendant => {
                 const totalScore = xpByAttendant.get(attendant.id) || 0;
                 const levelData = getLevelFromXp(totalScore);
@@ -57,7 +71,7 @@ export default function EscalaNiveisPage() {
             })
             .sort((a, b) => b.score - a.score);
 
-    }, [attendants, seasonXpEvents]);
+    }, [attendants.data, seasonXpEvents.data]);
 
     // Estatísticas do sistema
     const systemStats = useMemo(() => {

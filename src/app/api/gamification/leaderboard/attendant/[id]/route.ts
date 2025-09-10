@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 // Buscar posição e estatísticas de um atendente específico no leaderboard
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const attendantId = params.id;
@@ -280,7 +280,7 @@ export async function GET(
 // Recalcular posição e estatísticas de um atendente
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const attendantId = params.id;

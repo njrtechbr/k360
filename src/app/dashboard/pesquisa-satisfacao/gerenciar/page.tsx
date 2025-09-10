@@ -53,6 +53,9 @@ export default function GerenciarAvaliacoesPage() {
     }, [isAuthenticated, appLoading, router]);
     
     const attendantMap = useMemo(() => {
+        if (!attendants || !Array.isArray(attendants)) {
+            return {};
+        }
         return attendants.reduce((acc, attendant) => {
             acc[attendant.id] = attendant.name;
             return acc;
@@ -60,6 +63,9 @@ export default function GerenciarAvaliacoesPage() {
     }, [attendants]);
     
     const sortedEvaluations = useMemo(() => {
+        if (!Array.isArray(evaluations)) {
+            return [];
+        }
         return [...evaluations].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
     }, [evaluations]);
 

@@ -46,6 +46,9 @@ export default function AttendantProfilePage() {
     }, [attendantXpEvents]);
 
     const xpHistorySorted = useMemo(() => {
+        if (!Array.isArray(attendantXpEvents)) {
+            return [];
+        }
         return [...attendantXpEvents]
             .map(e => ({...e, icon: e.type === 'evaluation' ? Star : Trophy}))
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());

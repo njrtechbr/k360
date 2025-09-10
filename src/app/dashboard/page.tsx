@@ -1,12 +1,11 @@
-
 "use client";
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ShieldAlert, ShieldCheck, ShieldHalf, UserIcon, Wrench, Users, Gift, Building2, Cake, CalendarDays, PartyPopper, BarChart3, TrendingUp } from "lucide-react";
+import { ShieldAlert, ShieldCheck, ShieldHalf, UserIcon, Users, Gift, Building2, Cake, CalendarDays, PartyPopper, BarChart3, TrendingUp, Loader2 } from "lucide-react";
 import { ROLES, type Attendant, type Module } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -17,19 +16,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LazyDashboardTab } from "@/components/dashboard/LazyDashboardTab";
+import { useDashboardData } from "@/hooks/useDashboardData";
+import { DashboardErrorBoundary } from "@/components/dashboard/DashboardErrorBoundary";
 
-// Componentes de dashboard
-import { StatsCards } from "@/components/dashboard/StatsCards";
-import { EvaluationTrendChart } from "@/components/dashboard/EvaluationTrendChart";
-import { RatingDistributionChart } from "@/components/dashboard/RatingDistributionChart";
-import { TopPerformersChart } from "@/components/dashboard/TopPerformersChart";
-import { GamificationOverview } from "@/components/dashboard/GamificationOverview";
-import { MonthlyStatsChart } from "@/components/dashboard/MonthlyStatsChart";
-import { DashboardAlerts } from "@/components/dashboard/DashboardAlerts";
-import { QuickActions } from "@/components/dashboard/QuickActions";
-import { RecentActivity } from "@/components/dashboard/RecentActivity";
-
-// Não importar mais o DashboardService diretamente
+// Lazy loading dos componentes pesados
+const StatsCards = lazy(() => import("@/components/dashboard/StatsCards").then(m => ({ default: m.StatsCards })));
+const EvaluationTrendChart = lazy(() => import("@/components/dashboard/EvaluationTrendChart").then(m => ({ default: m.EvaluationTrendChart })));
+const RatingDistributionChart = lazy(() => import("@/components/dashboard/RatingDistributionChart").then(m => ({ default: m.RatingDistributionChart })));
+const TopPerformersChart = lazy(() => import("@/components/dashboard/TopPerformersChart").then(m => ({ default: m.TopPerformersChart })));
+const GamificationOverview = lazy(() => import("@/components/dashboard/GamificationOverview").then(m => ({ default: m.GamificationOverview })));
+const MonthlyStatsChart = lazy(() => import("@/components/dashboard/MonthlyStatsChart").then(m => ({ default: m.MonthlyStatsChart })));
+const DashboardAlerts = lazy(() => import("@/components/dashboard/DashboardAlerts").then(m => ({ default: m.DashboardAlerts })));
+const QuickActions = lazy(() => import("@/components/dashboard/QuickActions").then(m => ({ default: m.QuickActions })));
+const RecentActivity = lazy(() => import("@/components/dashboard/RecentActivity").then(m => ({ default: m.RecentActivity })));
 
 // Tipos para o usuário autenticado
 interface AuthenticatedUser {
@@ -40,6 +40,25 @@ interface AuthenticatedUser {
   modules?: string[];
 }
 
+// Componente de loading para Suspense
+const ComponentLoader = () => (
+  <div className="flex items-center justify-center p-8">
+    <Loader2 className="h-6 w-6 animate-spin" />
+  </div>
+);
+
+// Componente de loading para cards
+const CardSkeleton = () => (
+  <Card>
+    <CardHeader>
+      <Skeleton className="h-6 w-32" />
+      <Skeleton className="h-4 w-48" />
+    </CardHeader>
+    <CardContent>
+      <Skeleton className="h-20 w-full" />
+    </CardContent>
+  </Card>
+);
 
 const RoleIcon = ({ role }: { role: string }) => {
     switch (role) {
@@ -59,7 +78,6 @@ const RoleIcon = ({ role }: { role: string }) => {
 const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
 }
-
 
 type Anniversary = {
     attendant: Attendant;
@@ -127,8 +145,87 @@ const groupAnniversariesByMonth = (anniversaries: Anniversary[]) => {
     }, {} as Record<string, Anniversary[]>);
 };
 
+// Hook customizado para dados básicos
+const useBasicData = (isAuthenticated: boolean, user: AuthenticatedUser | null) => {
+  const [modules, setModules] = useState<Module[]>([]);
+  const [attendants, setAttendants] = useState<Attendant[]>([]);
+  const [loading, setLoading] = useState(true);
 
-export default function DashboardPage() {
+  const loadData = useCallback(async () => {
+    if (!isAuthenticated || !user) return;
+    
+    try {
+      setLoading(true);
+      
+      // Carregar dados em paralelo
+      const [modulesResponse, attendantsResponse] = await Promise.allSettled([
+        fetch('/api/modules'),
+        fetch('/api/attendants')
+      ]);
+
+      if (modulesResponse.status === 'fulfilled' && modulesResponse.value.ok) {
+        const modulesData = await modulesResponse.value.json();
+        setModules(modulesData);
+      }
+
+      if (attendantsResponse.status === 'fulfilled' && attendantsResponse.value.ok) {
+        const attendantsData = await attendantsResponse.value.json();
+        setAttendants(attendantsData);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados básicos:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [isAuthenticated, user]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  return { modules, attendants, loading };
+};
+
+// Hook para dados do dashboard com cache
+const useDashboardStats = (isAuthenticated: boolean) => {
+  const [dashboardStats, setDashboardStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadStats = useCallback(async () => {
+    if (!isAuthenticated) return;
+    
+    try {
+      setLoading(true);
+      // Usar endpoint otimizado para carregamento rápido
+      const response = await fetch('/api/dashboard/stats-lite');
+      if (response.ok) {
+        const data = await response.json();
+        setDashboardStats(data);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar estatísticas:', error);
+      // Fallback para dados vazios
+      setDashboardStats({
+        totalEvaluations: 0,
+        totalAttendants: 0,
+        averageRating: 0,
+        totalXp: 0,
+        activeSeasons: 0,
+        unlockedAchievements: 0
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
+
+  return { dashboardStats, loading };
+};
+
+function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   
@@ -136,95 +233,17 @@ export default function DashboardPage() {
   const isAuthenticated = status === "authenticated";
   const authLoading = status === "loading";
   
-  // Estados para dados básicos
-  const [modules, setModules] = useState<Module[]>([]);
-  const [attendants, setAttendants] = useState<Attendant[]>([]);
-  const [appLoading, setAppLoading] = useState(true);
-  
+  // Estados para modais
   const [isAnniversaryModalOpen, setIsAnniversaryModalOpen] = useState(false);
   const [modalContent, setModalContent] = useState<{ type: 'birthday' | 'admission', title: string, data: Anniversary[] } | null>(null);
   
-  // Estados para dados do dashboard
-  const [dashboardStats, setDashboardStats] = useState<any>(null);
-  const [evaluationTrend, setEvaluationTrend] = useState<any[]>([]);
-  const [ratingDistribution, setRatingDistribution] = useState<any[]>([]);
-  const [topPerformers, setTopPerformers] = useState<any[]>([]);
-  const [gamificationOverview, setGamificationOverview] = useState<any>(null);
-  const [popularAchievements, setPopularAchievements] = useState<any[]>([]);
-  const [monthlyStats, setMonthlyStats] = useState<any[]>([]);
-  const [recentActivities, setRecentActivities] = useState<any[]>([]);
-  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  // Estados para controle de abas
+  const [activeTab, setActiveTab] = useState('overview');
   
-  // Carregar dados básicos
-  const loadBasicData = useCallback(async () => {
-    try {
-      setAppLoading(true);
-      
-      // Carregar módulos
-      try {
-        const modulesResponse = await fetch('/api/modules');
-        if (modulesResponse.ok) {
-          const modulesData = await modulesResponse.json();
-          setModules(modulesData);
-        }
-      } catch (error) {
-        console.error('Erro ao carregar módulos:', error);
-      }
-
-      // Carregar atendentes
-      try {
-        const attendantsResponse = await fetch('/api/attendants');
-        if (attendantsResponse.ok) {
-          const attendantsData = await attendantsResponse.json();
-          setAttendants(attendantsData);
-        }
-      } catch (error) {
-        console.error('Erro ao carregar atendentes:', error);
-      }
-    } catch (error) {
-      console.error('Erro ao carregar dados básicos:', error);
-    } finally {
-      setAppLoading(false);
-    }
-  }, []);
-
-  // Carregar dados do dashboard
-  const loadDashboardData = useCallback(async () => {
-    try {
-      setIsLoadingStats(true);
-      
-      // Carregar dados de forma individual para melhor tratamento de erros
-      const endpoints = [
-        { url: '/api/dashboard/stats', setter: setDashboardStats, name: 'stats' },
-        { url: '/api/dashboard/evaluation-trend?days=30', setter: setEvaluationTrend, name: 'trend' },
-        { url: '/api/dashboard/rating-distribution', setter: setRatingDistribution, name: 'distribution' },
-        { url: '/api/dashboard/top-performers?limit=10', setter: setTopPerformers, name: 'performers' },
-        { url: '/api/dashboard/gamification-overview', setter: setGamificationOverview, name: 'gamification' },
-        { url: '/api/dashboard/popular-achievements?limit=5', setter: setPopularAchievements, name: 'achievements' },
-        { url: '/api/dashboard/monthly-stats?months=6', setter: setMonthlyStats, name: 'monthly' },
-        { url: '/api/dashboard/recent-activities?limit=20', setter: setRecentActivities, name: 'activities' }
-      ];
-
-      // Carregar cada endpoint individualmente
-      for (const endpoint of endpoints) {
-        try {
-          const response = await fetch(endpoint.url);
-          if (response.ok) {
-            const data = await response.json();
-            endpoint.setter(data);
-          } else {
-            console.warn(`Falha ao carregar ${endpoint.name}:`, response.status);
-          }
-        } catch (error) {
-          console.error(`Erro ao carregar ${endpoint.name}:`, error);
-        }
-      }
-    } catch (error) {
-      console.error('Erro geral ao carregar dados do dashboard:', error);
-    } finally {
-      setIsLoadingStats(false);
-    }
-  }, []);
+  // Hooks customizados
+  const { modules, attendants, loading: basicDataLoading } = useBasicData(isAuthenticated, user);
+  const { dashboardStats, loading: statsLoading } = useDashboardStats(isAuthenticated);
+  const { data: dashboardData, loadEvaluationData, loadGamificationData, loadTeamData } = useDashboardData();
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -232,23 +251,23 @@ export default function DashboardPage() {
     }
   }, [authLoading, isAuthenticated, router]);
 
-  // Carregar dados básicos
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      loadBasicData();
-      loadDashboardData();
-    }
-  }, [isAuthenticated, user, loadBasicData, loadDashboardData]);
-
-  const allAnniversaries = useMemo(() => {
-    if (!attendants || attendants.length === 0) return [];
-    return getUpcomingAnniversaries(attendants);
+  // Memoização dos cálculos de aniversários
+  const anniversaryData = useMemo(() => {
+    if (!attendants || attendants.length === 0) return {
+      allAnniversaries: [],
+      todayAnniversaries: [],
+      upcomingBirthdays: [],
+      upcomingWorkAnniversaries: []
+    };
+    
+    const allAnniversaries = getUpcomingAnniversaries(attendants);
+    return {
+      allAnniversaries,
+      todayAnniversaries: allAnniversaries.filter(a => a.daysUntil === 0),
+      upcomingBirthdays: allAnniversaries.filter(a => a.type === 'birthday' && a.daysUntil > 0),
+      upcomingWorkAnniversaries: allAnniversaries.filter(a => a.type === 'admission' && a.daysUntil > 0)
+    };
   }, [attendants]);
-
-  const todayAnniversaries = useMemo(() => allAnniversaries.filter(a => a.daysUntil === 0), [allAnniversaries]);
-  const upcomingBirthdays = useMemo(() => allAnniversaries.filter(a => a.type === 'birthday' && a.daysUntil > 0), [allAnniversaries]);
-  const upcomingWorkAnniversaries = useMemo(() => allAnniversaries.filter(a => a.type === 'admission' && a.daysUntil > 0), [allAnniversaries]);
-
 
   const moduleMap = useMemo(() => {
     if (!modules) return {};
@@ -260,32 +279,12 @@ export default function DashboardPage() {
   
   const handleOpenModal = (type: 'birthday' | 'admission') => {
       if (type === 'birthday') {
-          setModalContent({ type, title: 'Todos os Próximos Aniversariantes', data: upcomingBirthdays });
+          setModalContent({ type, title: 'Todos os Próximos Aniversariantes', data: anniversaryData.upcomingBirthdays });
       } else {
-          setModalContent({ type, title: 'Todos os Próximos Aniversários de Admissão', data: upcomingWorkAnniversaries });
+          setModalContent({ type, title: 'Todos os Próximos Aniversários de Admissão', data: anniversaryData.upcomingWorkAnniversaries });
       }
       setIsAnniversaryModalOpen(true);
   };
-
-
-  if (authLoading) {
-    return (
-        <div className="flex items-center justify-center h-full">
-            <p>Carregando autenticação...</p>
-        </div>
-    );
-  }
-
-  if (!isAuthenticated || !user) {
-    return (
-        <div className="flex items-center justify-center h-full">
-            <p>Redirecionando para login...</p>
-        </div>
-    );
-  }
-
-  const canManageSystem = user?.role === ROLES.ADMIN || user?.role === ROLES.SUPERADMIN;
-  const userModules = user?.modules?.map((moduleId: string) => moduleMap[moduleId]).filter(Boolean) || [];
 
   const renderAnniversaryGroup = (anniversaries: Anniversary[], type: 'birthday' | 'admission') => {
     const groupedData = groupAnniversariesByMonth(anniversaries.filter(a => a.type === type));
@@ -329,7 +328,7 @@ export default function DashboardPage() {
     ));
   }
   
-    const renderModalAnniversaryGroup = (anniversaries: Anniversary[]) => {
+  const renderModalAnniversaryGroup = (anniversaries: Anniversary[]) => {
     const groupedData = groupAnniversariesByMonth(anniversaries);
     const sortedMonths = Object.keys(groupedData).sort((a, b) => {
         const monthA = groupedData[a][0].date.getMonth();
@@ -371,6 +370,25 @@ export default function DashboardPage() {
     ));
   }
 
+  if (authLoading) {
+    return (
+        <div className="flex items-center justify-center h-full">
+            <Loader2 className="h-6 w-6 animate-spin mr-2" />
+            <p>Carregando autenticação...</p>
+        </div>
+    );
+  }
+
+  if (!isAuthenticated || !user) {
+    return (
+        <div className="flex items-center justify-center h-full">
+            <p>Redirecionando para login...</p>
+        </div>
+    );
+  }
+
+  const canManageSystem = user?.role === ROLES.ADMIN || user?.role === ROLES.SUPERADMIN;
+  const userModules = user?.modules?.map((moduleId: string) => moduleMap[moduleId]).filter(Boolean) || [];
 
   return (
     <>
@@ -386,26 +404,33 @@ export default function DashboardPage() {
           </Badge>
         </div>
 
-        {/* Estatísticas Gerais */}
-        <StatsCards 
-          stats={dashboardStats || {
-            totalEvaluations: 0,
-            totalAttendants: 0,
-            averageRating: 0,
-            totalXp: 0,
-            activeSeasons: 0,
-            unlockedAchievements: 0
-          }} 
-          isLoading={isLoadingStats} 
-        />
+        {/* Estatísticas Gerais - Carregamento prioritário */}
+        <DashboardErrorBoundary>
+          <Suspense fallback={<CardSkeleton />}>
+            <StatsCards 
+              stats={dashboardStats || {
+                totalEvaluations: 0,
+                totalAttendants: 0,
+                averageRating: 0,
+                totalXp: 0,
+                activeSeasons: 0,
+                unlockedAchievements: 0
+              }} 
+              isLoading={statsLoading} 
+            />
+          </Suspense>
+        </DashboardErrorBoundary>
         
-        {todayAnniversaries.length > 0 && (
+        {/* Celebrações de hoje - Dados já carregados */}
+        {anniversaryData.todayAnniversaries.length > 0 && (
             <Card className="border-amber-400 bg-amber-50 dark:bg-amber-950/30">
                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400"><PartyPopper /> Celebrações de Hoje!</CardTitle>
+                    <CardTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                      <PartyPopper /> Celebrações de Hoje!
+                    </CardTitle>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {todayAnniversaries.map(({ attendant, years, type }) => (
+                    {anniversaryData.todayAnniversaries.map(({ attendant, years, type }) => (
                          <div key={`${attendant.id}-${type}`} className="flex items-center justify-between p-3 bg-background rounded-md border">
                             <Link href={`/dashboard/rh/atendentes/${attendant.id}`} className="flex items-center gap-3 group">
                                 <Avatar className="h-10 w-10">
@@ -426,30 +451,31 @@ export default function DashboardPage() {
             </Card>
         )}
 
-        {/* Alertas e Notificações */}
-        <DashboardAlerts 
-          alerts={[]} 
-          stats={{
-            totalEvaluations: dashboardStats?.totalEvaluations || 0,
-            totalAttendants: dashboardStats?.totalAttendants || 0,
-            averageRating: dashboardStats?.averageRating || 0,
-            recentTrend: evaluationTrend.length > 1 && 
-              evaluationTrend[evaluationTrend.length - 1]?.averageRating > 
-              evaluationTrend[evaluationTrend.length - 2]?.averageRating ? 'up' : 'down'
-          }}
-        />
+        {/* Alertas e Ações Rápidas - Lazy loading */}
+        <Suspense fallback={<CardSkeleton />}>
+          <DashboardAlerts 
+            alerts={[]} 
+            stats={{
+              totalEvaluations: dashboardStats?.totalEvaluations || 0,
+              totalAttendants: dashboardStats?.totalAttendants || 0,
+              averageRating: dashboardStats?.averageRating || 0,
+              recentTrend: 'up'
+            }}
+          />
+        </Suspense>
 
-        {/* Ações Rápidas */}
-        <QuickActions 
-          userRole={user?.role || ROLES.USER}
-          stats={{
-            activeSeasons: dashboardStats?.activeSeasons || 0,
-            newAchievements: popularAchievements.length
-          }}
-        />
+        <Suspense fallback={<CardSkeleton />}>
+          <QuickActions 
+            userRole={user?.role || ROLES.USER}
+            stats={{
+              activeSeasons: dashboardStats?.activeSeasons || 0,
+              newAchievements: 0
+            }}
+          />
+        </Suspense>
 
-        {/* Abas principais do dashboard */}
-        <Tabs defaultValue="overview" className="space-y-6">
+        {/* Abas principais do dashboard - Carregamento sob demanda */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
@@ -469,113 +495,180 @@ export default function DashboardPage() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-6">
-            <div className="grid lg:grid-cols-2 gap-6">
-              <EvaluationTrendChart data={evaluationTrend} isLoading={isLoadingStats} />
-              <RatingDistributionChart data={ratingDistribution} isLoading={isLoadingStats} />
-            </div>
-            <div className="grid lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2">
-                <MonthlyStatsChart data={monthlyStats} isLoading={isLoadingStats} />
+          <TabsContent value="overview">
+            <LazyDashboardTab 
+              tabName="Visão Geral" 
+              isActive={activeTab === 'overview'}
+              onTabActive={loadEvaluationData}
+            >
+              <div className="grid lg:grid-cols-2 gap-6">
+                <Suspense fallback={<CardSkeleton />}>
+                  <EvaluationTrendChart 
+                    data={dashboardData.evaluationTrend} 
+                    isLoading={dashboardData.loading.evaluationTrend || false} 
+                  />
+                </Suspense>
+                <Suspense fallback={<CardSkeleton />}>
+                  <RatingDistributionChart 
+                    data={dashboardData.ratingDistribution} 
+                    isLoading={dashboardData.loading.ratingDistribution || false} 
+                  />
+                </Suspense>
               </div>
-              <div>
-                <RecentActivity activities={recentActivities} isLoading={isLoadingStats} maxItems={8} />
+              <div className="grid lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2">
+                  <Suspense fallback={<CardSkeleton />}>
+                    <MonthlyStatsChart 
+                      data={dashboardData.monthlyStats} 
+                      isLoading={dashboardData.loading.monthlyStats || false} 
+                    />
+                  </Suspense>
+                </div>
+                <div>
+                  <Suspense fallback={<CardSkeleton />}>
+                    <RecentActivity 
+                      activities={dashboardData.recentActivities} 
+                      isLoading={dashboardData.loading.recentActivities || false} 
+                      maxItems={8} 
+                    />
+                  </Suspense>
+                </div>
               </div>
-            </div>
+            </LazyDashboardTab>
           </TabsContent>
 
-          <TabsContent value="evaluations" className="space-y-6">
-            <div className="grid lg:grid-cols-2 gap-6">
-              <EvaluationTrendChart data={evaluationTrend} isLoading={isLoadingStats} />
-              <RatingDistributionChart data={ratingDistribution} isLoading={isLoadingStats} />
-            </div>
-            <MonthlyStatsChart data={monthlyStats} isLoading={isLoadingStats} />
+          <TabsContent value="evaluations">
+            <LazyDashboardTab 
+              tabName="Avaliações" 
+              isActive={activeTab === 'evaluations'}
+              onTabActive={loadEvaluationData}
+            >
+              <div className="grid lg:grid-cols-2 gap-6">
+                <Suspense fallback={<CardSkeleton />}>
+                  <EvaluationTrendChart 
+                    data={dashboardData.evaluationTrend} 
+                    isLoading={dashboardData.loading.evaluationTrend || false} 
+                  />
+                </Suspense>
+                <Suspense fallback={<CardSkeleton />}>
+                  <RatingDistributionChart 
+                    data={dashboardData.ratingDistribution} 
+                    isLoading={dashboardData.loading.ratingDistribution || false} 
+                  />
+                </Suspense>
+              </div>
+              <Suspense fallback={<CardSkeleton />}>
+                <MonthlyStatsChart 
+                  data={dashboardData.monthlyStats} 
+                  isLoading={dashboardData.loading.monthlyStats || false} 
+                />
+              </Suspense>
+            </LazyDashboardTab>
           </TabsContent>
 
-          <TabsContent value="gamification" className="space-y-6">
-            <GamificationOverview 
-              data={gamificationOverview || {
-                totalXpDistributed: 0,
-                activeAchievements: 0,
-                totalUnlocked: 0,
-                topAchievement: null
-              }} 
-              popularAchievements={popularAchievements}
-              isLoading={isLoadingStats} 
-            />
+          <TabsContent value="gamification">
+            <LazyDashboardTab 
+              tabName="Gamificação" 
+              isActive={activeTab === 'gamification'}
+              onTabActive={loadGamificationData}
+            >
+              <Suspense fallback={<CardSkeleton />}>
+                <GamificationOverview 
+                  data={dashboardData.gamificationOverview || {
+                    totalXpDistributed: 0,
+                    activeAchievements: 0,
+                    totalUnlocked: 0,
+                    topAchievement: null
+                  }} 
+                  popularAchievements={dashboardData.popularAchievements}
+                  isLoading={dashboardData.loading.gamificationOverview || false} 
+                />
+              </Suspense>
+            </LazyDashboardTab>
           </TabsContent>
 
-          <TabsContent value="team" className="space-y-6">
-            <div className="grid lg:grid-cols-2 gap-6">
-              <TopPerformersChart data={topPerformers} isLoading={isLoadingStats} />
-              
-              {/* Aniversários da equipe */}
-              <div className="grid gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Gift className="text-pink-500 h-5 w-5"/> 
-                      Próximos Aniversariantes
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {appLoading ? (
-                      Array.from({ length: 2 }).map((_, i) => (
-                        <div key={i} className="flex items-center justify-between p-2">
-                          <div className="flex items-center gap-3">
-                            <Skeleton className="h-10 w-10 rounded-full" />
-                            <div className="space-y-1">
-                              <Skeleton className="h-4 w-32" />
-                              <Skeleton className="h-3 w-24" />
+          <TabsContent value="team">
+            <LazyDashboardTab 
+              tabName="Equipe" 
+              isActive={activeTab === 'team'}
+              onTabActive={loadTeamData}
+            >
+              <div className="grid lg:grid-cols-2 gap-6">
+                <Suspense fallback={<CardSkeleton />}>
+                  <TopPerformersChart 
+                    data={dashboardData.topPerformers} 
+                    isLoading={dashboardData.loading.topPerformers || false} 
+                  />
+                </Suspense>
+                
+                {/* Aniversários da equipe */}
+                <div className="grid gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Gift className="text-pink-500 h-5 w-5"/> 
+                        Próximos Aniversariantes
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {basicDataLoading ? (
+                        Array.from({ length: 2 }).map((_, i) => (
+                          <div key={i} className="flex items-center justify-between p-2">
+                            <div className="flex items-center gap-3">
+                              <Skeleton className="h-10 w-10 rounded-full" />
+                              <div className="space-y-1">
+                                <Skeleton className="h-4 w-32" />
+                                <Skeleton className="h-3 w-24" />
+                              </div>
                             </div>
+                            <Skeleton className="h-6 w-16 rounded-full" />
                           </div>
-                          <Skeleton className="h-6 w-16 rounded-full" />
-                        </div>
-                      ))
-                    ) : renderAnniversaryGroup(upcomingBirthdays.slice(0, 3), 'birthday')}
-                  </CardContent>
-                  <CardFooter>
-                    <Button variant="secondary" className="w-full" onClick={() => handleOpenModal('birthday')}>
-                      Ver todos
-                    </Button>
-                  </CardFooter>
-                </Card>
+                        ))
+                      ) : renderAnniversaryGroup(anniversaryData.upcomingBirthdays.slice(0, 3), 'birthday')}
+                    </CardContent>
+                    <CardFooter>
+                      <Button variant="secondary" className="w-full" onClick={() => handleOpenModal('birthday')}>
+                        Ver todos
+                      </Button>
+                    </CardFooter>
+                  </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Building2 className="text-blue-500 h-5 w-5" /> 
-                      Aniversários de Admissão
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {appLoading ? (
-                      Array.from({ length: 2 }).map((_, i) => (
-                        <div key={i} className="flex items-center justify-between p-2">
-                          <div className="flex items-center gap-3">
-                            <Skeleton className="h-10 w-10 rounded-full" />
-                            <div className="space-y-1">
-                              <Skeleton className="h-4 w-32" />
-                              <Skeleton className="h-3 w-24" />
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Building2 className="text-blue-500 h-5 w-5" /> 
+                        Aniversários de Admissão
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {basicDataLoading ? (
+                        Array.from({ length: 2 }).map((_, i) => (
+                          <div key={i} className="flex items-center justify-between p-2">
+                            <div className="flex items-center gap-3">
+                              <Skeleton className="h-10 w-10 rounded-full" />
+                              <div className="space-y-1">
+                                <Skeleton className="h-4 w-32" />
+                                <Skeleton className="h-3 w-24" />
+                              </div>
                             </div>
+                            <Skeleton className="h-6 w-16 rounded-full" />
                           </div>
-                          <Skeleton className="h-6 w-16 rounded-full" />
-                        </div>
-                      ))
-                    ) : renderAnniversaryGroup(upcomingWorkAnniversaries.slice(0, 3), 'admission')}
-                  </CardContent>
-                  <CardFooter>
-                    <Button variant="secondary" className="w-full" onClick={() => handleOpenModal('admission')}>
-                      Ver todos
-                    </Button>
-                  </CardFooter>
-                </Card>
+                        ))
+                      ) : renderAnniversaryGroup(anniversaryData.upcomingWorkAnniversaries.slice(0, 3), 'admission')}
+                    </CardContent>
+                    <CardFooter>
+                      <Button variant="secondary" className="w-full" onClick={() => handleOpenModal('admission')}>
+                        Ver todos
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                </div>
               </div>
-            </div>
+            </LazyDashboardTab>
           </TabsContent>
         </Tabs>
 
-
+        {/* Módulos do usuário */}
         <Card>
           <CardHeader>
             <CardTitle>Seus Módulos de Acesso</CardTitle>
@@ -592,6 +685,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
         
+        {/* Área administrativa */}
         {canManageSystem && (
           <div>
             <h2 className="text-2xl font-bold font-heading mb-4">Área Administrativa</h2>
@@ -624,7 +718,7 @@ export default function DashboardPage() {
                           </p>
                           <Button asChild>
                               <Link href="/dashboard/modulos">
-                                  <Wrench className="mr-2 h-4 w-4" />
+                                  <Users className="mr-2 h-4 w-4" />
                                   Gerenciar Módulos
                               </Link>
                           </Button>
@@ -632,28 +726,6 @@ export default function DashboardPage() {
                   </Card>
               </div>
           </div>
-        )}
-        {(user?.role === ROLES.SUPERVISOR) && (
-          <Card>
-              <CardHeader>
-                  <CardTitle>Visão do Supervisor</CardTitle>
-                  <CardDescription>Você tem permissões de supervisão.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                  <p>Aqui você pode ver relatórios e dados relevantes para sua função.</p>
-              </CardContent>
-          </Card>
-        )}
-        {(user?.role === ROLES.USER) && (
-          <Card>
-              <CardHeader>
-                  <CardTitle>Painel do Usuário</CardTitle>
-                  <CardDescription>Bem-vindo à sua área pessoal.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                  <p>Você pode visualizar e editar seu perfil na página de perfil.</p>
-              </CardContent>
-          </Card>
         )}
       </div>
 
@@ -671,4 +743,4 @@ export default function DashboardPage() {
   );
 }
 
-    
+export default DashboardPage;

@@ -43,8 +43,8 @@ export default function ImportarLegadoPage() {
     const [mappedReviews, setMappedReviews] = useState<MappedReview[]>([]);
     const [isParsing, setIsParsing] = useState(false);
 
-    const attendantMap = useMemo(() => new Map(attendants.map(a => [a.id, a.name])), [attendants]);
-    const evaluationMap = useMemo(() => new Set(evaluations.map(e => e.id)), [evaluations]);
+    const attendantMap = useMemo(() => new Map(Array.isArray(attendants) ? attendants.map(a => [a.id, a.name]) : []), [attendants]);
+    const evaluationMap = useMemo(() => new Set(Array.isArray(evaluations) ? evaluations.map(e => e.id) : []), [evaluations]);
 
 
     useEffect(() => {

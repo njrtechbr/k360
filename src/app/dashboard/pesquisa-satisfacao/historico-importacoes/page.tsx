@@ -118,7 +118,7 @@ export default function HistoricoImportacoesPage() {
             // This case shouldn't happen with the current UI, but it's a good safeguard
         }
 
-        await deleteEvaluations(evaluationsToDelete.map(e => e.id));
+        await deleteEvaluations(Array.isArray(evaluationsToDelete) ? evaluationsToDelete.map(e => e.id) : []);
         setIsDeleteSelectedOpen(false);
         
         // Optimistically update the view in the modal

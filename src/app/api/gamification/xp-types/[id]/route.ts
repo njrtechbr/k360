@@ -7,7 +7,7 @@ import { xpAvulsoRateLimiter } from '@/lib/rate-limit';
 // Atualizar tipo de XP existente
 export const PUT = AuthMiddleware.withAuth(
   AuthConfigs.adminOnly,
-  async (request: NextRequest, session, { params }: { params: { id: string } }) => {
+  async (request: NextRequest, session, { params }: { params: Promise<{ id: string }> }) => {
     try {
 
       // Aplicar rate limiting
@@ -29,7 +29,7 @@ export const PUT = AuthMiddleware.withAuth(
         );
       }
 
-      const { id } = params;
+      const { id } = await params;
       const body = await request.json();
       const { name, description, points, category, icon, color } = body;
 
@@ -112,7 +112,7 @@ export const PUT = AuthMiddleware.withAuth(
 // Desativar tipo de XP (não deleta, apenas alterna status)
 export const DELETE = AuthMiddleware.withAuth(
   AuthConfigs.adminOnly,
-  async (request: NextRequest, session, { params }: { params: { id: string } }) => {
+  async (request: NextRequest, session, { params }: { params: Promise<{ id: string }> }) => {
     try {
       // Aplicar rate limiting
       const limitResult = await xpAvulsoRateLimiter.checkLimit(request);
@@ -133,7 +133,7 @@ export const DELETE = AuthMiddleware.withAuth(
         );
       }
 
-      const { id } = params;
+      const { id } = await params;
 
       // Alternar status do tipo de XP
       const updatedXpType = await XpAvulsoService.toggleXpTypeStatus(id);
@@ -184,7 +184,7 @@ export const DELETE = AuthMiddleware.withAuth(
 // Buscar tipo de XP específico
 export const GET = AuthMiddleware.withAuth(
   AuthConfigs.adminOnly,
-  async (request: NextRequest, session, { params }: { params: { id: string } }) => {
+  async (request: NextRequest, session, { params }: { params: Promise<{ id: string }> }) => {
     try {
       // Aplicar rate limiting
       const limitResult = await xpAvulsoRateLimiter.checkLimit(request);
@@ -205,7 +205,7 @@ export const GET = AuthMiddleware.withAuth(
         );
       }
 
-      const { id } = params;
+      const { id } = await params;
 
       // Buscar todos os tipos e filtrar pelo ID (usando método existente)
       const allXpTypes = await XpAvulsoService.findAllXpTypes(false);

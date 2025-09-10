@@ -2,6 +2,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { PrismaProvider } from '@/providers/PrismaProvider';
+import { AuthProvider } from '@/providers/AuthProvider';
 import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 import { SidebarProvider } from '@/components/ui/sidebar';
@@ -34,14 +35,16 @@ export default function RootLayout({
         <PerformanceProvider>
             <SessionProvider>
               <PrismaProvider>
-                <NotificationProvider>
-                  <SidebarProvider>
-                    <AppLayout>
-                      {children}
-                    </AppLayout>
-                    <Toaster />
-                  </SidebarProvider>
-                </NotificationProvider>
+                <AuthProvider>
+                  <NotificationProvider>
+                    <SidebarProvider>
+                      <AppLayout>
+                        {children}
+                      </AppLayout>
+                      <Toaster />
+                    </SidebarProvider>
+                  </NotificationProvider>
+                </AuthProvider>
               </PrismaProvider>
             </SessionProvider>
         </PerformanceProvider>

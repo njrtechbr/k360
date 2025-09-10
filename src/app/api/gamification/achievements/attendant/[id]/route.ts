@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 // Buscar achievements de um atendente específico
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const attendantId = params.id;
@@ -175,7 +175,7 @@ export async function GET(
 // Desbloquear achievement para um atendente
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const attendantId = params.id;
@@ -305,7 +305,7 @@ export async function POST(
 // Atualizar progresso de achievement
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const attendantId = params.id;
@@ -407,7 +407,7 @@ export async function PUT(
 // Remover achievement de um atendente
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const attendantId = params.id;

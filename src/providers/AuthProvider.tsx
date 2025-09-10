@@ -7,13 +7,8 @@ import type { User, Role, Module, Attendant, Evaluation, EvaluationImport, Atten
 import { ROLES } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 
-// Serviços Prisma
-import { UserService } from "@/services/userService";
-import { ModuleService } from "@/services/moduleService";
-import { AttendantService } from "@/services/attendantService";
-import { EvaluationService } from "@/services/evaluationService";
-import { GamificationService } from "@/services/gamificationService";
-import { RHService } from "@/services/rhService";
+// Removido: Serviços Prisma não podem ser usados no client-side
+// Agora usando endpoints de API
 
 import { INITIAL_ACHIEVEMENTS, INITIAL_LEVEL_REWARDS } from "@/lib/achievements";
 import { getScoreFromRating } from "@/lib/gamification";
@@ -121,6 +116,8 @@ interface AuthContextType {
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 
+export { AuthContext };
+
 export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: session, status } = useSession();
     const { toast } = useToast();
@@ -192,6 +189,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(true);
         try {
             const [
+                usersResponse,
+                modulesResponse,
+                attendantsResponse,
+                evaluationsResponse,
+                funcoesResponse,
+                setoresResponse,
+                seasonsResponse
+            ] = await Promise.all([
+                fetch('/api/users'),
+                fetch('/api/modules'),
+                fetch('/api/attendants'),
+                fetch('/api/evaluations'),
+                fetch('/api/rh/funcoes'),
+                fetch('/api/rh/setores'),
+                fetch('/api/gamification/seasons')
+            ]);
+
+            const [
                 usersData,
                 modulesData,
                 attendantsData,
@@ -200,13 +215,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setoresData,
                 seasonsData
             ] = await Promise.all([
-                UserService.findAll(),
-                ModuleService.findAll(),
-                AttendantService.findAll(),
-                EvaluationService.findAll(),
-                RHService.findAllFuncoes(),
-                RHService.findAllSetores(),
-                GamificationService.findAllSeasons()
+                usersResponse.ok ? usersResponse.json() : [],
+                modulesResponse.ok ? modulesResponse.json() : [],
+                attendantsResponse.ok ? attendantsResponse.json() : [],
+                evaluationsResponse.ok ? evaluationsResponse.json() : [],
+                funcoesResponse.ok ? funcoesResponse.json() : [],
+                setoresResponse.ok ? setoresResponse.json() : [],
+                seasonsResponse.ok ? seasonsResponse.json() : []
             ]);
 
             setUsers(usersData);
@@ -278,13 +293,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Funções de usuário
     const createUser = useCallback(async (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>) => {
         try {
-            await UserService.create({
-                name: userData.name,
-                email: userData.email,
-                password: userData.password!,
-                role: userData.role,
-                modules: userData.modules?.map(m => m.id) || []
+            const response = await fetch('/api/users', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: userData.name,
+                    email: userData.email,
+                    password: userData.password!,
+                    role: userData.role,
+                    modules: userData.modules?.map(m => m.id) || []
+                })
             });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Erro ao criar usuário');
+            }
             
             await fetchAllData();
             toast({
@@ -318,7 +344,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 updateData.modules = userData.modules.map(m => m.id);
             }
 
-            await UserService.update(userId, updateData);
+            const response = await fetch(`/api/users/${userId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(updateData)
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Erro ao atualizar usuário');
+            }
+
             await fetchAllData();
             
             toast({
@@ -338,7 +376,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const deleteUser = useCallback(async (userId: string) => {
         try {
-            await UserService.delete(userId);
+            const response = await fetch(`/api/users/${userId}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Erro ao remover usuário');
+            }
+
             await fetchAllData();
             
             toast({
@@ -359,13 +405,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Funções de módulo
     const createModule = useCallback(async (moduleData: Omit<Module, 'users'>) => {
         try {
-            await ModuleService.create({
-                id: moduleData.id,
-                name: moduleData.name,
-                description: moduleData.description,
-                path: moduleData.path,
-                active: moduleData.active
+            const response = await fetch('/api/modules', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    id: moduleData.id,
+                    name: moduleData.name,
+                    description: moduleData.description,
+                    path: moduleData.path,
+                    active: moduleData.active
+                })
             });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Erro ao criar módulo');
+            }
             
             await fetchAllData();
             toast({
@@ -385,12 +442,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const updateModule = useCallback(async (moduleId: string, moduleData: Partial<Module>) => {
         try {
-            await ModuleService.update(moduleId, {
-                name: moduleData.name,
-                description: moduleData.description,
-                path: moduleData.path,
-                active: moduleData.active
+            const response = await fetch(`/api/modules/${moduleId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: moduleData.name,
+                    description: moduleData.description,
+                    path: moduleData.path,
+                    active: moduleData.active
+                })
             });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Erro ao atualizar módulo');
+            }
             
             await fetchAllData();
             toast({
@@ -410,7 +478,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const deleteModule = useCallback(async (moduleId: string) => {
         try {
-            await ModuleService.delete(moduleId);
+            const response = await fetch(`/api/modules/${moduleId}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Erro ao remover módulo');
+            }
+
             await fetchAllData();
             
             toast({
@@ -431,21 +507,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Funções de atendente
     const createAttendant = useCallback(async (attendantData: Omit<Attendant, 'id' | 'createdAt' | 'updatedAt'>) => {
         try {
-            await AttendantService.create({
-                name: attendantData.name,
-                email: attendantData.email,
-                funcao: attendantData.funcao,
-                setor: attendantData.setor,
-                status: attendantData.status,
-                avatarUrl: attendantData.avatarUrl,
-                telefone: attendantData.telefone,
-                portaria: attendantData.portaria,
-                situacao: attendantData.situacao,
-                dataAdmissao: attendantData.dataAdmissao,
-                dataNascimento: attendantData.dataNascimento,
-                rg: attendantData.rg,
-                cpf: attendantData.cpf
+            const response = await fetch('/api/attendants', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: attendantData.name,
+                    email: attendantData.email,
+                    funcao: attendantData.funcao,
+                    setor: attendantData.setor,
+                    status: attendantData.status,
+                    avatarUrl: attendantData.avatarUrl,
+                    telefone: attendantData.telefone,
+                    portaria: attendantData.portaria,
+                    situacao: attendantData.situacao,
+                    dataAdmissao: attendantData.dataAdmissao,
+                    dataNascimento: attendantData.dataNascimento,
+                    rg: attendantData.rg,
+                    cpf: attendantData.cpf
+                })
             });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Erro ao criar atendente');
+            }
             
             await fetchAllData();
             toast({
@@ -465,21 +552,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const updateAttendant = useCallback(async (attendantId: string, attendantData: Partial<Attendant>) => {
         try {
-            await AttendantService.update(attendantId, {
-                name: attendantData.name,
-                email: attendantData.email,
-                funcao: attendantData.funcao,
-                setor: attendantData.setor,
-                status: attendantData.status,
-                avatarUrl: attendantData.avatarUrl,
-                telefone: attendantData.telefone,
-                portaria: attendantData.portaria,
-                situacao: attendantData.situacao,
-                dataAdmissao: attendantData.dataAdmissao,
-                dataNascimento: attendantData.dataNascimento,
-                rg: attendantData.rg,
-                cpf: attendantData.cpf
+            const response = await fetch(`/api/attendants/${attendantId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: attendantData.name,
+                    email: attendantData.email,
+                    funcao: attendantData.funcao,
+                    setor: attendantData.setor,
+                    status: attendantData.status,
+                    avatarUrl: attendantData.avatarUrl,
+                    telefone: attendantData.telefone,
+                    portaria: attendantData.portaria,
+                    situacao: attendantData.situacao,
+                    dataAdmissao: attendantData.dataAdmissao,
+                    dataNascimento: attendantData.dataNascimento,
+                    rg: attendantData.rg,
+                    cpf: attendantData.cpf
+                })
             });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Erro ao atualizar atendente');
+            }
             
             await fetchAllData();
             toast({
@@ -499,7 +597,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const deleteAttendant = useCallback(async (attendantId: string) => {
         try {
-            await AttendantService.delete(attendantId);
+            const response = await fetch(`/api/attendants/${attendantId}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Erro ao remover atendente');
+            }
+
             await fetchAllData();
             
             toast({
@@ -600,7 +706,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const reverseAttendantImport = useCallback(async (importId: string) => {
         try {
-            await AttendantService.deleteByImportId(importId);
+            const response = await fetch('/api/attendants/import/reverse', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ importId })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Erro ao reverter importação');
+            }
+
             await fetchAllData();
             
             toast({
@@ -621,13 +739,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Funções de avaliação
     const createEvaluation = useCallback(async (evaluationData: Omit<Evaluation, 'id' | 'createdAt'>) => {
         try {
-            await EvaluationService.create({
-                attendantId: evaluationData.attendantId,
-                nota: evaluationData.nota,
-                comentario: evaluationData.comentario || '',
-                data: evaluationData.data,
-                xpGained: evaluationData.xpGained || 0
+            const response = await fetch('/api/evaluations', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    attendantId: evaluationData.attendantId,
+                    nota: evaluationData.nota,
+                    comentario: evaluationData.comentario || '',
+                    data: evaluationData.data,
+                    xpGained: evaluationData.xpGained || 0
+                })
             });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Erro ao criar avaliação');
+            }
             
             await fetchAllData();
             toast({
@@ -647,12 +776,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const updateEvaluation = useCallback(async (evaluationId: string, evaluationData: Partial<Evaluation>) => {
         try {
-            await EvaluationService.update(evaluationId, {
-                nota: evaluationData.nota,
-                comentario: evaluationData.comentario,
-                data: evaluationData.data,
-                xpGained: evaluationData.xpGained
+            const response = await fetch(`/api/evaluations/${evaluationId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    nota: evaluationData.nota,
+                    comentario: evaluationData.comentario,
+                    data: evaluationData.data,
+                    xpGained: evaluationData.xpGained
+                })
             });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Erro ao atualizar avaliação');
+            }
             
             await fetchAllData();
             toast({
@@ -672,7 +812,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const deleteEvaluation = useCallback(async (evaluationId: string) => {
         try {
-            await EvaluationService.delete(evaluationId);
+            const response = await fetch(`/api/evaluations/${evaluationId}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Erro ao remover avaliação');
+            }
+
             await fetchAllData();
             
             toast({
@@ -823,13 +971,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const createSeason = useCallback(async (seasonData: Omit<GamificationSeason, 'id' | 'createdAt'>) => {
         try {
-            await GamificationService.createSeason({
-                name: seasonData.name,
-                startDate: seasonData.startDate,
-                endDate: seasonData.endDate,
-                active: seasonData.active,
-                xpMultiplier: seasonData.xpMultiplier
+            const response = await fetch('/api/gamification/seasons', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: seasonData.name,
+                    startDate: seasonData.startDate,
+                    endDate: seasonData.endDate,
+                    active: seasonData.active,
+                    xpMultiplier: seasonData.xpMultiplier
+                })
             });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Erro ao criar temporada');
+            }
             
             await fetchAllData();
             toast({
@@ -849,13 +1008,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const updateSeason = useCallback(async (seasonId: string, seasonData: Partial<GamificationSeason>) => {
         try {
-            await GamificationService.updateSeason(seasonId, {
-                name: seasonData.name,
-                startDate: seasonData.startDate,
-                endDate: seasonData.endDate,
-                active: seasonData.active,
-                xpMultiplier: seasonData.xpMultiplier
+            const response = await fetch(`/api/gamification/seasons/${seasonId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: seasonData.name,
+                    startDate: seasonData.startDate,
+                    endDate: seasonData.endDate,
+                    active: seasonData.active,
+                    xpMultiplier: seasonData.xpMultiplier
+                })
             });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Erro ao atualizar temporada');
+            }
             
             await fetchAllData();
             toast({
@@ -875,7 +1045,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const deleteSeason = useCallback(async (seasonId: string) => {
         try {
-            await GamificationService.deleteSeason(seasonId);
+            const response = await fetch(`/api/gamification/seasons/${seasonId}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Erro ao remover temporada');
+            }
+
             await fetchAllData();
             
             toast({
@@ -896,7 +1074,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Funções de RH
     const createFuncao = useCallback(async (name: string) => {
         try {
-            await RHService.createFuncao({ name });
+            const response = await fetch('/api/rh/funcoes', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Erro ao criar função');
+            }
+
             await fetchAllData();
             
             toast({
@@ -916,7 +1106,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const createSetor = useCallback(async (name: string) => {
         try {
-            await RHService.createSetor({ name });
+            const response = await fetch('/api/rh/setores', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Erro ao criar setor');
+            }
+
             await fetchAllData();
             
             toast({
@@ -938,7 +1140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const startAnalysis = useCallback(async () => {
         try {
             // Buscar avaliações sem análise IA
-            const evaluationsToAnalyze = evaluations.filter(eval => !eval.aiAnalysis);
+            const evaluationsToAnalyze = evaluations.filter(evaluation => !evaluation.aiAnalysis);
             
             if (evaluationsToAnalyze.length === 0) {
                 toast({

@@ -35,6 +35,9 @@ export default function AnaliseSentimentoPage() {
     }, [isAuthenticated, loading, router]);
 
     const attendantMap = useMemo(() => {
+        if (!Array.isArray(attendants)) {
+            return {};
+        }
         return safeReduceArray(
             attendants,
             (acc, attendant) => {
@@ -47,6 +50,9 @@ export default function AnaliseSentimentoPage() {
     }, [attendants]);
 
     const evaluationMap = useMemo(() => {
+        if (!Array.isArray(evaluations)) {
+            return {};
+        }
         return safeReduceArray(
             evaluations,
             (acc, ev) => {
@@ -59,6 +65,9 @@ export default function AnaliseSentimentoPage() {
     }, [evaluations]);
     
     const allAnalysisWithDetails = useMemo(() => {
+        if (!Array.isArray(aiAnalysisResults)) {
+            return [];
+        }
         return aiAnalysisResults.map(analysis => ({
             ...analysis,
             evaluation: evaluationMap[analysis.evaluationId],
@@ -155,6 +164,9 @@ export default function AnaliseSentimentoPage() {
 
     // Preparar opções de atendentes para o filtro
     const attendantOptions: AttendantOption[] = useMemo(() => {
+        if (!Array.isArray(attendants)) {
+            return [];
+        }
         return safeMapArray(
             attendants,
             (attendant) => {
@@ -193,8 +205,8 @@ export default function AnaliseSentimentoPage() {
     
     const sortedAnalysis = [...filteredAnalyses].sort((a, b) => new Date(b.evaluation.data).getTime() - new Date(a.evaluation.data).getTime());
 
-    const progressPercentage = analysisProgress.total > 0 ? (analysisProgress.current / analysisProgress.total) * 100 : 0;
-    const lastResult = analysisProgress.lastResult;
+    const progressPercentage = analysisProgress?.total > 0 ? (analysisProgress.current / analysisProgress.total) * 100 : 0;
+    const lastResult = analysisProgress?.lastResult;
     const lastEvaluationAnalyzed = lastResult ? evaluationMap[lastResult.evaluationId] : null;
 
     return (
@@ -349,11 +361,11 @@ export default function AnaliseSentimentoPage() {
                     <div className="space-y-4">
                         <div className="flex justify-between items-baseline">
                             <p className="font-medium">Progresso:</p>
-                            <p className="text-lg font-bold">{analysisProgress.current} / {analysisProgress.total}</p>
+                            <p className="text-lg font-bold">{analysisProgress?.current || 0} / {analysisProgress?.total || 0}</p>
                         </div>
                         <Progress value={progressPercentage} className="w-full" />
                         
-                        {analysisProgress.status === 'processing' && analysisProgress.evaluation && (
+                        {analysisProgress?.status === 'processing' && analysisProgress?.evaluation && (
                             <Card className="bg-muted/50 animate-in fade-in">
                                 <CardHeader>
                                     <CardTitle className="text-base flex items-center gap-2">
@@ -363,18 +375,18 @@ export default function AnaliseSentimentoPage() {
                                 <CardContent className="space-y-3">
                                     <div className="flex items-center gap-2">
                                         <span className="font-semibold">Atendente:</span>
-                                        <Badge variant="outline">{attendantMap[analysisProgress.evaluation.attendantId] || 'Desconhecido'}</Badge>
+                                        <Badge variant="outline">{attendantMap[analysisProgress?.evaluation?.attendantId] || 'Desconhecido'}</Badge>
                                     </div>
                                     <div className="flex items-start gap-2">
                                         <MessageSquareText className="h-5 w-5 mt-1 text-muted-foreground flex-shrink-0" />
                                         <p className="text-sm text-muted-foreground italic border-l-2 pl-3">
-                                           "{analysisProgress.evaluation.comentario}"
+                                           "{analysisProgress?.evaluation?.comentario || ''}"
                                         </p>
                                     </div>
                                 </CardContent>
                             </Card>
                         )}
-                         {analysisProgress.status === 'waiting' && lastResult && lastEvaluationAnalyzed && (
+                         {analysisProgress?.status === 'waiting' && lastResult && lastEvaluationAnalyzed && (
                             <Card className="bg-muted/50 animate-in fade-in">
                                 <CardHeader>
                                     <CardTitle className="text-base flex items-center gap-2 text-green-600">
@@ -397,7 +409,7 @@ export default function AnaliseSentimentoPage() {
                                         </p>
                                     </div>
                                      <div className="pt-2 text-center text-sm text-muted-foreground">
-                                        Próxima análise em {analysisProgress.countdown} segundos...
+                                        Próxima análise em {analysisProgress?.countdown || 0} segundos...
                                     </div>
                                 </CardContent>
                             </Card>

@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 // Buscar XP total e detalhes de um atendente específico
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const attendantId = params.id;
@@ -152,7 +152,7 @@ export async function GET(
 // Adicionar XP para um atendente específico
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const attendantId = params.id;

@@ -1,46 +1,50 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { ModuleService } from '@/services/moduleService';
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
-    const body = await request.json();
-    const { name, description, path, active } = body;
-    const moduleId = params.id;
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user || !['SUPERADMIN', 'ADMIN'].includes(session.user.role)) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 403 });
+    }
 
-    const updateData: any = {};
-    if (name !== undefined) updateData.name = name;
-    if (description !== undefined) updateData.description = description;
-    if (path !== undefined) updateData.path = path;
-    if (active !== undefined) updateData.active = active;
-
-    const module = await prisma.module.update({
-      where: { id: moduleId },
-      data: updateData
-    });
-
+    const moduleData = await request.json();
+    const module = await ModuleService.update(params.id, moduleData);
+    
     return NextResponse.json(module);
   } catch (error) {
-    console.error("Error updating module:", error);
+    console.error('Erro ao atualizar módulo:', error);
     return NextResponse.json(
-      { error: "Failed to update module" },
+      { error: error instanceof Error ? error.message : 'Erro interno do servidor' },
       { status: 500 }
     );
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
-    const moduleId = params.id;
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user || !['SUPERADMIN', 'ADMIN'].includes(session.user.role)) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 403 });
+    }
 
-    await prisma.module.delete({
-      where: { id: moduleId }
-    });
-
+    await ModuleService.delete(params.id);
+    
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting module:", error);
+    console.error('Erro ao deletar módulo:', error);
     return NextResponse.json(
-      { error: "Failed to delete module" },
+      { error: error instanceof Error ? error.message : 'Erro interno do servidor' },
       { status: 500 }
     );
   }

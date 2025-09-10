@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { importId: string } }
+  { params }: { params: Promise<{ importId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -19,7 +19,7 @@ export async function DELETE(
       );
     }
 
-    const { importId } = params;
+    const { importId } = await params;
 
     if (!importId) {
       return NextResponse.json(
@@ -89,7 +89,7 @@ export async function DELETE(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { importId: string } }
+  { params }: { params: Promise<{ importId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -101,7 +101,7 @@ export async function GET(
       );
     }
 
-    const { importId } = params;
+    const { importId } = await params;
 
     if (!importId) {
       return NextResponse.json(

@@ -92,7 +92,7 @@ export default function ImportarAvaliacoesPage() {
         try {
             const suggestions: SuggestAttendantOutput = await suggestAttendants({ 
                 agentNames: uniqueAgents, 
-                attendants: attendants.map(a => ({ id: a.id, name: a.name })) 
+                attendants: Array.isArray(attendants) ? attendants.map(a => ({ id: a.id, name: a.name })) : [] 
             });
             
             const newAgentMap = { ...agentMap };
@@ -178,6 +178,9 @@ export default function ImportarAvaliacoesPage() {
     const allAgentsMapped = uniqueAgents.length > 0 && uniqueAgents.every(agent => agentMap[agent]);
 
     const sortedAttendants = useMemo(() => {
+        if (!Array.isArray(attendants)) {
+            return [];
+        }
         return [...attendants].sort((a,b) => a.name.localeCompare(b.name));
     }, [attendants])
 

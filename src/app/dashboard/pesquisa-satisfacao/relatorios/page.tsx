@@ -73,7 +73,7 @@ export default function RelatoriosPage() {
         }
         
         // Filter by selected attendants if any
-        if (selectedAttendants.length > 0) {
+        if (selectedAttendants.length > 0 && !selectedAttendants.includes('all')) {
             return selectedAttendants.includes(evaluation.attendantId);
         }
         
@@ -138,12 +138,12 @@ export default function RelatoriosPage() {
 
                         <div className="flex items-center gap-2">
                             <label className="text-sm font-medium">Atendentes:</label>
-                            <Select value={selectedAttendants.join(',')} onValueChange={(value) => setSelectedAttendants(value ? value.split(',') : [])}>
+                            <Select value={selectedAttendants.length === 0 ? 'all' : selectedAttendants[0]} onValueChange={(value) => setSelectedAttendants(value === 'all' ? [] : [value])}>
                                 <SelectTrigger className="w-48">
                                     <SelectValue placeholder="Todos os atendentes" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">Todos os atendentes</SelectItem>
+                                    <SelectItem value="all">Todos os atendentes</SelectItem>
                                     {attendants?.map(attendant => (
                                         <SelectItem key={attendant.id} value={attendant.id}>
                                             {attendant.name}

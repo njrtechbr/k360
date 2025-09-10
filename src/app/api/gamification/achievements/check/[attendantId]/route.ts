@@ -5,10 +5,10 @@ import { AchievementCheckerService } from '@/services/gamification/achievement-c
 // Verificar status das conquistas de um atendente
 export async function GET(
   request: NextRequest,
-  { params }: { params: { attendantId: string } }
+  { params }: { params: Promise<{ attendantId: string }> }
 ) {
   try {
-    const attendantId = params.attendantId;
+    const { attendantId } = await params;
 
     if (!attendantId) {
       return NextResponse.json(
@@ -43,10 +43,10 @@ export async function GET(
 // Forçar verificação e desbloqueio de conquistas para um atendente
 export async function POST(
   request: NextRequest,
-  { params }: { params: { attendantId: string } }
+  { params }: { params: Promise<{ attendantId: string }> }
 ) {
   try {
-    const attendantId = params.attendantId;
+    const { attendantId } = await params;
 
     if (!attendantId) {
       return NextResponse.json(

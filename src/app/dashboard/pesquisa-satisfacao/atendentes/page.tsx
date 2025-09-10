@@ -224,7 +224,7 @@ export default function AtendentesPage() {
     return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
   }
   
-  const sortedAttendants = [...attendants].sort((a, b) => a.name.localeCompare(b.name));
+  const sortedAttendants = Array.isArray(attendants) ? [...attendants].sort((a, b) => a.name.localeCompare(b.name)) : [];
 
   return (
     <div className="space-y-8">
