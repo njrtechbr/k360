@@ -1,40 +1,48 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { Calendar, MessageSquare, Star, MoreHorizontal, Eye, Edit, Trash2 } from 'lucide-react';
+import React from "react";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import {
+  Calendar,
+  MessageSquare,
+  Star,
+  MoreHorizontal,
+  Eye,
+  Edit,
+  Trash2,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { cn } from '@/lib/utils';
-import { RatingDisplay } from './RatingStars';
-import SentimentBadge, { SentimentAnalysis } from './SentimentBadge';
-import { EvaluationCardProps } from './types';
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import { RatingDisplay } from "./RatingStars";
+import SentimentBadge, { SentimentAnalysis } from "./SentimentBadge";
+import { EvaluationCardProps } from "./types";
 
 function formatDate(date: string | Date): string {
   const d = new Date(date);
-  return d.toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
+  return d.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
 function getInitials(name: string): string {
   return name
-    .split(' ')
-    .map(word => word.charAt(0))
-    .join('')
+    .split(" ")
+    .map((word) => word.charAt(0))
+    .join("")
     .toUpperCase()
     .slice(0, 2);
 }
@@ -49,32 +57,36 @@ const EvaluationCard: React.FC<EvaluationCardProps> = ({
   onView,
   onEdit,
   onDelete,
-  onAttendantClick
+  onAttendantClick,
 }) => {
   const hasActions = showActions && (onView || onEdit || onDelete);
 
   return (
-    <Card className={cn(
-      'transition-all duration-200 hover:shadow-md',
-      compact ? 'p-3' : 'p-4',
-      className
-    )}>
-      <CardHeader className={cn(
-        'flex flex-row items-start justify-between space-y-0',
-        compact ? 'pb-2' : 'pb-3'
-      )}>
+    <Card
+      className={cn(
+        "transition-all duration-200 hover:shadow-md",
+        compact ? "p-3" : "p-4",
+        className,
+      )}
+    >
+      <CardHeader
+        className={cn(
+          "flex flex-row items-start justify-between space-y-0",
+          compact ? "pb-2" : "pb-3",
+        )}
+      >
         <div className="flex items-start space-x-3 flex-1">
           {showAttendant && attendant && (
-            <div 
+            <div
               className={cn(
-                'flex items-center space-x-2',
-                onAttendantClick && 'cursor-pointer hover:opacity-80'
+                "flex items-center space-x-2",
+                onAttendantClick && "cursor-pointer hover:opacity-80",
               )}
               onClick={onAttendantClick}
             >
-              <Avatar className={compact ? 'h-8 w-8' : 'h-10 w-10'}>
-                <AvatarImage 
-                  src={attendant.avatar || attendant.avatarUrl} 
+              <Avatar className={compact ? "h-8 w-8" : "h-10 w-10"}>
+                <AvatarImage
+                  src={attendant.avatar || attendant.avatarUrl}
                   alt={attendant.nome || attendant.name}
                 />
                 <AvatarFallback className="text-xs font-medium">
@@ -82,10 +94,12 @@ const EvaluationCard: React.FC<EvaluationCardProps> = ({
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0">
-                <p className={cn(
-                  'font-medium text-foreground truncate',
-                  compact ? 'text-sm' : 'text-base'
-                )}>
+                <p
+                  className={cn(
+                    "font-medium text-foreground truncate",
+                    compact ? "text-sm" : "text-base",
+                  )}
+                >
                   {attendant.nome || attendant.name}
                 </p>
                 {!compact && (attendant.setor || attendant.funcao) && (
@@ -96,47 +110,46 @@ const EvaluationCard: React.FC<EvaluationCardProps> = ({
               </div>
             </div>
           )}
-          
+
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <RatingDisplay 
-                value={evaluation.nota || evaluation.rating} 
-                size={compact ? 'sm' : 'md'}
+              <RatingDisplay
+                value={evaluation.nota || evaluation.rating}
+                size={compact ? "sm" : "md"}
                 showValue
               />
-              
+
               {evaluation.sentiment && (
                 <SentimentAnalysis
                   sentiment={evaluation.sentiment}
                   confidence={evaluation.confidence}
-                  size={compact ? 'sm' : 'md'}
+                  size={compact ? "sm" : "md"}
                 />
               )}
             </div>
-            
+
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Calendar className="h-3 w-3" />
               <span>{formatDate(evaluation.data || evaluation.createdAt)}</span>
-              
+
               {(evaluation.comentario || evaluation.comment) && (
                 <>
                   <Separator orientation="vertical" className="h-3" />
                   <MessageSquare className="h-3 w-3" />
-                  <span>{(evaluation.comentario || evaluation.comment).length} caracteres</span>
+                  <span>
+                    {(evaluation.comentario || evaluation.comment).length}{" "}
+                    caracteres
+                  </span>
                 </>
               )}
             </div>
           </div>
         </div>
-        
+
         {hasActions && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-8 w-8 p-0"
-              >
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                 <MoreHorizontal className="h-4 w-4" />
                 <span className="sr-only">Abrir menu</span>
               </Button>
@@ -154,11 +167,9 @@ const EvaluationCard: React.FC<EvaluationCardProps> = ({
                   Editar
                 </DropdownMenuItem>
               )}
-              {(onView || onEdit) && onDelete && (
-                <DropdownMenuSeparator />
-              )}
+              {(onView || onEdit) && onDelete && <DropdownMenuSeparator />}
               {onDelete && (
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   onClick={() => onDelete(evaluation)}
                   className="text-destructive focus:text-destructive"
                 >
@@ -171,34 +182,28 @@ const EvaluationCard: React.FC<EvaluationCardProps> = ({
         )}
       </CardHeader>
 
-      
       {(evaluation.comentario || evaluation.comment) && (
-        <CardContent className={cn(
-          'pt-0',
-          compact ? 'pb-2' : 'pb-3'
-        )}>
+        <CardContent className={cn("pt-0", compact ? "pb-2" : "pb-3")}>
           <div className="space-y-2">
-            <p className={cn(
-              'text-muted-foreground leading-relaxed',
-              compact ? 'text-sm' : 'text-base'
-            )}>
+            <p
+              className={cn(
+                "text-muted-foreground leading-relaxed",
+                compact ? "text-sm" : "text-base",
+              )}
+            >
               {evaluation.comentario || evaluation.comment}
             </p>
-            
+
             {evaluation.tags && evaluation.tags.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {evaluation.tags.map((tag: string, index: number) => (
-                  <Badge 
-                    key={index} 
-                    variant="secondary" 
-                    className="text-xs"
-                  >
+                  <Badge key={index} variant="secondary" className="text-xs">
                     {tag}
                   </Badge>
                 ))}
               </div>
             )}
-            
+
             {evaluation.xpGained > 0 && (
               <div className="flex items-center gap-2 pt-2">
                 <Badge variant="secondary" className="text-xs">
@@ -237,7 +242,7 @@ export const EvaluationsList: React.FC<EvaluationsListProps> = ({
   onEdit,
   onDelete,
   onAttendantClick,
-  className
+  className,
 }) => {
   if (loading) {
     return (
@@ -294,12 +299,12 @@ export const EvaluationsList: React.FC<EvaluationsListProps> = ({
 };
 
 // Variantes pré-configuradas
-export const CompactEvaluationCard: React.FC<Omit<EvaluationCardProps, 'compact'>> = (props) => (
-  <EvaluationCard {...props} compact={true} />
-);
+export const CompactEvaluationCard: React.FC<
+  Omit<EvaluationCardProps, "compact">
+> = (props) => <EvaluationCard {...props} compact={true} />;
 
-export const SimpleEvaluationCard: React.FC<Omit<EvaluationCardProps, 'showActions' | 'compact'>> = (props) => (
-  <EvaluationCard {...props} showActions={false} compact={true} />
-);
+export const SimpleEvaluationCard: React.FC<
+  Omit<EvaluationCardProps, "showActions" | "compact">
+> = (props) => <EvaluationCard {...props} showActions={false} compact={true} />;
 
 export default EvaluationCard;

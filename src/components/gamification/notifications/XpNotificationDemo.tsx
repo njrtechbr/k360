@@ -1,21 +1,32 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { triggerXpGrantedEvent, triggerLevelUpEvent } from "@/hooks/useXpNotifications";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  triggerXpGrantedEvent,
+  triggerLevelUpEvent,
+} from "@/hooks/useXpNotifications";
 import { Gift, Trophy, Zap } from "lucide-react";
 
 interface XpNotificationDemoProps {
   attendantId: string;
 }
 
-export default function XpNotificationDemo({ attendantId }: XpNotificationDemoProps) {
+export default function XpNotificationDemo({
+  attendantId,
+}: XpNotificationDemoProps) {
   const handleTestXpGrant = () => {
     triggerXpGrantedEvent({
       attendantId,
       xpAmount: 50,
       typeName: "Excelência no Atendimento",
-      justification: "Atendimento excepcional ao cliente"
+      justification: "Atendimento excepcional ao cliente",
     });
   };
 
@@ -29,7 +40,7 @@ export default function XpNotificationDemo({ attendantId }: XpNotificationDemoPr
       attendantId,
       xpAmount: 100,
       typeName: "Iniciativa Própria",
-      justification: "Proposta de melhoria implementada"
+      justification: "Proposta de melhoria implementada",
     });
 
     // Level up após 2 segundos
@@ -45,11 +56,9 @@ export default function XpNotificationDemo({ attendantId }: XpNotificationDemoPr
           <Zap className="h-5 w-5 text-yellow-500" />
           Teste de Notificações
         </CardTitle>
-        <CardDescription>
-          Teste o sistema de notificações de XP
-        </CardDescription>
+        <CardDescription>Teste o sistema de notificações de XP</CardDescription>
       </CardHeader>
-      
+
       <CardContent className="space-y-3">
         <Button
           onClick={handleTestXpGrant}

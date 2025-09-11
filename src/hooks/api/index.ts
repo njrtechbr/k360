@@ -2,20 +2,26 @@
  * Exportações centralizadas dos hooks de API
  */
 
-export { useApiQuery } from './useApiQuery';
-export type { UseApiQueryOptions, UseApiQueryResult } from './useApiQuery';
+export { useApiQuery } from "./useApiQuery";
+export type { UseApiQueryOptions, UseApiQueryResult } from "./useApiQuery";
 
-export { 
-  useApiMutation, 
-  useApiCreate, 
-  useApiUpdate, 
-  useApiDelete 
-} from './useApiMutation';
-export type { 
-  UseApiMutationOptions, 
-  UseApiMutationResult, 
-  MutationFunction 
-} from './useApiMutation';
+export {
+  useApiMutation,
+  useApiCreate,
+  useApiUpdate,
+  useApiDelete,
+} from "./useApiMutation";
+export type {
+  UseApiMutationOptions,
+  UseApiMutationResult,
+  MutationFunction,
+} from "./useApiMutation";
+
+export {
+  useGamificationData,
+  useGamificationReadOnly,
+} from "./useGamificationData";
+export type { UseGamificationDataResult } from "./useGamificationData";
 
 // Re-export dos tipos de API
 export type {
@@ -29,7 +35,7 @@ export type {
   ApiUpdateResponse,
   ApiDeleteResponse,
   HttpClientConfig,
-} from '@/lib/api-types';
+} from "@/lib/api-types";
 
 export {
   ApiErrorType,
@@ -41,4 +47,4 @@ export {
   isAuthorizationError,
   isNotFoundError,
   isServerError,
-} from '@/lib/api-types';
+} from "@/lib/api-types";

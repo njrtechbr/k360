@@ -15,7 +15,7 @@ export const authOptions: NextAuthOptions = {
       name: "Credentials",
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Senha", type: "password" }
+        password: { label: "Senha", type: "password" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
@@ -25,7 +25,7 @@ export const authOptions: NextAuthOptions = {
         try {
           // Buscar usuário diretamente no banco
           const user = await prisma.user.findUnique({
-            where: { email: credentials.email }
+            where: { email: credentials.email },
           });
 
           if (!user || !user.password) {
@@ -33,7 +33,10 @@ export const authOptions: NextAuthOptions = {
           }
 
           // Verificar senha
-          const isValidPassword = await bcrypt.compare(credentials.password, user.password);
+          const isValidPassword = await bcrypt.compare(
+            credentials.password,
+            user.password,
+          );
           if (!isValidPassword) {
             return null;
           }
@@ -45,11 +48,11 @@ export const authOptions: NextAuthOptions = {
             role: user.role,
           };
         } catch (error) {
-          console.error('Erro na autenticação:', error);
+          console.error("Erro na autenticação:", error);
           return null;
         }
-      }
-    })
+      },
+    }),
   ],
   callbacks: {
     async session({ session, token }) {
@@ -67,8 +70,8 @@ export const authOptions: NextAuthOptions = {
         token.role = user.role;
       }
       return token;
-    }
-  }
+    },
+  },
 };
 
 declare module "next-auth" {
@@ -78,7 +81,7 @@ declare module "next-auth" {
       name: string;
       email: string;
       role: string;
-    }
+    };
   }
 
   interface User {

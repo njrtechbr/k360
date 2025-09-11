@@ -1,5 +1,9 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { DashboardUpdate, ConnectionStatus, WebSocketMessage } from '@/types/dashboard';
+import { useEffect, useRef, useState, useCallback } from "react";
+import {
+  DashboardUpdate,
+  ConnectionStatus,
+  WebSocketMessage,
+} from "@/types/dashboard";
 
 interface UseWebSocketOptions {
   url: string;
@@ -18,11 +22,11 @@ export function useWebSocket({
   onMessage,
   onConnect,
   onDisconnect,
-  onError
+  onError,
 }: UseWebSocketOptions) {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>({
     connected: false,
-    reconnectAttempts: 0
+    reconnectAttempts: 0,
   });
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -40,13 +44,13 @@ export function useWebSocket({
       wsRef.current = ws;
 
       ws.onopen = () => {
-        console.log('WebSocket conectado');
+        console.log("WebSocket conectado");
         reconnectAttemptsRef.current = 0;
-        
+
         setConnectionStatus({
           connected: true,
           lastConnected: new Date(),
-          reconnectAttempts: 0
+          reconnectAttempts: 0,
         });
 
         onConnect?.();
@@ -55,23 +59,23 @@ export function useWebSocket({
       ws.onmessage = (event) => {
         try {
           const message: WebSocketMessage = JSON.parse(event.data);
-          
+
           // Se for uma atualização do dashboard, chamar callback
-          if (message.type === 'update' && onMessage) {
+          if (message.type === "update" && onMessage) {
             onMessage(message.payload as DashboardUpdate);
           }
         } catch (error) {
-          console.error('Erro ao processar mensagem WebSocket:', error);
+          console.error("Erro ao processar mensagem WebSocket:", error);
         }
       };
 
       ws.onclose = () => {
-        console.log('WebSocket desconectado');
-        
-        setConnectionStatus(prev => ({
+        console.log("WebSocket desconectado");
+
+        setConnectionStatus((prev) => ({
           ...prev,
           connected: false,
-          reconnectAttempts: reconnectAttemptsRef.current
+          reconnectAttempts: reconnectAttemptsRef.current,
         }));
 
         onDisconnect?.();
@@ -79,40 +83,49 @@ export function useWebSocket({
         // Tentar reconectar se não excedeu o limite
         if (reconnectAttemptsRef.current < maxReconnectAttempts) {
           reconnectAttemptsRef.current++;
-          
+
           reconnectTimeoutRef.current = setTimeout(() => {
-            console.log(`Tentativa de reconexão ${reconnectAttemptsRef.current}/${maxReconnectAttempts}`);
+            console.log(
+              `Tentativa de reconexão ${reconnectAttemptsRef.current}/${maxReconnectAttempts}`,
+            );
             connect();
           }, reconnectInterval);
         } else {
-          console.log('Máximo de tentativas de reconexão atingido');
-          setConnectionStatus(prev => ({
+          console.log("Máximo de tentativas de reconexão atingido");
+          setConnectionStatus((prev) => ({
             ...prev,
-            error: 'Falha ao reconectar após múltiplas tentativas'
+            error: "Falha ao reconectar após múltiplas tentativas",
           }));
         }
       };
 
       ws.onerror = (error) => {
-        console.error('Erro WebSocket:', error);
-        
-        setConnectionStatus(prev => ({
+        console.error("Erro WebSocket:", error);
+
+        setConnectionStatus((prev) => ({
           ...prev,
-          error: 'Erro de conexão WebSocket'
+          error: "Erro de conexão WebSocket",
         }));
 
         onError?.(error);
       };
-
     } catch (error) {
-      console.error('Erro ao criar conexão WebSocket:', error);
-      
-      setConnectionStatus(prev => ({
+      console.error("Erro ao criar conexão WebSocket:", error);
+
+      setConnectionStatus((prev) => ({
         ...prev,
-        error: 'Falha ao criar conexão WebSocket'
+        error: "Falha ao criar conexão WebSocket",
       }));
     }
-  }, [url, reconnectInterval, maxReconnectAttempts, onMessage, onConnect, onDisconnect, onError]);
+  }, [
+    url,
+    reconnectInterval,
+    maxReconnectAttempts,
+    onMessage,
+    onConnect,
+    onDisconnect,
+    onError,
+  ]);
 
   const disconnect = useCallback(() => {
     // Limpar timeout de reconexão
@@ -132,7 +145,7 @@ export function useWebSocket({
 
     setConnectionStatus({
       connected: false,
-      reconnectAttempts: 0
+      reconnectAttempts: 0,
     });
   }, [maxReconnectAttempts]);
 
@@ -141,8 +154,11 @@ export function useWebSocket({
       wsRef.current.send(JSON.stringify(message));
       return true;
     }
-    
-    console.warn('WebSocket não está conectado. Mensagem não enviada:', message);
+
+    console.warn(
+      "WebSocket não está conectado. Mensagem não enviada:",
+      message,
+    );
     return false;
   }, []);
 
@@ -167,7 +183,7 @@ export function useWebSocket({
     if (!connectionStatus.connected) return;
 
     const pingInterval = setInterval(() => {
-      sendMessage({ type: 'ping', timestamp: new Date() });
+      sendMessage({ type: "ping", timestamp: new Date() });
     }, 30000); // Ping a cada 30 segundos
 
     return () => clearInterval(pingInterval);
@@ -177,6 +193,6 @@ export function useWebSocket({
     connectionStatus,
     sendMessage,
     forceReconnect,
-    disconnect
+    disconnect,
   };
 }

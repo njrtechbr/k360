@@ -1,21 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { getScoreFromRating } from '@/lib/gamification';
-import { AchievementCheckerService } from '@/services/gamification/achievement-checker.service';
-
-const prisma = new PrismaClient();
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { getScoreFromRating } from "@/lib/gamification";
+import { AchievementApiClient } from "@/services/achievementApiClient";
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Não autorizado' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
     const body = await request.json();
@@ -23,20 +18,22 @@ export async function POST(request: NextRequest) {
 
     if (!evaluations || !Array.isArray(evaluations)) {
       return NextResponse.json(
-        { error: 'Lista de avaliações é obrigatória' },
-        { status: 400 }
+        { error: "Lista de avaliações é obrigatória" },
+        { status: 400 },
       );
     }
 
-    if (!fileName || typeof fileName !== 'string') {
+    if (!fileName || typeof fileName !== "string") {
       return NextResponse.json(
-        { error: 'Nome do arquivo é obrigatório' },
-        { status: 400 }
+        { error: "Nome do arquivo é obrigatório" },
+        { status: 400 },
       );
     }
 
     // Criar mapa de atendentes para rastreamento
-    const attendantIds = [...new Set(evaluations.map((evaluation: any) => evaluation.attendantId))];
+    const attendantIds = [
+      ...new Set(evaluations.map((evaluation: any) => evaluation.attendantId)),
+    ];
     const attendantMap = {
       attendants: attendantIds,
       totalEvaluations: evaluations.length,
@@ -55,7 +52,7 @@ export async function POST(request: NextRequest) {
 
     // Buscar configuração de gamificação
     const gamificationConfig = await prisma.gamificationConfig.findFirst({
-      orderBy: { updatedAt: 'desc' }
+      orderBy: { updatedAt: "desc" },
     });
 
     // Função para obter XP baseado na nota
@@ -76,7 +73,7 @@ export async function POST(request: NextRequest) {
 
     // Buscar temporadas ativas para calcular multiplicadores
     const activeSeasons = await prisma.gamificationSeason.findMany({
-      where: { active: true }
+      where: { active: true },
     });
 
     // Inserir avaliações e criar eventos XP individualmente para obter os IDs
@@ -86,25 +83,27 @@ export async function POST(request: NextRequest) {
     for (const evaluationData of evaluationsData) {
       // Criar avaliação individual
       const createdEvaluation = await prisma.evaluation.create({
-        data: evaluationData
+        data: evaluationData,
       });
-      
+
       createdEvaluationsIds.push(createdEvaluation.id);
-      
+
       // Preparar evento XP para esta avaliação
       const evaluationDate = new Date(evaluationData.data);
       const baseScore = evaluationData.xpGained;
-      
+
       // Encontrar temporada ativa para a data da avaliação
-      const seasonForEvaluation = activeSeasons.find(s => 
-        evaluationDate >= new Date(s.startDate) && 
-        evaluationDate <= new Date(s.endDate)
+      const seasonForEvaluation = activeSeasons.find(
+        (s) =>
+          evaluationDate >= new Date(s.startDate) &&
+          evaluationDate <= new Date(s.endDate),
       );
-      
+
       const seasonMultiplier = seasonForEvaluation?.xpMultiplier ?? 1;
-      const totalMultiplier = gamificationConfig.globalXpMultiplier * seasonMultiplier;
+      const totalMultiplier =
+        gamificationConfig.globalXpMultiplier * seasonMultiplier;
       const finalXp = baseScore * totalMultiplier;
-      
+
       xpEventsData.push({
         attendantId: evaluationData.attendantId,
         points: finalXp,
@@ -112,7 +111,7 @@ export async function POST(request: NextRequest) {
         multiplier: totalMultiplier,
         reason: `Avaliação de ${evaluationData.nota} estrela(s)`,
         date: evaluationData.data,
-        type: 'evaluation',
+        type: "evaluation",
         relatedId: createdEvaluation.id,
         seasonId: seasonForEvaluation?.id || null,
       });
@@ -125,28 +124,42 @@ export async function POST(request: NextRequest) {
     });
 
     // Verificar conquistas para cada atendente que teve avaliações importadas
-    const uniqueAttendantIds = [...new Set(evaluationsData.map(e => e.attendantId))];
+    const uniqueAttendantIds = [
+      ...new Set(evaluationsData.map((e) => e.attendantId)),
+    ];
     let totalAchievementsUnlocked = 0;
     let totalAchievementXp = 0;
 
     for (const attendantId of uniqueAttendantIds) {
       try {
-        const attendantEvaluations = evaluationsData.filter(e => e.attendantId === attendantId);
-        const latestEvaluationDate = new Date(Math.max(...attendantEvaluations.map(e => new Date(e.data).getTime())));
-        
-        const achievementResults = await AchievementCheckerService.checkAndUnlockAchievements(
-          attendantId,
-          latestEvaluationDate
+        const attendantEvaluations = evaluationsData.filter(
+          (e) => e.attendantId === attendantId,
         );
-        
+        const latestEvaluationDate = new Date(
+          Math.max(
+            ...attendantEvaluations.map((e) => new Date(e.data).getTime()),
+          ),
+        );
+
+        const achievementResults =
+          await AchievementApiClient.checkAndUnlockAchievements(
+            attendantId,
+            latestEvaluationDate,
+          );
+
         totalAchievementsUnlocked += achievementResults.newAchievements.length;
         totalAchievementXp += achievementResults.totalXpAwarded;
-        
+
         if (achievementResults.newAchievements.length > 0) {
-          console.log(`🏆 ${achievementResults.newAchievements.length} nova(s) conquista(s) desbloqueada(s) para atendente ${attendantId}`);
+          console.log(
+            `🏆 ${achievementResults.newAchievements.length} nova(s) conquista(s) desbloqueada(s) para atendente ${attendantId}`,
+          );
         }
       } catch (error) {
-        console.error(`Erro ao verificar conquistas para atendente ${attendantId}:`, error);
+        console.error(
+          `Erro ao verificar conquistas para atendente ${attendantId}:`,
+          error,
+        );
       }
     }
 
@@ -160,14 +173,11 @@ export async function POST(request: NextRequest) {
       achievementXpAwarded: totalAchievementXp,
       message: `${createdEvaluationsIds.length} avaliações, ${xpEventsData.length} eventos XP e ${totalAchievementsUnlocked} conquistas processadas com sucesso`,
     });
-
   } catch (error) {
-    console.error('Erro ao importar avaliações:', error);
+    console.error("Erro ao importar avaliações:", error);
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
+      { error: "Erro interno do servidor" },
+      { status: 500 },
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

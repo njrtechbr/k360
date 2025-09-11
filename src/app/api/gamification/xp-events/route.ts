@@ -1,28 +1,26 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { XpService } from '@/services/gamification';
-import type { XpEvent } from '@/lib/types';
-
-const prisma = new PrismaClient();
+import { NextRequest, NextResponse } from "next/server";
+import { XpService } from "@/services/gamification";
+import { prisma } from "@/lib/prisma";
+import type { XpEvent } from "@/lib/types";
 
 // GET /api/gamification/xp-events
 // Buscar eventos de XP com filtros opcionais
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const attendantId = searchParams.get('attendantId');
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const offset = parseInt(searchParams.get('offset') || '0');
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
+    const attendantId = searchParams.get("attendantId");
+    const limit = parseInt(searchParams.get("limit") || "50");
+    const offset = parseInt(searchParams.get("offset") || "0");
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
 
     // Construir filtros do Prisma
     const where: any = {};
-    
+
     if (attendantId) {
       where.attendantId = attendantId;
     }
-    
+
     if (startDate || endDate) {
       where.date = {};
       if (startDate) {
@@ -37,43 +35,43 @@ export async function GET(request: NextRequest) {
     const [events, totalCount] = await Promise.all([
       prisma.xpEvent.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         take: limit,
-        skip: offset
+        skip: offset,
       }),
-      prisma.xpEvent.count({ where })
+      prisma.xpEvent.count({ where }),
     ]);
 
     // Calcular estatísticas se solicitado
-    const includeStats = searchParams.get('includeStats') === 'true';
+    const includeStats = searchParams.get("includeStats") === "true";
     let stats = null;
-    
+
     if (includeStats) {
       const totalXp = await prisma.xpEvent.aggregate({
         where,
         _sum: {
-          points: true
-        }
+          points: true,
+        },
       });
 
       const eventsByType = await prisma.xpEvent.groupBy({
-        by: ['type'],
+        by: ["type"],
         where,
         _sum: {
-          points: true
+          points: true,
         },
-        _count: true
+        _count: true,
       });
 
       stats = {
         totalEvents: totalCount,
         totalXp: totalXp._sum.points || 0,
         averageXp: totalCount > 0 ? (totalXp._sum.points || 0) / totalCount : 0,
-        eventsByType: eventsByType.map(item => ({
+        eventsByType: eventsByType.map((item) => ({
           type: item.type,
           totalXp: item._sum.points || 0,
-          count: item._count
-        }))
+          count: item._count,
+        })),
       };
     }
 
@@ -83,15 +81,15 @@ export async function GET(request: NextRequest) {
         total: totalCount,
         limit,
         offset,
-        hasMore: offset + limit < totalCount
+        hasMore: offset + limit < totalCount,
       },
-      stats
+      stats,
     });
   } catch (error) {
-    console.error('Erro ao buscar eventos de XP:', error);
+    console.error("Erro ao buscar eventos de XP:", error);
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
+      { error: "Erro interno do servidor" },
+      { status: 500 },
     );
   }
 }
@@ -107,27 +105,27 @@ export async function POST(request: NextRequest) {
       basePoints,
       multiplier = 1,
       reason,
-      type = 'manual',
-      relatedId
+      type = "manual",
+      relatedId,
     } = body;
 
     // Validar dados obrigatórios
     if (!attendantId || !points || !reason || !type) {
       return NextResponse.json(
-        { error: 'Dados obrigatórios: attendantId, points, reason, type' },
-        { status: 400 }
+        { error: "Dados obrigatórios: attendantId, points, reason, type" },
+        { status: 400 },
       );
     }
 
     // Verificar se o atendente existe
     const attendant = await prisma.attendant.findUnique({
-      where: { id: attendantId }
+      where: { id: attendantId },
     });
-    
+
     if (!attendant) {
       return NextResponse.json(
-        { error: 'Atendente não encontrado' },
-        { status: 404 }
+        { error: "Atendente não encontrado" },
+        { status: 404 },
       );
     }
 
@@ -140,17 +138,17 @@ export async function POST(request: NextRequest) {
         multiplier,
         reason,
         type,
-        relatedId: relatedId || '',
-        date: new Date()
-      }
+        relatedId: relatedId || "",
+        date: new Date(),
+      },
     });
 
     return NextResponse.json(xpEvent, { status: 201 });
   } catch (error) {
-    console.error('Erro ao criar evento de XP:', error);
+    console.error("Erro ao criar evento de XP:", error);
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
+      { error: "Erro interno do servidor" },
+      { status: 500 },
     );
   }
 }
@@ -164,20 +162,20 @@ export async function PUT(request: NextRequest) {
 
     if (!id) {
       return NextResponse.json(
-        { error: 'ID do evento é obrigatório' },
-        { status: 400 }
+        { error: "ID do evento é obrigatório" },
+        { status: 400 },
       );
     }
 
     // Verificar se o evento existe
     const existingEvent = await prisma.xpEvent.findUnique({
-      where: { id }
+      where: { id },
     });
-    
+
     if (!existingEvent) {
       return NextResponse.json(
-        { error: 'Evento de XP não encontrado' },
-        { status: 404 }
+        { error: "Evento de XP não encontrado" },
+        { status: 404 },
       );
     }
 
@@ -186,7 +184,9 @@ export async function PUT(request: NextRequest) {
       where: { id },
       data: {
         ...updateData,
-        xpGained: updateData.xpGained ? Math.max(0, updateData.xpGained) : undefined
+        xpGained: updateData.xpGained
+          ? Math.max(0, updateData.xpGained)
+          : undefined,
       },
       include: {
         attendant: {
@@ -194,24 +194,24 @@ export async function PUT(request: NextRequest) {
             id: true,
             name: true,
             email: true,
-            setor: true
-          }
+            setor: true,
+          },
         },
         season: {
           select: {
             id: true,
-            name: true
-          }
-        }
-      }
+            name: true,
+          },
+        },
+      },
     });
 
     return NextResponse.json(updatedEvent);
   } catch (error) {
-    console.error('Erro ao atualizar evento de XP:', error);
+    console.error("Erro ao atualizar evento de XP:", error);
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
+      { error: "Erro interno do servidor" },
+      { status: 500 },
     );
   }
 }
@@ -221,41 +221,41 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
+    const id = searchParams.get("id");
 
     if (!id) {
       return NextResponse.json(
-        { error: 'ID do evento é obrigatório' },
-        { status: 400 }
+        { error: "ID do evento é obrigatório" },
+        { status: 400 },
       );
     }
 
     // Verificar se o evento existe
     const existingEvent = await prisma.xpEvent.findUnique({
-      where: { id }
+      where: { id },
     });
-    
+
     if (!existingEvent) {
       return NextResponse.json(
-        { error: 'Evento de XP não encontrado' },
-        { status: 404 }
+        { error: "Evento de XP não encontrado" },
+        { status: 404 },
       );
     }
 
     // Deletar evento
     await prisma.xpEvent.delete({
-      where: { id }
+      where: { id },
     });
 
     return NextResponse.json(
-      { message: 'Evento de XP deletado com sucesso' },
-      { status: 200 }
+      { message: "Evento de XP deletado com sucesso" },
+      { status: 200 },
     );
   } catch (error) {
-    console.error('Erro ao deletar evento de XP:', error);
+    console.error("Erro ao deletar evento de XP:", error);
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
+      { error: "Erro interno do servidor" },
+      { status: 500 },
     );
   }
 }

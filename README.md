@@ -32,6 +32,27 @@ Sistema para gerenciar avaliações de atendentes com mecânicas de gamificaçã
 - **NextAuth.js** para autenticação
 - **Tailwind CSS** e **shadcn/ui** para interface
 
+## Arquitetura
+
+O sistema segue uma arquitetura em camadas com separação clara entre frontend e backend:
+
+### Frontend (Client-Side)
+- **Componentes React**: Interface de usuário responsiva
+- **API Clients**: Camada de abstração para comunicação com APIs
+- **Hooks Customizados**: Gerenciamento de estado e efeitos
+- **Providers**: Contextos globais para autenticação e dados
+
+### Backend (API Routes)
+- **API Routes**: Endpoints REST para todas as operações
+- **Prisma Singleton**: Instância única do ORM para otimização de conexões
+- **Validação**: Schemas Zod para validação de entrada
+- **Autenticação**: Middleware de segurança em todos os endpoints
+
+### Camada de Dados
+- **PostgreSQL**: Banco de dados principal
+- **Prisma**: ORM com migrations e type safety
+- **Singleton Pattern**: Gerenciamento otimizado de conexões
+
 ## Começando
 
 Para iniciar o desenvolvimento, execute:
@@ -90,6 +111,30 @@ O sistema de XP avulso permite que administradores concedam pontos extras aos at
 - `POST /api/auth/signin` - Login
 - `POST /api/auth/signout` - Logout
 
+### Dashboard
+- `GET /api/dashboard/stats` - Estatísticas gerais do dashboard
+- `GET /api/dashboard/realtime` - Métricas em tempo real
+- `GET /api/dashboard/evaluation-trend` - Tendência de avaliações
+- `GET /api/dashboard/rating-distribution` - Distribuição de notas
+- `GET /api/dashboard/top-performers` - Top performers
+- `GET /api/dashboard/gamification-overview` - Visão geral da gamificação
+- `GET /api/dashboard/gamification-metrics` - Métricas de gamificação
+- `GET /api/dashboard/satisfaction-metrics` - Métricas de satisfação
+- `GET /api/dashboard/alert-metrics` - Métricas de alertas
+- `GET /api/dashboard/monthly-stats` - Estatísticas mensais
+- `GET /api/dashboard/popular-achievements` - Conquistas populares
+- `GET /api/dashboard/recent-activities` - Atividades recentes
+
+### Conquistas (Achievements)
+- `POST /api/achievements/process` - Processar todas as conquistas
+- `POST /api/achievements/process-attendant` - Processar conquistas de um atendente
+- `POST /api/achievements/process-season` - Processar conquistas de uma temporada
+- `POST /api/achievements/check` - Verificar critérios de conquista
+- `GET /api/achievements/unlocked/[attendantId]` - Conquistas desbloqueadas
+- `GET /api/achievements/stats` - Estatísticas de conquistas
+- `GET /api/achievements/status/[attendantId]` - Status das conquistas do atendente
+- `POST /api/achievements/check-and-unlock` - Verificar e desbloquear conquistas
+
 ### Gamificação
 - `GET /api/gamification/stats` - Estatísticas gerais
 - `GET /api/gamification/rankings` - Rankings por temporada
@@ -125,3 +170,9 @@ O sistema de XP avulso permite que administradores concedam pontos extras aos at
 ### Documentação Geral
 - **[Documentação Completa](DOCUMENTACAO-COMPLETA-PROJETO.md)** - Visão geral completa do sistema
 - **[Documentação do Projeto](DOCUMENTACAO_PROJETO.md)** - Estrutura e funcionalidades principais
+
+### Documentação da Arquitetura
+- **[Arquitetura de APIs](docs/api-architecture.md)** - Documentação completa da nova arquitetura
+- **[Padrões de Desenvolvimento](docs/development-patterns.md)** - Padrões e convenções estabelecidos
+- **[Guia de Troubleshooting](docs/troubleshooting-migration.md)** - Solução de problemas comuns
+- **[Guia de Migração](docs/migration-guide.md)** - Processo de migração para futuras referências

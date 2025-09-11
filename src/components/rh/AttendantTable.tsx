@@ -1,18 +1,46 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MoreHorizontal, Pencil, Trash2, Eye, QrCode, Link as LinkIcon } from "lucide-react";
+import {
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  Eye,
+  QrCode,
+  Link as LinkIcon,
+} from "lucide-react";
 import { UserCircle } from "lucide-react";
 
 import Link from "next/link";
 import { type Attendant } from "@/lib/types";
-import { DataValidator, LoadingTable, ErrorTable, EmptyTable } from "@/components/ui/data-validator";
-import { validateAttendantArray, isValidAttendant } from "@/lib/data-validation";
+import {
+  DataValidator,
+  LoadingTable,
+  ErrorTable,
+  EmptyTable,
+} from "@/components/ui/data-validator";
+import {
+  validateAttendantArray,
+  isValidAttendant,
+} from "@/lib/data-validation";
 
 interface AttendantTableProps {
   attendants: Attendant[] | null | undefined;
@@ -33,7 +61,7 @@ function AttendantTableContent({
   onEdit,
   onDelete,
   onQrCode,
-  onCopyLink
+  onCopyLink,
 }: {
   attendants: Attendant[];
   onEdit: (attendant: Attendant) => void;
@@ -44,9 +72,12 @@ function AttendantTableContent({
   // Validação e ordenação segura dos atendentes com memoização
   const sortedAttendants = useMemo(() => {
     // Validação adicional para garantir que todos os itens são atendentes válidos
-    const validAttendants = attendants.filter(attendant => {
+    const validAttendants = attendants.filter((attendant) => {
       if (!isValidAttendant(attendant)) {
-        console.warn('AttendantTable: Atendente inválido removido da lista', attendant);
+        console.warn(
+          "AttendantTable: Atendente inválido removido da lista",
+          attendant,
+        );
         return false;
       }
       return true;
@@ -54,8 +85,8 @@ function AttendantTableContent({
 
     // Ordenação segura com fallback para propriedades undefined
     return validAttendants.sort((a, b) => {
-      const nameA = a.name || '';
-      const nameB = b.name || '';
+      const nameA = a.name || "";
+      const nameB = b.name || "";
       return nameA.localeCompare(nameB);
     });
   }, [attendants]);
@@ -76,19 +107,32 @@ function AttendantTableContent({
           <TableRow key={attendant.id}>
             <TableCell className="font-medium flex items-center gap-3">
               <Avatar>
-                <AvatarImage src={attendant.avatarUrl} alt={attendant.name || 'Atendente'}/>
-                <AvatarFallback><UserCircle /></AvatarFallback>
+                <AvatarImage
+                  src={attendant.avatarUrl}
+                  alt={attendant.name || "Atendente"}
+                />
+                <AvatarFallback>
+                  <UserCircle />
+                </AvatarFallback>
               </Avatar>
               <div>
-                <div className="font-medium">{attendant.name || 'Nome não informado'}</div>
-                <div className="text-sm text-muted-foreground">{attendant.email || 'Email não informado'}</div>
+                <div className="font-medium">
+                  {attendant.name || "Nome não informado"}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {attendant.email || "Email não informado"}
+                </div>
               </div>
             </TableCell>
-            <TableCell>{attendant.funcao || 'Não informado'}</TableCell>
-            <TableCell className="capitalize">{attendant.setor || 'Não informado'}</TableCell>
+            <TableCell>{attendant.funcao || "Não informado"}</TableCell>
+            <TableCell className="capitalize">
+              {attendant.setor || "Não informado"}
+            </TableCell>
             <TableCell>
-              <Badge variant={attendant.status === 'Ativo' ? "secondary" : "outline"}>
-                {attendant.status || 'Indefinido'}
+              <Badge
+                variant={attendant.status === "Ativo" ? "secondary" : "outline"}
+              >
+                {attendant.status || "Indefinido"}
               </Badge>
             </TableCell>
             <TableCell className="text-right">
@@ -115,8 +159,8 @@ function AttendantTableContent({
                   <DropdownMenuItem onClick={() => onEdit(attendant)}>
                     <Pencil className="mr-2 h-4 w-4" /> Editar
                   </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    className="text-red-600" 
+                  <DropdownMenuItem
+                    className="text-red-600"
                     onClick={() => onDelete(attendant)}
                   >
                     <Trash2 className="mr-2 h-4 w-4" /> Excluir
@@ -133,7 +177,7 @@ function AttendantTableContent({
 
 /**
  * Componente principal da tabela de atendentes com validação robusta
- * 
+ *
  * Este componente implementa validação completa de dados, tratamento de estados
  * de loading e error, e fallbacks seguros para prevenir erros de runtime.
  */
@@ -145,7 +189,7 @@ export default function AttendantTable({
   onDelete,
   onQrCode,
   onCopyLink,
-  onRetry
+  onRetry,
 }: AttendantTableProps) {
   // Validador customizado para array de atendentes
   const attendantArrayValidator = useMemo(() => {
@@ -156,22 +200,27 @@ export default function AttendantTable({
   }, []);
 
   // Componente de loading customizado para tabela
-  const loadingComponent = useMemo(() => (
-    <LoadingTable rows={5} columns={5} />
-  ), []);
+  const loadingComponent = useMemo(
+    () => <LoadingTable rows={5} columns={5} />,
+    [],
+  );
 
   // Componente de erro customizado
-  const errorComponent = useMemo(() => (
-    <ErrorTable error={error || 'Erro desconhecido'} onRetry={onRetry} />
-  ), [error, onRetry]);
+  const errorComponent = useMemo(
+    () => <ErrorTable error={error || "Erro desconhecido"} onRetry={onRetry} />,
+    [error, onRetry],
+  );
 
   // Componente de estado vazio customizado
-  const emptyComponent = useMemo(() => (
-    <EmptyTable 
-      message="Comece adicionando um novo atendente ou importando dados via CSV."
-      onRetry={onRetry}
-    />
-  ), [onRetry]);
+  const emptyComponent = useMemo(
+    () => (
+      <EmptyTable
+        message="Comece adicionando um novo atendente ou importando dados via CSV."
+        onRetry={onRetry}
+      />
+    ),
+    [onRetry],
+  );
 
   return (
     <DataValidator

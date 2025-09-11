@@ -1,4 +1,4 @@
-import { Season } from '../types';
+import { Season } from "../types";
 
 export interface SeasonStatusProps {
   activeSeason?: Season;

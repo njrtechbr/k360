@@ -1,9 +1,13 @@
-import type { Evaluation, SentimentAnalysis } from '@/lib/types';
-import { 
+import type { Evaluation, SentimentAnalysis } from "@/lib/types";
+import {
   SentimentAnalysisSchema,
-  type SentimentAnalysisInput
-} from '@/lib/validation';
-import { validateFormData, isValidDateRange, sanitizeString } from '@/lib/validation-utils';
+  type SentimentAnalysisInput,
+} from "@/lib/validation";
+import {
+  validateFormData,
+  isValidDateRange,
+  sanitizeString,
+} from "@/lib/validation-utils";
 
 export interface SentimentDistribution {
   positive: number;
@@ -31,9 +35,11 @@ export class SentimentService {
   /**
    * Calcula a distribuição de sentimentos
    */
-  static calculateSentimentDistribution(analyses: SentimentAnalysis[]): SentimentDistribution {
+  static calculateSentimentDistribution(
+    analyses: SentimentAnalysis[],
+  ): SentimentDistribution {
     const total = analyses.length;
-    
+
     if (total === 0) {
       return { positive: 0, neutral: 0, negative: 0 };
     }
@@ -43,13 +49,13 @@ export class SentimentService {
         acc[analysis.sentiment]++;
         return acc;
       },
-      { positive: 0, neutral: 0, negative: 0 }
+      { positive: 0, neutral: 0, negative: 0 },
     );
 
     return {
       positive: (counts.positive / total) * 100,
       neutral: (counts.neutral / total) * 100,
-      negative: (counts.negative / total) * 100
+      negative: (counts.negative / total) * 100,
     };
   }
 
@@ -60,7 +66,7 @@ export class SentimentService {
     evaluations: Evaluation[],
     analyses: SentimentAnalysis[],
     isRunning: boolean = false,
-    currentEvaluation?: Evaluation
+    currentEvaluation?: Evaluation,
   ): AnalysisProgress {
     const total = evaluations.length;
     const analyzed = analyses.length;
@@ -73,30 +79,37 @@ export class SentimentService {
       pending,
       percentage,
       isRunning,
-      currentEvaluation
+      currentEvaluation,
     };
   }
 
   /**
    * Calcula estatísticas de sentimento
    */
-  static calculateSentimentStats(analyses: SentimentAnalysis[]): SentimentStats {
+  static calculateSentimentStats(
+    analyses: SentimentAnalysis[],
+  ): SentimentStats {
     const totalAnalyzed = analyses.length;
     const distribution = this.calculateSentimentDistribution(analyses);
-    
-    const averageConfidence = totalAnalyzed > 0
-      ? analyses.reduce((sum, analysis) => sum + analysis.confidence, 0) / totalAnalyzed
-      : 0;
+
+    const averageConfidence =
+      totalAnalyzed > 0
+        ? analyses.reduce((sum, analysis) => sum + analysis.confidence, 0) /
+          totalAnalyzed
+        : 0;
 
     const recentAnalyses = [...analyses]
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      )
       .slice(0, 10);
 
     return {
       totalAnalyzed,
       distribution,
       averageConfidence,
-      recentAnalyses
+      recentAnalyses,
     };
   }
 
@@ -105,15 +118,17 @@ export class SentimentService {
    */
   static filterBySentiment(
     analyses: SentimentAnalysis[],
-    sentiment: 'positive' | 'neutral' | 'negative'
+    sentiment: "positive" | "neutral" | "negative",
   ): SentimentAnalysis[] {
     // Valida o sentimento
-    const validSentiments = ['positive', 'neutral', 'negative'];
+    const validSentiments = ["positive", "neutral", "negative"];
     if (!validSentiments.includes(sentiment)) {
-      throw new Error(`Sentimento inválido: ${sentiment}. Deve ser um de: ${validSentiments.join(', ')}`);
+      throw new Error(
+        `Sentimento inválido: ${sentiment}. Deve ser um de: ${validSentiments.join(", ")}`,
+      );
     }
-    
-    return analyses.filter(analysis => analysis.sentiment === sentiment);
+
+    return analyses.filter((analysis) => analysis.sentiment === sentiment);
   }
 
   /**
@@ -122,13 +137,15 @@ export class SentimentService {
   static filterByPeriod(
     analyses: SentimentAnalysis[],
     startDate: Date,
-    endDate: Date
+    endDate: Date,
   ): SentimentAnalysis[] {
     // Valida o período
     if (startDate > endDate) {
-      throw new Error('Data de início deve ser anterior ou igual à data de fim');
+      throw new Error(
+        "Data de início deve ser anterior ou igual à data de fim",
+      );
     }
-    return analyses.filter(analysis => {
+    return analyses.filter((analysis) => {
       const analysisDate = new Date(analysis.createdAt);
       return analysisDate >= startDate && analysisDate <= endDate;
     });
@@ -139,14 +156,14 @@ export class SentimentService {
    */
   static filterByConfidence(
     analyses: SentimentAnalysis[],
-    minConfidence: number
+    minConfidence: number,
   ): SentimentAnalysis[] {
     // Valida o nível de confiança
     if (minConfidence < 0 || minConfidence > 1) {
-      throw new Error('Nível de confiança deve estar entre 0 e 1');
+      throw new Error("Nível de confiança deve estar entre 0 e 1");
     }
-    
-    return analyses.filter(analysis => analysis.confidence >= minConfidence);
+
+    return analyses.filter((analysis) => analysis.confidence >= minConfidence);
   }
 
   /**
@@ -154,21 +171,25 @@ export class SentimentService {
    */
   static searchAnalyses(
     analyses: SentimentAnalysis[],
-    searchTerm: string
+    searchTerm: string,
   ): SentimentAnalysis[] {
     // Sanitiza o termo de busca
     const sanitizedSearchTerm = sanitizeString(searchTerm.toLowerCase());
-    
+
     if (!sanitizedSearchTerm) {
       return analyses;
     }
-    
-    return analyses.filter(analysis => {
+
+    return analyses.filter((analysis) => {
       const sanitizedSummary = sanitizeString(analysis.summary.toLowerCase());
-      const sanitizedComment = sanitizeString(analysis.originalComment.toLowerCase());
-      
-      return sanitizedSummary.includes(sanitizedSearchTerm) ||
-             sanitizedComment.includes(sanitizedSearchTerm);
+      const sanitizedComment = sanitizeString(
+        analysis.originalComment.toLowerCase(),
+      );
+
+      return (
+        sanitizedSummary.includes(sanitizedSearchTerm) ||
+        sanitizedComment.includes(sanitizedSearchTerm)
+      );
     });
   }
 
@@ -177,10 +198,10 @@ export class SentimentService {
    */
   static getLowConfidenceAnalyses(
     analyses: SentimentAnalysis[],
-    threshold: number = 0.7
+    threshold: number = 0.7,
   ): SentimentAnalysis[] {
     return analyses
-      .filter(analysis => analysis.confidence < threshold)
+      .filter((analysis) => analysis.confidence < threshold)
       .sort((a, b) => a.confidence - b.confidence);
   }
 
@@ -189,21 +210,26 @@ export class SentimentService {
    */
   static getConflictingAnalyses(
     analyses: SentimentAnalysis[],
-    evaluations: Evaluation[]
+    evaluations: Evaluation[],
   ): Array<SentimentAnalysis & { evaluation: Evaluation }> {
-    const evaluationMap = new Map(evaluations.map(evaluation => [evaluation.id, evaluation]));
-    
+    const evaluationMap = new Map(
+      evaluations.map((evaluation) => [evaluation.id, evaluation]),
+    );
+
     return analyses
-      .map(analysis => {
+      .map((analysis) => {
         const evaluation = evaluationMap.get(analysis.evaluationId);
         return evaluation ? { ...analysis, evaluation } : null;
       })
-      .filter((item): item is SentimentAnalysis & { evaluation: Evaluation } => item !== null)
+      .filter(
+        (item): item is SentimentAnalysis & { evaluation: Evaluation } =>
+          item !== null,
+      )
       .filter(({ sentiment, evaluation }) => {
         // Conflito: sentimento negativo com nota alta (4-5)
-        if (sentiment === 'negative' && evaluation.nota >= 4) return true;
+        if (sentiment === "negative" && evaluation.nota >= 4) return true;
         // Conflito: sentimento positivo com nota baixa (1-2)
-        if (sentiment === 'positive' && evaluation.nota <= 2) return true;
+        if (sentiment === "positive" && evaluation.nota <= 2) return true;
         return false;
       });
   }
@@ -213,7 +239,7 @@ export class SentimentService {
    */
   static calculateSentimentTrends(
     analyses: SentimentAnalysis[],
-    months: number = 6
+    months: number = 6,
   ): Array<{
     period: string;
     distribution: SentimentDistribution;
@@ -224,24 +250,27 @@ export class SentimentService {
       distribution: SentimentDistribution;
       totalAnalyses: number;
     }> = [];
-    
+
     const now = new Date();
 
     for (let i = months - 1; i >= 0; i--) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const nextDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
-      
-      const monthAnalyses = analyses.filter(analysis => {
+
+      const monthAnalyses = analyses.filter((analysis) => {
         const analysisDate = new Date(analysis.createdAt);
         return analysisDate >= date && analysisDate < nextDate;
       });
 
       const distribution = this.calculateSentimentDistribution(monthAnalyses);
-      
+
       trends.push({
-        period: date.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }),
+        period: date.toLocaleDateString("pt-BR", {
+          month: "short",
+          year: "numeric",
+        }),
         distribution,
-        totalAnalyses: monthAnalyses.length
+        totalAnalyses: monthAnalyses.length,
       });
     }
 
@@ -253,41 +282,51 @@ export class SentimentService {
    */
   static generateSentimentInsights(
     analyses: SentimentAnalysis[],
-    evaluations: Evaluation[]
+    evaluations: Evaluation[],
   ): string[] {
     const insights: string[] = [];
-    
+
     if (analyses.length === 0) {
-      insights.push('📊 Nenhuma análise de sentimento disponível ainda');
+      insights.push("📊 Nenhuma análise de sentimento disponível ainda");
       return insights;
     }
 
     const stats = this.calculateSentimentStats(analyses);
     const conflicting = this.getConflictingAnalyses(analyses, evaluations);
     const lowConfidence = this.getLowConfidenceAnalyses(analyses);
-    
+
     // Insights sobre distribuição
     if (stats.distribution.positive > 70) {
-      insights.push('😊 Excelente! Mais de 70% dos comentários têm sentimento positivo');
+      insights.push(
+        "😊 Excelente! Mais de 70% dos comentários têm sentimento positivo",
+      );
     } else if (stats.distribution.negative > 30) {
-      insights.push('😟 Atenção: Mais de 30% dos comentários têm sentimento negativo');
+      insights.push(
+        "😟 Atenção: Mais de 30% dos comentários têm sentimento negativo",
+      );
     }
 
     // Insights sobre confiança
     if (stats.averageConfidence > 0.8) {
-      insights.push('🎯 Alta confiança nas análises de IA (>80%)');
+      insights.push("🎯 Alta confiança nas análises de IA (>80%)");
     } else if (stats.averageConfidence < 0.6) {
-      insights.push('⚠️ Confiança baixa nas análises - revisar comentários manualmente');
+      insights.push(
+        "⚠️ Confiança baixa nas análises - revisar comentários manualmente",
+      );
     }
 
     // Insights sobre conflitos
     if (conflicting.length > 0) {
-      insights.push(`🔍 ${conflicting.length} análises conflitantes encontradas - revisar manualmente`);
+      insights.push(
+        `🔍 ${conflicting.length} análises conflitantes encontradas - revisar manualmente`,
+      );
     }
 
     // Insights sobre análises de baixa confiança
     if (lowConfidence.length > analyses.length * 0.2) {
-      insights.push('📝 Muitas análises com baixa confiança - considerar melhorar prompts de IA');
+      insights.push(
+        "📝 Muitas análises com baixa confiança - considerar melhorar prompts de IA",
+      );
     }
 
     // Insights sobre tendências
@@ -295,12 +334,15 @@ export class SentimentService {
     if (trends.length >= 2) {
       const latest = trends[trends.length - 1];
       const previous = trends[trends.length - 2];
-      
-      const positiveChange = latest.distribution.positive - previous.distribution.positive;
+
+      const positiveChange =
+        latest.distribution.positive - previous.distribution.positive;
       if (positiveChange > 10) {
-        insights.push('📈 Melhoria no sentimento dos comentários no último mês');
+        insights.push(
+          "📈 Melhoria no sentimento dos comentários no último mês",
+        );
       } else if (positiveChange < -10) {
-        insights.push('📉 Piora no sentimento dos comentários no último mês');
+        insights.push("📉 Piora no sentimento dos comentários no último mês");
       }
     }
 
@@ -313,20 +355,20 @@ export class SentimentService {
   static needsReanalysis(
     analysis: SentimentAnalysis,
     evaluation: Evaluation,
-    confidenceThreshold: number = 0.6
+    confidenceThreshold: number = 0.6,
   ): boolean {
     // Baixa confiança
     if (analysis.confidence < confidenceThreshold) return true;
-    
+
     // Análise muito antiga (mais de 6 meses)
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
     if (new Date(analysis.createdAt) < sixMonthsAgo) return true;
-    
+
     // Conflito entre sentimento e nota
-    if (analysis.sentiment === 'negative' && evaluation.nota >= 4) return true;
-    if (analysis.sentiment === 'positive' && evaluation.nota <= 2) return true;
-    
+    if (analysis.sentiment === "negative" && evaluation.nota >= 4) return true;
+    if (analysis.sentiment === "positive" && evaluation.nota <= 2) return true;
+
     return false;
   }
 
@@ -335,11 +377,13 @@ export class SentimentService {
    */
   static prioritizeForAnalysis(
     evaluations: Evaluation[],
-    existingAnalyses: SentimentAnalysis[]
+    existingAnalyses: SentimentAnalysis[],
   ): Evaluation[] {
-    const analyzedIds = new Set(existingAnalyses.map(a => a.evaluationId));
-    const unanalyzed = evaluations.filter(evaluation => !analyzedIds.has(evaluation.id));
-    
+    const analyzedIds = new Set(existingAnalyses.map((a) => a.evaluationId));
+    const unanalyzed = evaluations.filter(
+      (evaluation) => !analyzedIds.has(evaluation.id),
+    );
+
     // Priorizar por:
     // 1. Avaliações com comentários mais longos
     // 2. Avaliações mais recentes
@@ -351,14 +395,14 @@ export class SentimentService {
       if (aCommentLength !== bCommentLength) {
         return bCommentLength - aCommentLength;
       }
-      
+
       // Prioridade por data
       const aDate = new Date(a.data).getTime();
       const bDate = new Date(b.data).getTime();
       if (aDate !== bDate) {
         return bDate - aDate;
       }
-      
+
       // Prioridade por notas extremas
       const aExtreme = a.nota <= 2 || a.nota >= 5 ? 1 : 0;
       const bExtreme = b.nota <= 2 || b.nota >= 5 ? 1 : 0;
@@ -384,7 +428,9 @@ export class SentimentService {
     return {
       ...data,
       summary: data.summary ? sanitizeString(data.summary) : data.summary,
-      originalComment: data.originalComment ? sanitizeString(data.originalComment) : data.originalComment
+      originalComment: data.originalComment
+        ? sanitizeString(data.originalComment)
+        : data.originalComment,
     };
   }
 
@@ -394,27 +440,29 @@ export class SentimentService {
   static shouldReanalyze(
     analysis: SentimentAnalysis,
     minConfidenceThreshold: number = 0.7,
-    maxAgeInDays: number = 30
+    maxAgeInDays: number = 30,
   ): boolean {
     // Valida parâmetros
     if (minConfidenceThreshold < 0 || minConfidenceThreshold > 1) {
-      throw new Error('Threshold de confiança deve estar entre 0 e 1');
+      throw new Error("Threshold de confiança deve estar entre 0 e 1");
     }
-    
+
     if (maxAgeInDays < 1) {
-      throw new Error('Idade máxima deve ser pelo menos 1 dia');
+      throw new Error("Idade máxima deve ser pelo menos 1 dia");
     }
-    
+
     // Verifica confiança baixa
     if (analysis.confidence < minConfidenceThreshold) {
       return true;
     }
-    
+
     // Verifica idade da análise
     const analysisDate = new Date(analysis.createdAt);
     const now = new Date();
-    const daysDifference = Math.floor((now.getTime() - analysisDate.getTime()) / (1000 * 60 * 60 * 24));
-    
+    const daysDifference = Math.floor(
+      (now.getTime() - analysisDate.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
     return daysDifference > maxAgeInDays;
   }
 
@@ -423,10 +471,10 @@ export class SentimentService {
    */
   static calculateAnalysisQualityScore(analysis: SentimentAnalysis): number {
     let score = 0;
-    
+
     // Pontuação baseada na confiança (0-40 pontos)
     score += analysis.confidence * 40;
-    
+
     // Pontuação baseada no tamanho do resumo (0-20 pontos)
     const summaryLength = analysis.summary.length;
     if (summaryLength >= 50 && summaryLength <= 150) {
@@ -434,34 +482,64 @@ export class SentimentService {
     } else if (summaryLength >= 20) {
       score += 10;
     }
-    
+
     // Pontuação baseada na consistência do sentimento (0-20 pontos)
     const commentLength = analysis.originalComment.length;
     if (commentLength > 0) {
       // Análise simples de consistência baseada em palavras-chave
-      const positiveWords = ['bom', 'ótimo', 'excelente', 'satisfeito', 'recomendo'];
-      const negativeWords = ['ruim', 'péssimo', 'insatisfeito', 'problema', 'reclamação'];
-      
+      const positiveWords = [
+        "bom",
+        "ótimo",
+        "excelente",
+        "satisfeito",
+        "recomendo",
+      ];
+      const negativeWords = [
+        "ruim",
+        "péssimo",
+        "insatisfeito",
+        "problema",
+        "reclamação",
+      ];
+
       const commentLower = analysis.originalComment.toLowerCase();
-      const hasPositiveWords = positiveWords.some(word => commentLower.includes(word));
-      const hasNegativeWords = negativeWords.some(word => commentLower.includes(word));
-      
-      if (analysis.sentiment === 'positive' && hasPositiveWords && !hasNegativeWords) {
+      const hasPositiveWords = positiveWords.some((word) =>
+        commentLower.includes(word),
+      );
+      const hasNegativeWords = negativeWords.some((word) =>
+        commentLower.includes(word),
+      );
+
+      if (
+        analysis.sentiment === "positive" &&
+        hasPositiveWords &&
+        !hasNegativeWords
+      ) {
         score += 20;
-      } else if (analysis.sentiment === 'negative' && hasNegativeWords && !hasPositiveWords) {
+      } else if (
+        analysis.sentiment === "negative" &&
+        hasNegativeWords &&
+        !hasPositiveWords
+      ) {
         score += 20;
-      } else if (analysis.sentiment === 'neutral' && !hasPositiveWords && !hasNegativeWords) {
+      } else if (
+        analysis.sentiment === "neutral" &&
+        !hasPositiveWords &&
+        !hasNegativeWords
+      ) {
         score += 15;
       } else {
         score += 5; // Pontuação baixa para inconsistência
       }
     }
-    
+
     // Pontuação baseada na idade da análise (0-20 pontos)
     const analysisDate = new Date(analysis.createdAt);
     const now = new Date();
-    const daysDifference = Math.floor((now.getTime() - analysisDate.getTime()) / (1000 * 60 * 60 * 24));
-    
+    const daysDifference = Math.floor(
+      (now.getTime() - analysisDate.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
     if (daysDifference <= 7) {
       score += 20;
     } else if (daysDifference <= 30) {
@@ -471,7 +549,7 @@ export class SentimentService {
     } else {
       score += 5;
     }
-    
+
     return Math.min(100, Math.max(0, score));
   }
 }

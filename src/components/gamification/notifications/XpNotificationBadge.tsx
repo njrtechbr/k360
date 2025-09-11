@@ -1,27 +1,33 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { 
-  Bell, 
-  Gift, 
-  Trophy, 
-  X, 
+import { useState, useEffect } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import {
+  Bell,
+  Gift,
+  Trophy,
+  X,
   CheckCircle,
   Calendar,
-  Zap
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+  Zap,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface XpNotification {
   id: string;
-  type: 'xp_grant' | 'level_up' | 'achievement';
+  type: "xp_grant" | "level_up" | "achievement";
   title: string;
   message: string;
   xpAmount?: number;
@@ -35,7 +41,10 @@ interface XpNotificationBadgeProps {
   className?: string;
 }
 
-export default function XpNotificationBadge({ attendantId, className }: XpNotificationBadgeProps) {
+export default function XpNotificationBadge({
+  attendantId,
+  className,
+}: XpNotificationBadgeProps) {
   const [notifications, setNotifications] = useState<XpNotification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -48,30 +57,33 @@ export default function XpNotificationBadge({ attendantId, className }: XpNotifi
     const handleXpGranted = (event: CustomEvent) => {
       const { xpAmount, typeName, justification } = event.detail;
       addNotification({
-        type: 'xp_grant',
-        title: 'XP Recebido!',
-        message: `Você recebeu ${xpAmount} XP por "${typeName}"${justification ? ` - ${justification}` : ''}`,
+        type: "xp_grant",
+        title: "XP Recebido!",
+        message: `Você recebeu ${xpAmount} XP por "${typeName}"${justification ? ` - ${justification}` : ""}`,
         xpAmount,
-        data: event.detail
+        data: event.detail,
       });
     };
 
     const handleLevelUp = (event: CustomEvent) => {
       const { level, xp } = event.detail;
       addNotification({
-        type: 'level_up',
-        title: 'Subiu de Nível!',
+        type: "level_up",
+        title: "Subiu de Nível!",
         message: `Parabéns! Você alcançou o nível ${level}!`,
-        data: { level, xp }
+        data: { level, xp },
       });
     };
 
-    window.addEventListener('xp-granted', handleXpGranted as EventListener);
-    window.addEventListener('level-up', handleLevelUp as EventListener);
+    window.addEventListener("xp-granted", handleXpGranted as EventListener);
+    window.addEventListener("level-up", handleLevelUp as EventListener);
 
     return () => {
-      window.removeEventListener('xp-granted', handleXpGranted as EventListener);
-      window.removeEventListener('level-up', handleLevelUp as EventListener);
+      window.removeEventListener(
+        "xp-granted",
+        handleXpGranted as EventListener,
+      );
+      window.removeEventListener("level-up", handleLevelUp as EventListener);
     };
   }, [attendantId]);
 
@@ -80,7 +92,7 @@ export default function XpNotificationBadge({ attendantId, className }: XpNotifi
     if (stored) {
       const parsed = JSON.parse(stored).map((n: any) => ({
         ...n,
-        timestamp: new Date(n.timestamp)
+        timestamp: new Date(n.timestamp),
       }));
       setNotifications(parsed);
       setUnreadCount(parsed.filter((n: XpNotification) => !n.read).length);
@@ -88,17 +100,22 @@ export default function XpNotificationBadge({ attendantId, className }: XpNotifi
   };
 
   const saveNotifications = (newNotifications: XpNotification[]) => {
-    localStorage.setItem(`xp-notifications-${attendantId}`, JSON.stringify(newNotifications));
+    localStorage.setItem(
+      `xp-notifications-${attendantId}`,
+      JSON.stringify(newNotifications),
+    );
     setNotifications(newNotifications);
-    setUnreadCount(newNotifications.filter(n => !n.read).length);
+    setUnreadCount(newNotifications.filter((n) => !n.read).length);
   };
 
-  const addNotification = (notification: Omit<XpNotification, 'id' | 'timestamp' | 'read'>) => {
+  const addNotification = (
+    notification: Omit<XpNotification, "id" | "timestamp" | "read">,
+  ) => {
     const newNotification: XpNotification = {
       ...notification,
       id: Math.random().toString(36).substring(2, 11),
       timestamp: new Date(),
-      read: false
+      read: false,
     };
 
     const updated = [newNotification, ...notifications].slice(0, 50); // Manter apenas 50 notificações
@@ -106,29 +123,29 @@ export default function XpNotificationBadge({ attendantId, className }: XpNotifi
   };
 
   const markAsRead = (id: string) => {
-    const updated = notifications.map(n => 
-      n.id === id ? { ...n, read: true } : n
+    const updated = notifications.map((n) =>
+      n.id === id ? { ...n, read: true } : n,
     );
     saveNotifications(updated);
   };
 
   const markAllAsRead = () => {
-    const updated = notifications.map(n => ({ ...n, read: true }));
+    const updated = notifications.map((n) => ({ ...n, read: true }));
     saveNotifications(updated);
   };
 
   const clearNotification = (id: string) => {
-    const updated = notifications.filter(n => n.id !== id);
+    const updated = notifications.filter((n) => n.id !== id);
     saveNotifications(updated);
   };
 
-  const getIcon = (type: XpNotification['type']) => {
+  const getIcon = (type: XpNotification["type"]) => {
     switch (type) {
-      case 'xp_grant':
+      case "xp_grant":
         return <Gift className="h-4 w-4 text-blue-500" />;
-      case 'level_up':
+      case "level_up":
         return <Trophy className="h-4 w-4 text-yellow-500" />;
-      case 'achievement':
+      case "achievement":
         return <CheckCircle className="h-4 w-4 text-green-500" />;
       default:
         return <Bell className="h-4 w-4 text-gray-500" />;
@@ -145,11 +162,11 @@ export default function XpNotificationBadge({ attendantId, className }: XpNotifi
       >
         <Bell className="h-4 w-4" />
         {unreadCount > 0 && (
-          <Badge 
-            variant="destructive" 
+          <Badge
+            variant="destructive"
             className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs"
           >
-            {unreadCount > 99 ? '99+' : unreadCount}
+            {unreadCount > 99 ? "99+" : unreadCount}
           </Badge>
         )}
       </Button>
@@ -182,7 +199,7 @@ export default function XpNotificationBadge({ attendantId, className }: XpNotifi
             </div>
             {notifications.length > 0 && (
               <CardDescription>
-                {unreadCount > 0 ? `${unreadCount} não lidas` : 'Todas lidas'}
+                {unreadCount > 0 ? `${unreadCount} não lidas` : "Todas lidas"}
               </CardDescription>
             )}
           </CardHeader>
@@ -200,7 +217,8 @@ export default function XpNotificationBadge({ attendantId, className }: XpNotifi
                       <div
                         className={cn(
                           "p-3 hover:bg-muted/50 cursor-pointer transition-colors",
-                          !notification.read && "bg-blue-50/50 dark:bg-blue-950/20"
+                          !notification.read &&
+                            "bg-blue-50/50 dark:bg-blue-950/20",
                         )}
                         onClick={() => markAsRead(notification.id)}
                       >
@@ -208,13 +226,15 @@ export default function XpNotificationBadge({ attendantId, className }: XpNotifi
                           <div className="flex-shrink-0 mt-0.5">
                             {getIcon(notification.type)}
                           </div>
-                          
+
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between">
-                              <h4 className={cn(
-                                "text-sm font-medium",
-                                !notification.read && "font-semibold"
-                              )}>
+                              <h4
+                                className={cn(
+                                  "text-sm font-medium",
+                                  !notification.read && "font-semibold",
+                                )}
+                              >
                                 {notification.title}
                               </h4>
                               <Button
@@ -229,28 +249,32 @@ export default function XpNotificationBadge({ attendantId, className }: XpNotifi
                                 <X className="h-3 w-3" />
                               </Button>
                             </div>
-                            
+
                             <p className="text-sm text-muted-foreground mt-1">
                               {notification.message}
                             </p>
-                            
+
                             {notification.xpAmount && (
                               <div className="flex items-center gap-2 mt-2">
                                 <Badge variant="secondary" className="text-xs">
-                                  <Zap className="h-3 w-3 mr-1" />
-                                  +{notification.xpAmount} XP
+                                  <Zap className="h-3 w-3 mr-1" />+
+                                  {notification.xpAmount} XP
                                 </Badge>
                               </div>
                             )}
-                            
+
                             <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
                               <Calendar className="h-3 w-3" />
-                              {format(notification.timestamp, 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                              {format(
+                                notification.timestamp,
+                                "dd/MM/yyyy HH:mm",
+                                { locale: ptBR },
+                              )}
                             </div>
                           </div>
                         </div>
                       </div>
-                      
+
                       {index < notifications.length - 1 && <Separator />}
                     </div>
                   ))}

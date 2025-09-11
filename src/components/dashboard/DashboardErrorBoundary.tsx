@@ -1,7 +1,7 @@
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { AlertTriangle, RefreshCw } from "lucide-react";
 
 interface DashboardErrorBoundaryState {
   hasError: boolean;
@@ -27,7 +27,7 @@ export class DashboardErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('Dashboard Error Boundary:', error, errorInfo);
+    console.error("Dashboard Error Boundary:", error, errorInfo);
   }
 
   handleRetry = () => {
@@ -60,9 +60,9 @@ export class DashboardErrorBoundary extends React.Component<
                 </pre>
               </details>
             )}
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={this.handleRetry}
               className="flex items-center gap-2"
             >
@@ -87,7 +87,7 @@ export function useDashboardErrorHandler() {
   }, []);
 
   const handleError = React.useCallback((error: Error) => {
-    console.error('Dashboard Error:', error);
+    console.error("Dashboard Error:", error);
     setError(error);
   }, []);
 

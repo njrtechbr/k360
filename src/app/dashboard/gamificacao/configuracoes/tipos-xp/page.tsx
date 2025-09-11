@@ -1,17 +1,28 @@
 "use client";
 
-import { useAuth } from "@/hooks/useAuth";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { XpTypeManager } from "@/components/gamification/XpTypeManager";
 
 export default function TiposXpPage() {
-  const { user, isAuthenticated, loading } = useAuth();
+  const { data: session, status } = useSession();
   const router = useRouter();
+
+  const user = session?.user;
+  const isAuthenticated = !!session;
+  const loading = status === "loading";
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -20,7 +31,11 @@ export default function TiposXpPage() {
   }, [loading, isAuthenticated, router]);
 
   if (loading) {
-    return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p>Carregando...</p>
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
@@ -46,7 +61,9 @@ export default function TiposXpPage() {
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link href="/dashboard/gamificacao/configuracoes">Configurações</Link>
+              <Link href="/dashboard/gamificacao/configuracoes">
+                Configurações
+              </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
@@ -64,7 +81,9 @@ export default function TiposXpPage() {
         </Button>
         <div className="flex-1">
           <h1 className="text-3xl font-bold">Tipos de XP Avulso</h1>
-          <p className="text-muted-foreground">Gerencie os tipos de XP que podem ser concedidos manualmente</p>
+          <p className="text-muted-foreground">
+            Gerencie os tipos de XP que podem ser concedidos manualmente
+          </p>
         </div>
       </div>
 

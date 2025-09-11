@@ -1,17 +1,28 @@
 "use client";
 
-import { useAuth } from "@/hooks/useAuth";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { ArrowLeft, Settings, Zap } from "lucide-react";
 import Link from "next/link";
 import { XpAvulsoConfigManager } from "@/components/gamification/XpAvulsoConfigManager";
 
 export default function XpAvulsoConfigPage() {
-  const { user, isAuthenticated, loading } = useAuth();
+  const { data: session, status } = useSession();
   const router = useRouter();
+
+  const user = session?.user;
+  const isAuthenticated = !!session;
+  const loading = status === "loading";
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -21,27 +32,32 @@ export default function XpAvulsoConfigPage() {
 
   // Verificar se o usuário tem permissão (apenas SUPERADMIN pode alterar configurações)
   useEffect(() => {
-    if (!loading && isAuthenticated && user?.role !== 'SUPERADMIN') {
+    if (!loading && isAuthenticated && user?.role !== "SUPERADMIN") {
       router.push("/dashboard");
     }
   }, [loading, isAuthenticated, user, router]);
 
   if (loading) {
-    return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p>Carregando...</p>
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
     return null;
   }
 
-  if (user?.role !== 'SUPERADMIN') {
+  if (user?.role !== "SUPERADMIN") {
     return (
       <div className="space-y-6">
         <div className="text-center py-12">
           <Settings className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h2 className="text-2xl font-bold mb-2">Acesso Restrito</h2>
           <p className="text-muted-foreground mb-4">
-            Apenas superadministradores podem acessar as configurações de XP Avulso.
+            Apenas superadministradores podem acessar as configurações de XP
+            Avulso.
           </p>
           <Button asChild>
             <Link href="/dashboard">Voltar ao Dashboard</Link>
@@ -70,7 +86,9 @@ export default function XpAvulsoConfigPage() {
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link href="/dashboard/gamificacao/configuracoes">Configurações</Link>
+              <Link href="/dashboard/gamificacao/configuracoes">
+                Configurações
+              </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
@@ -92,7 +110,8 @@ export default function XpAvulsoConfigPage() {
             Configurações de XP Avulso
           </h1>
           <p className="text-muted-foreground">
-            Configure limites, regras e controles para o sistema de concessão manual de XP
+            Configure limites, regras e controles para o sistema de concessão
+            manual de XP
           </p>
         </div>
       </div>

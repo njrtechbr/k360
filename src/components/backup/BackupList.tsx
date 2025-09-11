@@ -3,29 +3,48 @@
 import { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { 
-  Download, 
-  Trash2, 
-  Search, 
-  Filter, 
-  RefreshCw, 
-  CheckCircle, 
-  XCircle, 
+import {
+  Download,
+  Trash2,
+  Search,
+  Filter,
+  RefreshCw,
+  CheckCircle,
+  XCircle,
   Clock,
   FileText,
   Calendar,
   HardDrive,
-  Shield
+  Shield,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -47,29 +66,31 @@ interface BackupListProps {
   onRefresh: () => void;
 }
 
-type SortField = 'createdAt' | 'filename' | 'size' | 'status';
-type SortOrder = 'asc' | 'desc';
+type SortField = "createdAt" | "filename" | "size" | "status";
+type SortOrder = "asc" | "desc";
 
-export function BackupList({ 
-  backups, 
-  isLoading, 
-  canDelete, 
-  onDownload, 
-  onDelete, 
-  onRefresh 
+export function BackupList({
+  backups,
+  isLoading,
+  canDelete,
+  onDownload,
+  onDelete,
+  onRefresh,
 }: BackupListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [sortField, setSortField] = useState<SortField>('createdAt');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  const [sortField, setSortField] = useState<SortField>("createdAt");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
   // Filtrar e ordenar backups
   const filteredAndSortedBackups = useMemo(() => {
-    let filtered = backups.filter(backup => {
-      const matchesSearch = backup.filename.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           backup.createdBy?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === 'all' || backup.status === statusFilter;
-      
+    let filtered = backups.filter((backup) => {
+      const matchesSearch =
+        backup.filename.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        backup.createdBy?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus =
+        statusFilter === "all" || backup.status === statusFilter;
+
       return matchesSearch && matchesStatus;
     });
 
@@ -78,12 +99,12 @@ export function BackupList({
       let aValue: any = a[sortField];
       let bValue: any = b[sortField];
 
-      if (sortField === 'createdAt') {
+      if (sortField === "createdAt") {
         aValue = new Date(aValue).getTime();
         bValue = new Date(bValue).getTime();
       }
 
-      if (sortOrder === 'asc') {
+      if (sortOrder === "asc") {
         return aValue > bValue ? 1 : -1;
       } else {
         return aValue < bValue ? 1 : -1;
@@ -95,19 +116,19 @@ export function BackupList({
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
     } else {
       setSortField(field);
-      setSortOrder('desc');
+      setSortOrder("desc");
     }
   };
 
   const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 B';
+    if (bytes === 0) return "0 B";
     const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const sizes = ["B", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   const formatDuration = (seconds: number): string => {
@@ -119,11 +140,11 @@ export function BackupList({
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'success':
+      case "success":
         return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'failed':
+      case "failed":
         return <XCircle className="h-4 w-4 text-red-500" />;
-      case 'in_progress':
+      case "in_progress":
         return <Clock className="h-4 w-4 text-yellow-500" />;
       default:
         return <FileText className="h-4 w-4 text-gray-500" />;
@@ -132,11 +153,15 @@ export function BackupList({
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'success':
-        return <Badge variant="default" className="bg-green-100 text-green-800">Sucesso</Badge>;
-      case 'failed':
+      case "success":
+        return (
+          <Badge variant="default" className="bg-green-100 text-green-800">
+            Sucesso
+          </Badge>
+        );
+      case "failed":
         return <Badge variant="destructive">Falhou</Badge>;
-      case 'in_progress':
+      case "in_progress":
         return <Badge variant="secondary">Em Progresso</Badge>;
       default:
         return <Badge variant="outline">Desconhecido</Badge>;
@@ -220,10 +245,9 @@ export function BackupList({
           {filteredAndSortedBackups.length === 0 ? (
             <Alert>
               <AlertDescription>
-                {backups.length === 0 
+                {backups.length === 0
                   ? "Nenhum backup encontrado. Crie seu primeiro backup usando a aba 'Criar Backup'."
-                  : "Nenhum backup corresponde aos filtros aplicados."
-                }
+                  : "Nenhum backup corresponde aos filtros aplicados."}
               </AlertDescription>
             </Alert>
           ) : (
@@ -232,31 +256,37 @@ export function BackupList({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Status</TableHead>
-                    <TableHead 
+                    <TableHead
                       className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => handleSort('filename')}
+                      onClick={() => handleSort("filename")}
                     >
                       Arquivo
-                      {sortField === 'filename' && (
-                        <span className="ml-1">{sortOrder === 'asc' ? '↑' : '↓'}</span>
+                      {sortField === "filename" && (
+                        <span className="ml-1">
+                          {sortOrder === "asc" ? "↑" : "↓"}
+                        </span>
                       )}
                     </TableHead>
-                    <TableHead 
+                    <TableHead
                       className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => handleSort('size')}
+                      onClick={() => handleSort("size")}
                     >
                       Tamanho
-                      {sortField === 'size' && (
-                        <span className="ml-1">{sortOrder === 'asc' ? '↑' : '↓'}</span>
+                      {sortField === "size" && (
+                        <span className="ml-1">
+                          {sortOrder === "asc" ? "↑" : "↓"}
+                        </span>
                       )}
                     </TableHead>
-                    <TableHead 
+                    <TableHead
                       className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => handleSort('createdAt')}
+                      onClick={() => handleSort("createdAt")}
                     >
                       Data/Hora
-                      {sortField === 'createdAt' && (
-                        <span className="ml-1">{sortOrder === 'asc' ? '↑' : '↓'}</span>
+                      {sortField === "createdAt" && (
+                        <span className="ml-1">
+                          {sortOrder === "asc" ? "↑" : "↓"}
+                        </span>
                       )}
                     </TableHead>
                     <TableHead>Duração</TableHead>
@@ -287,10 +317,16 @@ export function BackupList({
                           <Calendar className="h-4 w-4 text-muted-foreground" />
                           <div className="space-y-1">
                             <p className="text-sm">
-                              {format(new Date(backup.createdAt), 'dd/MM/yyyy', { locale: ptBR })}
+                              {format(
+                                new Date(backup.createdAt),
+                                "dd/MM/yyyy",
+                                { locale: ptBR },
+                              )}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {format(new Date(backup.createdAt), 'HH:mm:ss', { locale: ptBR })}
+                              {format(new Date(backup.createdAt), "HH:mm:ss", {
+                                locale: ptBR,
+                              })}
                             </p>
                           </div>
                         </div>
@@ -299,7 +335,7 @@ export function BackupList({
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Shield className="h-4 w-4 text-muted-foreground" />
-                          {backup.createdBy || 'Sistema'}
+                          {backup.createdBy || "Sistema"}
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
@@ -308,7 +344,7 @@ export function BackupList({
                             variant="outline"
                             size="sm"
                             onClick={() => onDownload(backup.id)}
-                            disabled={backup.status !== 'success'}
+                            disabled={backup.status !== "success"}
                           >
                             <Download className="h-4 w-4" />
                           </Button>
@@ -325,14 +361,19 @@ export function BackupList({
                               </AlertDialogTrigger>
                               <AlertDialogContent>
                                 <AlertDialogHeader>
-                                  <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                                  <AlertDialogTitle>
+                                    Confirmar Exclusão
+                                  </AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Tem certeza que deseja excluir o backup "{backup.filename}"? 
-                                    Esta ação não pode ser desfeita.
+                                    Tem certeza que deseja excluir o backup "
+                                    {backup.filename}"? Esta ação não pode ser
+                                    desfeita.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogCancel>
+                                    Cancelar
+                                  </AlertDialogCancel>
                                   <AlertDialogAction
                                     onClick={() => onDelete(backup.id)}
                                     className="bg-red-600 hover:bg-red-700"

@@ -1,8 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { XpAvulsoService, GrantXpSchema, GrantHistoryFiltersSchema } from '@/services/xpAvulsoService';
-import { XpAvulsoConfigService } from '@/services/xpAvulsoConfigService';
-import { AuthMiddleware, AuthConfigs, AuditLogger } from '@/lib/auth-middleware';
-import { xpGrantRateLimiter, xpAvulsoRateLimiter } from '@/lib/rate-limit';
+import { NextRequest, NextResponse } from "next/server";
+import {
+  XpAvulsoService,
+  GrantXpSchema,
+  GrantHistoryFiltersSchema,
+} from "@/services/xpAvulsoService";
+import { XpAvulsoConfigService } from "@/services/xpAvulsoConfigService";
+import {
+  AuthMiddleware,
+  AuthConfigs,
+  AuditLogger,
+} from "@/lib/auth-middleware";
+import { xpGrantRateLimiter, xpAvulsoRateLimiter } from "@/lib/rate-limit";
 
 /**
  * POST /api/gamification/xp-grants
@@ -12,31 +20,37 @@ export async function POST(request: NextRequest) {
   try {
     // Verificar rate limiting para concessões
     const limitResult = await xpGrantRateLimiter.checkLimit(request);
-    
+
     if (!limitResult.allowed) {
       return NextResponse.json(
         {
-          error: 'Muitas tentativas de concessão. Tente novamente em alguns instantes.',
-          retryAfter: Math.ceil((limitResult.resetTime - Date.now()) / 1000)
+          error:
+            "Muitas tentativas de concessão. Tente novamente em alguns instantes.",
+          retryAfter: Math.ceil((limitResult.resetTime - Date.now()) / 1000),
         },
-        { 
+        {
           status: 429,
           headers: {
-            'X-RateLimit-Limit': '10',
-            'X-RateLimit-Remaining': limitResult.remaining.toString(),
-            'X-RateLimit-Reset': Math.ceil(limitResult.resetTime / 1000).toString()
-          }
-        }
+            "X-RateLimit-Limit": "10",
+            "X-RateLimit-Remaining": limitResult.remaining.toString(),
+            "X-RateLimit-Reset": Math.ceil(
+              limitResult.resetTime / 1000,
+            ).toString(),
+          },
+        },
       );
     }
 
     // Verificar autenticação e autorização (apenas ADMIN e SUPERADMIN)
-    const authResult = await AuthMiddleware.checkAuth(request, AuthConfigs.adminOnly);
+    const authResult = await AuthMiddleware.checkAuth(
+      request,
+      AuthConfigs.adminOnly,
+    );
 
     if (!authResult.authorized) {
       return NextResponse.json(
         { error: authResult.error },
-        { status: authResult.statusCode || 401 }
+        { status: authResult.statusCode || 401 },
       );
     }
 
@@ -48,19 +62,19 @@ export async function POST(request: NextRequest) {
     // Validar dados de entrada
     const validationResult = GrantXpSchema.safeParse({
       ...body,
-      grantedBy: session.user.id // Usar ID do usuário autenticado
+      grantedBy: session.user.id, // Usar ID do usuário autenticado
     });
 
     if (!validationResult.success) {
       return NextResponse.json(
         {
-          error: 'Dados inválidos',
-          details: validationResult.error.errors.map(err => ({
-            field: err.path.join('.'),
-            message: err.message
-          }))
+          error: "Dados inválidos",
+          details: validationResult.error.errors.map((err) => ({
+            field: err.path.join("."),
+            message: err.message,
+          })),
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -70,60 +84,56 @@ export async function POST(request: NextRequest) {
     const configValidation = await XpAvulsoConfigService.validateGrant(
       grantData.points || 0, // Usar pontos do tipo se não especificado
       grantData.grantedBy,
-      grantData.attendantId
+      grantData.attendantId,
     );
 
     if (!configValidation.isValid) {
       return NextResponse.json(
         {
-          error: 'Concessão não permitida',
+          error: "Concessão não permitida",
           details: configValidation.errors,
-          warnings: configValidation.warnings
+          warnings: configValidation.warnings,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Mostrar avisos se houver
     if (configValidation.warnings.length > 0) {
-      console.warn('Avisos na concessão de XP:', configValidation.warnings);
+      console.warn("Avisos na concessão de XP:", configValidation.warnings);
     }
 
     // Conceder XP avulso
     const xpGrant = await XpAvulsoService.grantXp(grantData);
 
     // Registrar log de auditoria
-    await AuditLogger.logAdminAction(
-      session.user.id,
-      'XP_GRANT_CREATED',
-      {
-        grantId: xpGrant.id,
-        attendantId: grantData.attendantId,
-        typeId: grantData.typeId,
-        points: xpGrant.points,
-        justification: grantData.justification
-      }
-    );
+    await AuditLogger.logAdminAction(session.user.id, "XP_GRANT_CREATED", {
+      grantId: xpGrant.id,
+      attendantId: grantData.attendantId,
+      typeId: grantData.typeId,
+      points: xpGrant.points,
+      justification: grantData.justification,
+    });
 
     // Preparar dados de resposta incluindo informações de notificação
     const responseData = {
       id: xpGrant.id,
       attendant: {
         id: xpGrant.attendant.id,
-        name: xpGrant.attendant.name
+        name: xpGrant.attendant.name,
       },
       type: {
         id: xpGrant.type.id,
         name: xpGrant.type.name,
-        points: xpGrant.type.points
+        points: xpGrant.type.points,
       },
       points: xpGrant.points,
       justification: xpGrant.justification,
       grantedAt: xpGrant.grantedAt,
       granter: {
         id: xpGrant.granter.id,
-        name: xpGrant.granter.name
-      }
+        name: xpGrant.granter.name,
+      },
     };
 
     // Adicionar dados de notificação se disponíveis
@@ -134,7 +144,7 @@ export async function POST(request: NextRequest) {
         typeName: notificationData.typeName,
         justification: notificationData.justification,
         levelUp: notificationData.levelUp,
-        achievementsUnlocked: notificationData.achievementsUnlocked
+        achievementsUnlocked: notificationData.achievementsUnlocked,
       };
     }
 
@@ -142,40 +152,40 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        message: 'XP avulso concedido com sucesso',
-        data: responseData
+        message: "XP avulso concedido com sucesso",
+        data: responseData,
       },
-      { 
+      {
         status: 201,
         headers: {
-          'X-RateLimit-Limit': '10',
-          'X-RateLimit-Remaining': limitResult.remaining.toString(),
-          'X-RateLimit-Reset': Math.ceil(limitResult.resetTime / 1000).toString()
-        }
-      }
+          "X-RateLimit-Limit": "10",
+          "X-RateLimit-Remaining": limitResult.remaining.toString(),
+          "X-RateLimit-Reset": Math.ceil(
+            limitResult.resetTime / 1000,
+          ).toString(),
+        },
+      },
     );
-
   } catch (error) {
-    console.error('Erro ao conceder XP avulso:', error);
+    console.error("Erro ao conceder XP avulso:", error);
 
     // Tratar erros específicos
     if (error instanceof Error) {
       // Erros de validação ou regras de negócio
-      if (error.message.includes('não encontrado') || 
-          error.message.includes('inativo') ||
-          error.message.includes('temporada') ||
-          error.message.includes('limite')) {
-        return NextResponse.json(
-          { error: error.message },
-          { status: 400 }
-        );
+      if (
+        error.message.includes("não encontrado") ||
+        error.message.includes("inativo") ||
+        error.message.includes("temporada") ||
+        error.message.includes("limite")
+      ) {
+        return NextResponse.json({ error: error.message }, { status: 400 });
       }
     }
 
     // Erro interno do servidor
     return NextResponse.json(
-      { error: 'Erro interno do servidor ao conceder XP avulso' },
-      { status: 500 }
+      { error: "Erro interno do servidor ao conceder XP avulso" },
+      { status: 500 },
     );
   }
 }
@@ -188,79 +198,84 @@ export async function GET(request: NextRequest) {
   try {
     // Verificar rate limiting
     const limitResult = await xpAvulsoRateLimiter.checkLimit(request);
-    
+
     if (!limitResult.allowed) {
       return NextResponse.json(
         {
-          error: 'Muitas tentativas. Tente novamente em alguns instantes.',
-          retryAfter: Math.ceil((limitResult.resetTime - Date.now()) / 1000)
+          error: "Muitas tentativas. Tente novamente em alguns instantes.",
+          retryAfter: Math.ceil((limitResult.resetTime - Date.now()) / 1000),
         },
-        { 
+        {
           status: 429,
           headers: {
-            'X-RateLimit-Limit': '30',
-            'X-RateLimit-Remaining': limitResult.remaining.toString(),
-            'X-RateLimit-Reset': Math.ceil(limitResult.resetTime / 1000).toString()
-          }
-        }
+            "X-RateLimit-Limit": "30",
+            "X-RateLimit-Remaining": limitResult.remaining.toString(),
+            "X-RateLimit-Reset": Math.ceil(
+              limitResult.resetTime / 1000,
+            ).toString(),
+          },
+        },
       );
     }
 
     // Verificar autenticação (supervisores e acima podem visualizar)
-    const authResult = await AuthMiddleware.checkAuth(request, AuthConfigs.supervisorAndAbove);
+    const authResult = await AuthMiddleware.checkAuth(
+      request,
+      AuthConfigs.supervisorAndAbove,
+    );
 
     if (!authResult.authorized) {
       return NextResponse.json(
         { error: authResult.error },
-        { status: authResult.statusCode || 401 }
+        { status: authResult.statusCode || 401 },
       );
     }
 
     // Obter parâmetros de query
     const { searchParams } = new URL(request.url);
-    
+
     // Construir filtros
     const filters: any = {
-      page: parseInt(searchParams.get('page') || '1'),
-      limit: parseInt(searchParams.get('limit') || '20')
+      page: parseInt(searchParams.get("page") || "1"),
+      limit: parseInt(searchParams.get("limit") || "20"),
     };
 
     // Filtros opcionais
-    if (searchParams.get('attendantId')) {
-      filters.attendantId = searchParams.get('attendantId');
+    if (searchParams.get("attendantId")) {
+      filters.attendantId = searchParams.get("attendantId");
     }
 
-    if (searchParams.get('typeId')) {
-      filters.typeId = searchParams.get('typeId');
+    if (searchParams.get("typeId")) {
+      filters.typeId = searchParams.get("typeId");
     }
 
-    if (searchParams.get('granterId')) {
-      filters.granterId = searchParams.get('granterId');
+    if (searchParams.get("granterId")) {
+      filters.granterId = searchParams.get("granterId");
     }
 
-    if (searchParams.get('startDate')) {
-      filters.startDate = new Date(searchParams.get('startDate')!);
+    if (searchParams.get("startDate")) {
+      filters.startDate = new Date(searchParams.get("startDate")!);
     }
 
-    if (searchParams.get('endDate')) {
-      filters.endDate = new Date(searchParams.get('endDate')!);
+    if (searchParams.get("endDate")) {
+      filters.endDate = new Date(searchParams.get("endDate")!);
     }
 
-    if (searchParams.get('minPoints')) {
-      filters.minPoints = parseInt(searchParams.get('minPoints')!);
+    if (searchParams.get("minPoints")) {
+      filters.minPoints = parseInt(searchParams.get("minPoints")!);
     }
 
-    if (searchParams.get('maxPoints')) {
-      filters.maxPoints = parseInt(searchParams.get('maxPoints')!);
+    if (searchParams.get("maxPoints")) {
+      filters.maxPoints = parseInt(searchParams.get("maxPoints")!);
     }
 
     // Parâmetros de ordenação
-    if (searchParams.get('sortBy')) {
-      filters.sortBy = searchParams.get('sortBy');
+    if (searchParams.get("sortBy")) {
+      filters.sortBy = searchParams.get("sortBy");
     }
 
-    if (searchParams.get('sortOrder')) {
-      filters.sortOrder = searchParams.get('sortOrder');
+    if (searchParams.get("sortOrder")) {
+      filters.sortOrder = searchParams.get("sortOrder");
     }
 
     // Validar filtros
@@ -269,36 +284,38 @@ export async function GET(request: NextRequest) {
     if (!validationResult.success) {
       return NextResponse.json(
         {
-          error: 'Parâmetros de filtro inválidos',
-          details: validationResult.error.errors.map(err => ({
-            field: err.path.join('.'),
-            message: err.message
-          }))
+          error: "Parâmetros de filtro inválidos",
+          details: validationResult.error.errors.map((err) => ({
+            field: err.path.join("."),
+            message: err.message,
+          })),
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Buscar histórico de concessões
-    const result = await XpAvulsoService.findGrantHistory(validationResult.data);
+    const result = await XpAvulsoService.findGrantHistory(
+      validationResult.data,
+    );
 
     // Retornar dados
     return NextResponse.json(
       {
         success: true,
         data: {
-          grants: result.grants.map(grant => ({
+          grants: result.grants.map((grant) => ({
             id: grant.id,
             attendant: {
               id: grant.attendant.id,
-              name: grant.attendant.name
+              name: grant.attendant.name,
             },
             type: {
               id: grant.type.id,
               name: grant.type.name,
               category: grant.type.category,
               icon: grant.type.icon,
-              color: grant.type.color
+              color: grant.type.color,
             },
             points: grant.points,
             justification: grant.justification,
@@ -306,32 +323,139 @@ export async function GET(request: NextRequest) {
             granter: {
               id: grant.granter.id,
               name: grant.granter.name,
-              role: grant.granter.role
-            }
+              role: grant.granter.role,
+            },
           })),
           pagination: {
             page: result.page,
             limit: validationResult.data.limit,
             total: result.total,
-            totalPages: result.totalPages
-          }
-        }
+            totalPages: result.totalPages,
+          },
+        },
       },
       {
         headers: {
-          'X-RateLimit-Limit': '30',
-          'X-RateLimit-Remaining': limitResult.remaining.toString(),
-          'X-RateLimit-Reset': Math.ceil(limitResult.resetTime / 1000).toString()
-        }
-      }
+          "X-RateLimit-Limit": "30",
+          "X-RateLimit-Remaining": limitResult.remaining.toString(),
+          "X-RateLimit-Reset": Math.ceil(
+            limitResult.resetTime / 1000,
+          ).toString(),
+        },
+      },
     );
-
   } catch (error) {
-    console.error('Erro ao buscar histórico de XP avulso:', error);
+    console.error("Erro ao buscar histórico de XP avulso:", error);
 
     return NextResponse.json(
-      { error: 'Erro interno do servidor ao buscar histórico' },
-      { status: 500 }
+      { error: "Erro interno do servidor ao buscar histórico" },
+      { status: 500 },
+    );
+  }
+}
+
+/**
+ * DELETE /api/gamification/xp-grants
+ * Deletar uma concessão de XP avulso (apenas SUPERADMIN)
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    // Verificar rate limiting
+    const limitResult = await xpGrantRateLimiter.checkLimit(request);
+
+    if (!limitResult.allowed) {
+      return NextResponse.json(
+        {
+          error: "Muitas tentativas. Tente novamente em alguns instantes.",
+          retryAfter: Math.ceil((limitResult.resetTime - Date.now()) / 1000),
+        },
+        {
+          status: 429,
+          headers: {
+            "X-RateLimit-Limit": "10",
+            "X-RateLimit-Remaining": limitResult.remaining.toString(),
+            "X-RateLimit-Reset": Math.ceil(
+              limitResult.resetTime / 1000,
+            ).toString(),
+          },
+        },
+      );
+    }
+
+    // Verificar autenticação e autorização (apenas SUPERADMIN)
+    const authResult = await AuthMiddleware.checkAuth(
+      request,
+      AuthConfigs.superAdminOnly,
+    );
+
+    if (!authResult.authorized) {
+      return NextResponse.json(
+        { error: authResult.error },
+        { status: authResult.statusCode || 401 },
+      );
+    }
+
+    const session = authResult.session!;
+
+    // Obter ID da concessão do corpo da requisição
+    const body = await request.json();
+    const { grantId } = body;
+
+    if (!grantId || typeof grantId !== "string") {
+      return NextResponse.json(
+        { error: "ID da concessão é obrigatório" },
+        { status: 400 },
+      );
+    }
+
+    // Deletar concessão de XP
+    const deletedGrant = await XpAvulsoService.deleteGrant(grantId);
+
+    // Registrar log de auditoria
+    await AuditLogger.logAdminAction(session.user.id, "XP_GRANT_DELETED", {
+      grantId: deletedGrant.id,
+      attendantId: deletedGrant.attendantId,
+      points: deletedGrant.points,
+      reason: "Deleted by SUPERADMIN",
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Concessão de XP deletada com sucesso",
+        data: {
+          id: deletedGrant.id,
+          attendantId: deletedGrant.attendantId,
+          points: deletedGrant.points,
+        },
+      },
+      {
+        status: 200,
+        headers: {
+          "X-RateLimit-Limit": "10",
+          "X-RateLimit-Remaining": limitResult.remaining.toString(),
+          "X-RateLimit-Reset": Math.ceil(
+            limitResult.resetTime / 1000,
+          ).toString(),
+        },
+      },
+    );
+  } catch (error) {
+    console.error("Erro ao deletar concessão de XP:", error);
+
+    // Tratar erros específicos
+    if (error instanceof Error) {
+      if (error.message.includes("não encontrado")) {
+        return NextResponse.json(
+          { error: "Concessão não encontrada" },
+          { status: 404 },
+        );
+      }
+    }
+
+    return NextResponse.json(
+      { error: "Erro interno do servidor ao deletar concessão" },
+      { status: 500 },
     );
   }
 }

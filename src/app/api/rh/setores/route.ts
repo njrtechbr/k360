@@ -1,44 +1,27 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { RHService } from '@/services/rhService';
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET() {
-  try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+/**
+ * API DEPRECIADA - Redirecionamento para /api/setores
+ *
+ * Esta API foi movida para /api/setores para seguir padrões REST consistentes.
+ * Mantenha este redirecionamento para compatibilidade com código existente.
+ */
 
-    const setores = await RHService.findAllSetores();
-    return NextResponse.json(setores);
-  } catch (error) {
-    console.error('Erro ao buscar setores:', error);
-    return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
-    );
-  }
+export async function GET(request: NextRequest) {
+  // Redirecionar para a nova API
+  const url = new URL("/api/setores", request.url);
+
+  // Preservar query parameters
+  const searchParams = new URL(request.url).searchParams;
+  searchParams.forEach((value, key) => {
+    url.searchParams.set(key, value);
+  });
+
+  return NextResponse.redirect(url, 301);
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user || !['SUPERADMIN', 'ADMIN'].includes(session.user.role)) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 403 });
-    }
-
-    const { name } = await request.json();
-    const setor = await RHService.createSetor({ name });
-    
-    return NextResponse.json(setor, { status: 201 });
-  } catch (error) {
-    console.error('Erro ao criar setor:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Erro interno do servidor' },
-      { status: 500 }
-    );
-  }
+  // Redirecionar para a nova API
+  const url = new URL("/api/setores", request.url);
+  return NextResponse.redirect(url, 301);
 }

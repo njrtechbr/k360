@@ -1,15 +1,15 @@
-import type { Evaluation, Attendant } from '@/lib/types';
-import { 
-  EvaluationSchema, 
-  CreateEvaluationSchema, 
+import type { Evaluation, Attendant } from "@/lib/types";
+import {
+  EvaluationSchema,
+  CreateEvaluationSchema,
   UpdateEvaluationSchema,
   EvaluationFiltersSchema,
   type EvaluationInput,
   type CreateEvaluationInput,
   type UpdateEvaluationInput,
-  type EvaluationFiltersInput
-} from '@/lib/validation';
-import { validateAndTransform, validateFormData } from '@/lib/validation-utils';
+  type EvaluationFiltersInput,
+} from "@/lib/validation";
+import { validateAndTransform, validateFormData } from "@/lib/validation-utils";
 
 export interface EvaluationFilters {
   attendantId?: string;
@@ -31,7 +31,7 @@ export interface EvaluationStats {
   satisfactionRate: number;
   commentsCount: number;
   lastEvaluation?: string;
-  trend: 'up' | 'down' | 'stable';
+  trend: "up" | "down" | "stable";
 }
 
 export interface EvaluationSummary {
@@ -45,18 +45,27 @@ export class EvaluationsService {
    */
   static filterEvaluations(
     evaluations: Evaluation[],
-    filters: EvaluationFiltersInput
+    filters: EvaluationFiltersInput,
   ): Evaluation[] {
     // Valida os filtros
-    const validatedFilters = validateAndTransform(EvaluationFiltersSchema, filters);
-    return evaluations.filter(evaluation => {
+    const validatedFilters = validateAndTransform(
+      EvaluationFiltersSchema,
+      filters,
+    );
+    return evaluations.filter((evaluation) => {
       // Filtro por atendente
-      if (validatedFilters.attendantId && evaluation.attendantId !== validatedFilters.attendantId) {
+      if (
+        validatedFilters.attendantId &&
+        evaluation.attendantId !== validatedFilters.attendantId
+      ) {
         return false;
       }
 
       // Filtro por nota
-      if (validatedFilters.rating && evaluation.nota !== validatedFilters.rating) {
+      if (
+        validatedFilters.rating &&
+        evaluation.nota !== validatedFilters.rating
+      ) {
         return false;
       }
 
@@ -88,18 +97,25 @@ export class EvaluationsService {
       }
 
       // Filtro por nota mínima
-      if (validatedFilters.minRating && evaluation.nota < validatedFilters.minRating) {
+      if (
+        validatedFilters.minRating &&
+        evaluation.nota < validatedFilters.minRating
+      ) {
         return false;
       }
 
       // Filtro por nota máxima
-      if (validatedFilters.maxRating && evaluation.nota > validatedFilters.maxRating) {
+      if (
+        validatedFilters.maxRating &&
+        evaluation.nota > validatedFilters.maxRating
+      ) {
         return false;
       }
 
       // Filtro por presença de comentário
       if (validatedFilters.hasComment !== undefined) {
-        const hasComment = evaluation.comentario && evaluation.comentario.trim().length > 0;
+        const hasComment =
+          evaluation.comentario && evaluation.comentario.trim().length > 0;
         if (validatedFilters.hasComment !== hasComment) {
           return false;
         }
@@ -120,29 +136,40 @@ export class EvaluationsService {
         ratingDistribution: {},
         satisfactionRate: 0,
         commentsCount: 0,
-        trend: 'stable'
+        trend: "stable",
       };
     }
 
     const total = evaluations.length;
-    const totalRating = evaluations.reduce((sum, evaluation) => sum + evaluation.nota, 0);
+    const totalRating = evaluations.reduce(
+      (sum, evaluation) => sum + evaluation.nota,
+      0,
+    );
     const averageRating = totalRating / total;
 
     // Distribuição de notas
     const ratingDistribution: Record<number, number> = {};
-    evaluations.forEach(evaluation => {
-      ratingDistribution[evaluation.nota] = (ratingDistribution[evaluation.nota] || 0) + 1;
+    evaluations.forEach((evaluation) => {
+      ratingDistribution[evaluation.nota] =
+        (ratingDistribution[evaluation.nota] || 0) + 1;
     });
 
     // Taxa de satisfação (notas 4 e 5)
-    const satisfiedCount = evaluations.filter(evaluation => evaluation.nota >= 4).length;
+    const satisfiedCount = evaluations.filter(
+      (evaluation) => evaluation.nota >= 4,
+    ).length;
     const satisfactionRate = (satisfiedCount / total) * 100;
 
     // Contagem de comentários
-    const commentsCount = evaluations.filter(evaluation => evaluation.comentario && evaluation.comentario.trim() !== '').length;
+    const commentsCount = evaluations.filter(
+      (evaluation) =>
+        evaluation.comentario && evaluation.comentario.trim() !== "",
+    ).length;
 
     // Última avaliação
-    const sortedByDate = [...evaluations].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+    const sortedByDate = [...evaluations].sort(
+      (a, b) => new Date(b.data).getTime() - new Date(a.data).getTime(),
+    );
     const lastEvaluation = sortedByDate[0]?.data;
 
     // Tendência (comparar últimos 30 dias com 30 dias anteriores)
@@ -150,19 +177,25 @@ export class EvaluationsService {
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
 
-    const recentEvals = evaluations.filter(evaluation => new Date(evaluation.data) >= thirtyDaysAgo);
-    const previousEvals = evaluations.filter(evaluation => {
+    const recentEvals = evaluations.filter(
+      (evaluation) => new Date(evaluation.data) >= thirtyDaysAgo,
+    );
+    const previousEvals = evaluations.filter((evaluation) => {
       const date = new Date(evaluation.data);
       return date >= sixtyDaysAgo && date < thirtyDaysAgo;
     });
 
-    let trend: 'up' | 'down' | 'stable' = 'stable';
+    let trend: "up" | "down" | "stable" = "stable";
     if (recentEvals.length > 0 && previousEvals.length > 0) {
-      const recentAvg = recentEvals.reduce((sum, evaluation) => sum + evaluation.nota, 0) / recentEvals.length;
-      const previousAvg = previousEvals.reduce((sum, evaluation) => sum + evaluation.nota, 0) / previousEvals.length;
-      
-      if (recentAvg > previousAvg + 0.1) trend = 'up';
-      else if (recentAvg < previousAvg - 0.1) trend = 'down';
+      const recentAvg =
+        recentEvals.reduce((sum, evaluation) => sum + evaluation.nota, 0) /
+        recentEvals.length;
+      const previousAvg =
+        previousEvals.reduce((sum, evaluation) => sum + evaluation.nota, 0) /
+        previousEvals.length;
+
+      if (recentAvg > previousAvg + 0.1) trend = "up";
+      else if (recentAvg < previousAvg - 0.1) trend = "down";
     }
 
     return {
@@ -172,7 +205,7 @@ export class EvaluationsService {
       satisfactionRate,
       commentsCount,
       lastEvaluation,
-      trend
+      trend,
     };
   }
 
@@ -181,25 +214,25 @@ export class EvaluationsService {
    */
   static sortEvaluations(
     evaluations: Evaluation[],
-    sortBy: 'date' | 'rating' | 'attendant',
-    order: 'asc' | 'desc' = 'desc'
+    sortBy: "date" | "rating" | "attendant",
+    order: "asc" | "desc" = "desc",
   ): Evaluation[] {
     return [...evaluations].sort((a, b) => {
       let comparison = 0;
 
       switch (sortBy) {
-        case 'date':
+        case "date":
           comparison = new Date(a.data).getTime() - new Date(b.data).getTime();
           break;
-        case 'rating':
+        case "rating":
           comparison = a.nota - b.nota;
           break;
-        case 'attendant':
+        case "attendant":
           comparison = a.attendantId.localeCompare(b.attendantId);
           break;
       }
 
-      return order === 'asc' ? comparison : -comparison;
+      return order === "asc" ? comparison : -comparison;
     });
   }
 
@@ -208,13 +241,14 @@ export class EvaluationsService {
    */
   static createEvaluationSummaries(
     evaluations: Evaluation[],
-    attendants: Attendant[]
+    attendants: Attendant[],
   ): EvaluationSummary[] {
-    const attendantMap = new Map(attendants.map(att => [att.id, att.name]));
+    const attendantMap = new Map(attendants.map((att) => [att.id, att.name]));
 
-    return evaluations.map(evaluation => ({
+    return evaluations.map((evaluation) => ({
       evaluation,
-      attendantName: attendantMap.get(evaluation.attendantId) || 'Atendente não encontrado'
+      attendantName:
+        attendantMap.get(evaluation.attendantId) || "Atendente não encontrado",
     }));
   }
 
@@ -224,16 +258,21 @@ export class EvaluationsService {
   static searchEvaluations(
     evaluations: Evaluation[],
     attendants: Attendant[],
-    searchTerm: string
+    searchTerm: string,
   ): Evaluation[] {
     if (!searchTerm.trim()) return evaluations;
 
     const searchLower = searchTerm.toLowerCase();
-    const attendantMap = new Map(attendants.map(att => [att.id, att.name.toLowerCase()]));
+    const attendantMap = new Map(
+      attendants.map((att) => [att.id, att.name.toLowerCase()]),
+    );
 
-    return evaluations.filter(evaluation => {
+    return evaluations.filter((evaluation) => {
       // Busca no comentário
-      if (evaluation.comentario && evaluation.comentario.toLowerCase().includes(searchLower)) {
+      if (
+        evaluation.comentario &&
+        evaluation.comentario.toLowerCase().includes(searchLower)
+      ) {
         return true;
       }
 
@@ -252,9 +291,9 @@ export class EvaluationsService {
    */
   static getRecentEvaluations(
     evaluations: Evaluation[],
-    limit: number = 5
+    limit: number = 5,
   ): Evaluation[] {
-    return this.sortEvaluations(evaluations, 'date', 'desc').slice(0, limit);
+    return this.sortEvaluations(evaluations, "date", "desc").slice(0, limit);
   }
 
   /**
@@ -293,21 +332,32 @@ export class EvaluationsService {
   /**
    * Buscar avaliação por ID
    */
-  static getById(evaluations: Evaluation[], id: string): Evaluation | undefined {
-    return evaluations.find(evaluation => evaluation.id === id);
+  static getById(
+    evaluations: Evaluation[],
+    id: string,
+  ): Evaluation | undefined {
+    return evaluations.find((evaluation) => evaluation.id === id);
   }
 
   /**
    * Filtrar avaliações por atendente
    */
-  static filterByAttendant(evaluations: Evaluation[], attendantId: string): Evaluation[] {
-    return evaluations.filter(evaluation => evaluation.attendantId === attendantId);
+  static filterByAttendant(
+    evaluations: Evaluation[],
+    attendantId: string,
+  ): Evaluation[] {
+    return evaluations.filter(
+      (evaluation) => evaluation.attendantId === attendantId,
+    );
   }
 
   /**
    * Filtrar avaliações (alias para filterEvaluations)
    */
-  static filter(evaluations: Evaluation[], filters: EvaluationFiltersInput): Evaluation[] {
+  static filter(
+    evaluations: Evaluation[],
+    filters: EvaluationFiltersInput,
+  ): Evaluation[] {
     return this.filterEvaluations(evaluations, filters);
   }
 
@@ -317,17 +367,23 @@ export class EvaluationsService {
   static search(evaluations: Evaluation[], searchTerm: string): Evaluation[] {
     // Para manter compatibilidade, vamos buscar apenas no comentário
     if (!searchTerm.trim()) return evaluations;
-    
+
     const searchLower = searchTerm.toLowerCase();
-    return evaluations.filter(evaluation => {
-      return evaluation.comentario && evaluation.comentario.toLowerCase().includes(searchLower);
+    return evaluations.filter((evaluation) => {
+      return (
+        evaluation.comentario &&
+        evaluation.comentario.toLowerCase().includes(searchLower)
+      );
     });
   }
 
   /**
    * Obter avaliações recentes (alias para getRecentEvaluations)
    */
-  static getRecent(evaluations: Evaluation[], limit: number = 10): Evaluation[] {
+  static getRecent(
+    evaluations: Evaluation[],
+    limit: number = 10,
+  ): Evaluation[] {
     return this.getRecentEvaluations(evaluations, limit);
   }
 
@@ -345,7 +401,7 @@ export class EvaluationsService {
       totalEvaluations: stats.total,
       averageRating: stats.averageRating,
       satisfactionRate: stats.satisfactionRate,
-      commentsCount: stats.commentsCount
+      commentsCount: stats.commentsCount,
     };
   }
 }

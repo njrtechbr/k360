@@ -1,20 +1,26 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Plus, 
-  FileText, 
-  Users, 
-  BarChart3, 
-  Settings, 
+import {
+  Plus,
+  FileText,
+  Users,
+  BarChart3,
+  Settings,
   Download,
   Upload,
   Zap,
   Trophy,
   Calendar,
-  MessageSquare
+  MessageSquare,
 } from "lucide-react";
 import Link from "next/link";
 import { ROLES } from "@/lib/types";
@@ -34,11 +40,11 @@ interface QuickAction {
   description: string;
   icon: React.ElementType;
   href: string;
-  variant: 'default' | 'outline' | 'secondary';
+  variant: "default" | "outline" | "secondary";
   color: string;
   badge?: {
     text: string;
-    variant: 'default' | 'secondary' | 'destructive' | 'outline';
+    variant: "default" | "secondary" | "destructive" | "outline";
   };
   requiredRoles?: string[];
 }
@@ -46,111 +52,121 @@ interface QuickAction {
 export function QuickActions({ userRole, stats }: QuickActionsProps) {
   const quickActions: QuickAction[] = [
     {
-      id: 'add-attendant',
-      title: 'Novo Atendente',
-      description: 'Cadastrar novo membro da equipe',
+      id: "add-attendant",
+      title: "Novo Atendente",
+      description: "Cadastrar novo membro da equipe",
       icon: Users,
-      href: '/dashboard/rh/atendentes/novo',
-      variant: 'default',
-      color: 'text-blue-500',
-      requiredRoles: [ROLES.ADMIN, ROLES.SUPERADMIN]
+      href: "/dashboard/rh/atendentes/novo",
+      variant: "default",
+      color: "text-blue-500",
+      requiredRoles: [ROLES.ADMIN, ROLES.SUPERADMIN],
     },
     {
-      id: 'new-evaluation',
-      title: 'Nova Avaliação',
-      description: 'Registrar avaliação de atendimento',
+      id: "new-evaluation",
+      title: "Nova Avaliação",
+      description: "Registrar avaliação de atendimento",
       icon: MessageSquare,
-      href: '/dashboard/pesquisa-satisfacao/avaliacoes/nova',
-      variant: 'default',
-      color: 'text-green-500'
+      href: "/dashboard/pesquisa-satisfacao/avaliacoes/nova",
+      variant: "default",
+      color: "text-green-500",
     },
     {
-      id: 'view-reports',
-      title: 'Relatórios',
-      description: 'Visualizar relatórios e análises',
+      id: "view-reports",
+      title: "Relatórios",
+      description: "Visualizar relatórios e análises",
       icon: BarChart3,
-      href: '/dashboard/pesquisa-satisfacao/relatorios',
-      variant: 'outline',
-      color: 'text-purple-500'
+      href: "/dashboard/pesquisa-satisfacao/relatorios",
+      variant: "outline",
+      color: "text-purple-500",
     },
     {
-      id: 'gamification',
-      title: 'Gamificação',
-      description: 'Gerenciar conquistas e temporadas',
+      id: "gamification",
+      title: "Gamificação",
+      description: "Gerenciar conquistas e temporadas",
       icon: Trophy,
-      href: '/dashboard/gamificacao',
-      variant: 'outline',
-      color: 'text-amber-500',
-      badge: stats?.newAchievements ? {
-        text: `${stats.newAchievements} novas`,
-        variant: 'secondary'
-      } : undefined
+      href: "/dashboard/gamificacao",
+      variant: "outline",
+      color: "text-amber-500",
+      badge: stats?.newAchievements
+        ? {
+            text: `${stats.newAchievements} novas`,
+            variant: "secondary",
+          }
+        : undefined,
     },
     {
-      id: 'import-data',
-      title: 'Importar Dados',
-      description: 'Importar avaliações via CSV',
+      id: "import-data",
+      title: "Importar Dados",
+      description: "Importar avaliações via CSV",
       icon: Upload,
-      href: '/dashboard/pesquisa-satisfacao/importar',
-      variant: 'outline',
-      color: 'text-indigo-500',
-      requiredRoles: [ROLES.ADMIN, ROLES.SUPERADMIN]
+      href: "/dashboard/pesquisa-satisfacao/importar",
+      variant: "outline",
+      color: "text-indigo-500",
+      requiredRoles: [ROLES.ADMIN, ROLES.SUPERADMIN],
     },
     {
-      id: 'export-data',
-      title: 'Exportar Dados',
-      description: 'Baixar relatórios em Excel/PDF',
+      id: "export-data",
+      title: "Exportar Dados",
+      description: "Baixar relatórios em Excel/PDF",
       icon: Download,
-      href: '/dashboard/pesquisa-satisfacao/exportar',
-      variant: 'outline',
-      color: 'text-teal-500'
+      href: "/dashboard/pesquisa-satisfacao/exportar",
+      variant: "outline",
+      color: "text-teal-500",
     },
     {
-      id: 'manage-seasons',
-      title: 'Temporadas',
-      description: 'Gerenciar temporadas de gamificação',
+      id: "manage-seasons",
+      title: "Temporadas",
+      description: "Gerenciar temporadas de gamificação",
       icon: Calendar,
-      href: '/dashboard/gamificacao/temporadas',
-      variant: 'secondary',
-      color: 'text-orange-500',
-      badge: stats?.activeSeasons ? {
-        text: `${stats.activeSeasons} ativas`,
-        variant: 'outline'
-      } : undefined,
-      requiredRoles: [ROLES.ADMIN, ROLES.SUPERADMIN]
+      href: "/dashboard/gamificacao/temporadas",
+      variant: "secondary",
+      color: "text-orange-500",
+      badge: stats?.activeSeasons
+        ? {
+            text: `${stats.activeSeasons} ativas`,
+            variant: "outline",
+          }
+        : undefined,
+      requiredRoles: [ROLES.ADMIN, ROLES.SUPERADMIN],
     },
     {
-      id: 'system-settings',
-      title: 'Configurações',
-      description: 'Configurar sistema e permissões',
+      id: "system-settings",
+      title: "Configurações",
+      description: "Configurar sistema e permissões",
       icon: Settings,
-      href: '/dashboard/configuracoes',
-      variant: 'secondary',
-      color: 'text-gray-500',
-      requiredRoles: [ROLES.ADMIN, ROLES.SUPERADMIN]
+      href: "/dashboard/configuracoes",
+      variant: "secondary",
+      color: "text-gray-500",
+      requiredRoles: [ROLES.ADMIN, ROLES.SUPERADMIN],
     },
     {
-      id: 'xp-management',
-      title: 'XP Avulso',
-      description: 'Conceder XP manual aos atendentes',
+      id: "xp-management",
+      title: "XP Avulso",
+      description: "Conceder XP manual aos atendentes",
       icon: Zap,
-      href: '/dashboard/gamificacao/xp-avulso',
-      variant: 'outline',
-      color: 'text-yellow-500',
-      requiredRoles: [ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.SUPERVISOR]
-    }
+      href: "/dashboard/gamificacao/xp-avulso",
+      variant: "outline",
+      color: "text-yellow-500",
+      requiredRoles: [ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.SUPERVISOR],
+    },
   ];
 
   // Filtrar ações baseadas no role do usuário
-  const availableActions = quickActions.filter(action => {
+  const availableActions = quickActions.filter((action) => {
     if (!action.requiredRoles) return true;
     return action.requiredRoles.includes(userRole);
   });
 
   // Organizar ações por categoria
-  const primaryActions = availableActions.filter(action => action.variant === 'default');
-  const secondaryActions = availableActions.filter(action => action.variant === 'outline');
-  const utilityActions = availableActions.filter(action => action.variant === 'secondary');
+  const primaryActions = availableActions.filter(
+    (action) => action.variant === "default",
+  );
+  const secondaryActions = availableActions.filter(
+    (action) => action.variant === "outline",
+  );
+  const utilityActions = availableActions.filter(
+    (action) => action.variant === "secondary",
+  );
 
   const renderActionButton = (action: QuickAction) => (
     <Button
@@ -170,7 +186,9 @@ export function QuickActions({ userRole, stats }: QuickActionsProps) {
         </div>
         <div className="text-left">
           <div className="font-medium text-sm">{action.title}</div>
-          <div className="text-xs text-muted-foreground">{action.description}</div>
+          <div className="text-xs text-muted-foreground">
+            {action.description}
+          </div>
         </div>
       </Link>
     </Button>
@@ -246,7 +264,8 @@ export function QuickActions({ userRole, stats }: QuickActionsProps) {
                 Nenhuma ação rápida disponível para seu nível de acesso atual.
               </p>
               <p className="text-sm text-muted-foreground mt-2">
-                Entre em contato com um administrador para solicitar permissões adicionais.
+                Entre em contato com um administrador para solicitar permissões
+                adicionais.
               </p>
             </div>
           </CardContent>

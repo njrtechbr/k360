@@ -1,9 +1,9 @@
-import * as React from "react"
-import { AlertTriangle, Loader2, RefreshCw } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Skeleton } from "@/components/ui/skeleton"
+import * as React from "react";
+import { AlertTriangle, Loader2, RefreshCw } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 
 /**
  * Props para o componente DataValidator
@@ -41,10 +41,10 @@ interface DataValidatorProps<T> {
 
 /**
  * Componente genérico para validação de dados com estados de loading e error
- * 
+ *
  * Este componente wrapper fornece validação robusta de dados e renderização
  * condicional baseada no estado dos dados (loading, error, empty, valid).
- * 
+ *
  * @example
  * ```tsx
  * <DataValidator
@@ -76,19 +76,25 @@ export function DataValidator<T>({
   className,
   enableWarnings = true,
   emptyMessage = "Nenhum dado disponível",
-  treatEmptyArrayAsEmpty = true
+  treatEmptyArrayAsEmpty = true,
 }: DataValidatorProps<T>) {
   // Estado de loading
   if (loading) {
     if (loadingComponent) {
-      return <div className={cn("data-validator-loading", className)}>{loadingComponent}</div>;
+      return (
+        <div className={cn("data-validator-loading", className)}>
+          {loadingComponent}
+        </div>
+      );
     }
-    
+
     return (
       <div className={cn("data-validator-loading space-y-4", className)}>
         <div className="flex items-center space-x-2">
           <Loader2 className="h-4 w-4 animate-spin" />
-          <span className="text-sm text-muted-foreground">Carregando dados...</span>
+          <span className="text-sm text-muted-foreground">
+            Carregando dados...
+          </span>
         </div>
         <div className="space-y-2">
           <Skeleton className="h-4 w-full" />
@@ -102,7 +108,11 @@ export function DataValidator<T>({
   // Estado de erro
   if (error) {
     if (errorComponent) {
-      return <div className={cn("data-validator-error", className)}>{errorComponent}</div>;
+      return (
+        <div className={cn("data-validator-error", className)}>
+          {errorComponent}
+        </div>
+      );
     }
 
     return (
@@ -138,7 +148,9 @@ export function DataValidator<T>({
     // Se dados são null ou undefined, usa fallback
     if (data === null || data === undefined) {
       if (enableWarnings) {
-        console.warn('DataValidator: Dados são null ou undefined, usando fallback');
+        console.warn(
+          "DataValidator: Dados são null ou undefined, usando fallback",
+        );
       }
       validData = fallback;
       isValid = false;
@@ -146,11 +158,14 @@ export function DataValidator<T>({
     // Se há validador customizado, usa ele
     else if (validator && !validator(data)) {
       if (enableWarnings) {
-        console.warn('DataValidator: Dados falharam na validação customizada, usando fallback', data);
+        console.warn(
+          "DataValidator: Dados falharam na validação customizada, usando fallback",
+          data,
+        );
       }
       validData = fallback;
       isValid = false;
-      validationError = 'Dados não passaram na validação';
+      validationError = "Dados não passaram na validação";
     }
     // Caso contrário, usa os dados fornecidos
     else {
@@ -158,24 +173,30 @@ export function DataValidator<T>({
     }
   } catch (err) {
     if (enableWarnings) {
-      console.error('DataValidator: Erro durante validação', err);
+      console.error("DataValidator: Erro durante validação", err);
     }
     validData = fallback;
     isValid = false;
-    validationError = err instanceof Error ? err.message : 'Erro desconhecido na validação';
+    validationError =
+      err instanceof Error ? err.message : "Erro desconhecido na validação";
   }
 
   // Verifica se dados estão vazios (para arrays)
   // Só considera vazio se os dados originais eram válidos mas resultaram em array vazio
-  const isEmpty = treatEmptyArrayAsEmpty && 
-    Array.isArray(validData) && 
+  const isEmpty =
+    treatEmptyArrayAsEmpty &&
+    Array.isArray(validData) &&
     validData.length === 0 &&
     isValid; // Só mostra estado vazio se dados eram válidos originalmente
 
   // Estado vazio
   if (isEmpty) {
     if (emptyComponent) {
-      return <div className={cn("data-validator-empty", className)}>{emptyComponent}</div>;
+      return (
+        <div className={cn("data-validator-empty", className)}>
+          {emptyComponent}
+        </div>
+      );
     }
 
     return (
@@ -206,7 +227,9 @@ export function DataValidator<T>({
 
   // Se houve erro de validação mas temos fallback, mostra aviso
   if (!isValid && validationError && enableWarnings) {
-    console.warn('DataValidator: Renderizando com dados de fallback devido a erro de validação');
+    console.warn(
+      "DataValidator: Renderizando com dados de fallback devido a erro de validação",
+    );
   }
 
   // Renderiza conteúdo com dados válidos
@@ -220,12 +243,20 @@ export function DataValidator<T>({
 /**
  * Componente de loading padrão para tabelas
  */
-export function LoadingTable({ rows = 5, columns = 4 }: { rows?: number; columns?: number }) {
+export function LoadingTable({
+  rows = 5,
+  columns = 4,
+}: {
+  rows?: number;
+  columns?: number;
+}) {
   return (
     <div className="space-y-4">
       <div className="flex items-center space-x-2">
         <Loader2 className="h-4 w-4 animate-spin" />
-        <span className="text-sm text-muted-foreground">Carregando tabela...</span>
+        <span className="text-sm text-muted-foreground">
+          Carregando tabela...
+        </span>
       </div>
       <div className="border rounded-lg">
         <div className="border-b p-4">
@@ -273,12 +304,12 @@ export function LoadingCard() {
 /**
  * Componente de erro padrão para tabelas
  */
-export function ErrorTable({ 
-  error, 
-  onRetry 
-}: { 
-  error: string; 
-  onRetry?: () => void; 
+export function ErrorTable({
+  error,
+  onRetry,
+}: {
+  error: string;
+  onRetry?: () => void;
 }) {
   return (
     <div className="border rounded-lg p-8">
@@ -307,12 +338,12 @@ export function ErrorTable({
 /**
  * Componente de estado vazio padrão para tabelas
  */
-export function EmptyTable({ 
+export function EmptyTable({
   message = "Nenhum dado encontrado",
-  onRetry 
-}: { 
+  onRetry,
+}: {
   message?: string;
-  onRetry?: () => void; 
+  onRetry?: () => void;
 }) {
   return (
     <div className="border rounded-lg p-8 text-center">
@@ -323,11 +354,7 @@ export function EmptyTable({
           <p className="text-sm text-muted-foreground mt-1">{message}</p>
         </div>
         {onRetry && (
-          <Button
-            variant="outline"
-            onClick={onRetry}
-            className="h-8"
-          >
+          <Button variant="outline" onClick={onRetry} className="h-8">
             <RefreshCw className="h-3 w-3 mr-2" />
             Recarregar
           </Button>

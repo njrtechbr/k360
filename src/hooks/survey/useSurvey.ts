@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import type { Evaluation, Attendant } from '@/lib/types';
+import { useState, useCallback } from "react";
+import { useToast } from "@/hooks/use-toast";
+import type { Evaluation, Attendant } from "@/lib/types";
 
 interface SubmitEvaluationData {
   rating: number;
@@ -21,59 +21,63 @@ export function useSurvey({ attendant, onSuccess, onError }: UseSurveyProps) {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const submitEvaluation = useCallback(async (data: SubmitEvaluationData) => {
-    if (isSubmitting || isSubmitted) return;
+  const submitEvaluation = useCallback(
+    async (data: SubmitEvaluationData) => {
+      if (isSubmitting || isSubmitted) return;
 
-    setIsSubmitting(true);
-    setError(null);
+      setIsSubmitting(true);
+      setError(null);
 
-    try {
-      const response = await fetch('/api/evaluations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          attendantId: attendant.id,
-          nota: data.rating,
-          comentario: data.comment,
-        }),
-      });
+      try {
+        const response = await fetch("/api/evaluations", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            attendantId: attendant.id,
+            nota: data.rating,
+            comentario: data.comment,
+          }),
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Erro ao enviar avaliação');
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || "Erro ao enviar avaliação");
+        }
+
+        const evaluation = await response.json();
+
+        setIsSubmitted(true);
+
+        toast({
+          title: "Avaliação enviada!",
+          description: "Obrigado pelo seu feedback.",
+          variant: "default",
+        });
+
+        onSuccess?.(evaluation);
+
+        return evaluation;
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Erro desconhecido";
+        setError(errorMessage);
+
+        toast({
+          title: "Erro ao enviar avaliação",
+          description: errorMessage,
+          variant: "destructive",
+        });
+
+        onError?.(err instanceof Error ? err : new Error(errorMessage));
+        throw err;
+      } finally {
+        setIsSubmitting(false);
       }
-
-      const evaluation = await response.json();
-      
-      setIsSubmitted(true);
-      
-      toast({
-        title: 'Avaliação enviada!',
-        description: 'Obrigado pelo seu feedback.',
-        variant: 'default',
-      });
-
-      onSuccess?.(evaluation);
-      
-      return evaluation;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
-      setError(errorMessage);
-      
-      toast({
-        title: 'Erro ao enviar avaliação',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-
-      onError?.(err instanceof Error ? err : new Error(errorMessage));
-      throw err;
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [attendant.id, isSubmitting, isSubmitted, toast, onSuccess, onError]);
+    },
+    [attendant.id, isSubmitting, isSubmitted, toast, onSuccess, onError],
+  );
 
   const reset = useCallback(() => {
     setIsSubmitting(false);

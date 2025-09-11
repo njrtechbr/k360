@@ -1,7 +1,6 @@
-
 "use client";
 
-import { usePrisma } from "@/providers/PrismaProvider";
+import { useApi } from "@/providers/ApiProvider";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -18,26 +17,34 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
 import { Star, TrendingDown, TrendingUp } from "lucide-react";
 import { ROLES } from "@/lib/types";
 
 const formSchema = z.object({
-  '5': z.coerce.number(),
-  '4': z.coerce.number(),
-  '3': z.coerce.number(),
-  '2': z.coerce.number(),
-  '1': z.coerce.number(),
+  "5": z.coerce.number(),
+  "4": z.coerce.number(),
+  "3": z.coerce.number(),
+  "2": z.coerce.number(),
+  "1": z.coerce.number(),
 });
 
 export default function GamificacaoPontosPage() {
   const { data: session, status } = useSession();
-  const { gamificationConfig, updateGamificationConfig, appLoading } = usePrisma();
+  const { gamificationConfig, updateGamificationConfig, isAnyLoading } =
+    useApi();
   const router = useRouter();
-  
+
   const user = session?.user;
   const isAuthenticated = !!session;
-  const loading = status === "loading" || appLoading;
+  const loading = status === "loading" || isAnyLoading;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -47,7 +54,11 @@ export default function GamificacaoPontosPage() {
   });
 
   useEffect(() => {
-    if (!loading && (!isAuthenticated || (user?.role !== ROLES.ADMIN && user?.role !== ROLES.SUPERADMIN))) {
+    if (
+      !loading &&
+      (!isAuthenticated ||
+        (user?.role !== ROLES.ADMIN && user?.role !== ROLES.SUPERADMIN))
+    ) {
       router.push("/dashboard");
     }
   }, [isAuthenticated, loading, router, user]);
@@ -69,7 +80,11 @@ export default function GamificacaoPontosPage() {
   }
 
   if (loading || !user) {
-    return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p>Carregando...</p>
+      </div>
+    );
   }
 
   return (
@@ -77,7 +92,8 @@ export default function GamificacaoPontosPage() {
       <div>
         <h1 className="text-3xl font-bold">Pontos Base por Avaliação</h1>
         <p className="text-muted-foreground">
-          Defina os valores de XP que são a base para o cálculo da pontuação, antes da aplicação de quaisquer multiplicadores.
+          Defina os valores de XP que são a base para o cálculo da pontuação,
+          antes da aplicação de quaisquer multiplicadores.
         </p>
       </div>
 
@@ -85,10 +101,11 @@ export default function GamificacaoPontosPage() {
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <Card>
             <CardHeader className="pt-0 mt-6">
-                <CardTitle>Pontos de Experiência (XP) Base</CardTitle>
-                <CardDescription>
-                  Esses valores são a base para o cálculo da pontuação, antes dos multiplicadores.
-                </CardDescription>
+              <CardTitle>Pontos de Experiência (XP) Base</CardTitle>
+              <CardDescription>
+                Esses valores são a base para o cálculo da pontuação, antes dos
+                multiplicadores.
+              </CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {[5, 4, 3, 2, 1].map((rating) => (
@@ -99,11 +116,17 @@ export default function GamificacaoPontosPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center text-lg gap-2">
-                        <Star className={`h-6 w-6 text-yellow-400 fill-yellow-400`} />
-                        {rating} Estrela{rating > 1 ? 's' : ''}
+                        <Star
+                          className={`h-6 w-6 text-yellow-400 fill-yellow-400`}
+                        />
+                        {rating} Estrela{rating > 1 ? "s" : ""}
                       </FormLabel>
                       <div className="flex items-center gap-2">
-                         {Number(field.value) >= 0 ? <TrendingUp className="text-green-500" /> : <TrendingDown className="text-red-500" />}
+                        {Number(field.value) >= 0 ? (
+                          <TrendingUp className="text-green-500" />
+                        ) : (
+                          <TrendingDown className="text-red-500" />
+                        )}
                         <FormControl>
                           <Input type="number" className="w-24" {...field} />
                         </FormControl>
@@ -117,7 +140,9 @@ export default function GamificacaoPontosPage() {
             </CardContent>
             <CardFooter>
               <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
+                {form.formState.isSubmitting
+                  ? "Salvando..."
+                  : "Salvar Alterações"}
               </Button>
             </CardFooter>
           </Card>

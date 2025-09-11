@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest } from "next/server";
 
 // Interface para configuração de rate limiting
 interface RateLimitConfig {
@@ -31,7 +31,7 @@ export class RateLimiter {
   }> {
     try {
       // Gerar chave única para o cliente
-      const key = this.config.keyGenerator 
+      const key = this.config.keyGenerator
         ? this.config.keyGenerator(request)
         : this.getDefaultKey(request);
 
@@ -43,12 +43,12 @@ export class RateLimiter {
 
       // Obter ou criar entrada para a chave
       let entry = requestCounts.get(key);
-      
+
       if (!entry || entry.resetTime <= now) {
         // Criar nova entrada ou resetar se expirou
         entry = {
           count: 0,
-          resetTime: now + this.config.windowMs
+          resetTime: now + this.config.windowMs,
         };
       }
 
@@ -64,15 +64,15 @@ export class RateLimiter {
         allowed,
         remaining,
         resetTime: entry.resetTime,
-        error: allowed ? undefined : 'Rate limit exceeded'
+        error: allowed ? undefined : "Rate limit exceeded",
       };
     } catch (error) {
-      console.error('Erro no rate limiting:', error);
+      console.error("Erro no rate limiting:", error);
       // Em caso de erro, permitir o request
       return {
         allowed: true,
         remaining: this.config.maxRequests,
-        resetTime: Date.now() + this.config.windowMs
+        resetTime: Date.now() + this.config.windowMs,
       };
     }
   }
@@ -82,10 +82,10 @@ export class RateLimiter {
    */
   private getDefaultKey(request: NextRequest): string {
     // Tentar obter IP real
-    const forwarded = request.headers.get('x-forwarded-for');
-    const realIp = request.headers.get('x-real-ip');
-    const ip = forwarded?.split(',')[0] || realIp || 'unknown';
-    
+    const forwarded = request.headers.get("x-forwarded-for");
+    const realIp = request.headers.get("x-real-ip");
+    const ip = forwarded?.split(",")[0] || realIp || "unknown";
+
     return `rate_limit:${ip}`;
   }
 
@@ -109,13 +109,13 @@ export const xpAvulsoRateLimiter = new RateLimiter({
   maxRequests: 30, // 30 requests por minuto
   keyGenerator: (request: NextRequest) => {
     // Usar IP + User-Agent para identificação mais precisa
-    const forwarded = request.headers.get('x-forwarded-for');
-    const realIp = request.headers.get('x-real-ip');
-    const ip = forwarded?.split(',')[0] || realIp || 'unknown';
-    const userAgent = request.headers.get('user-agent') || 'unknown';
-    
+    const forwarded = request.headers.get("x-forwarded-for");
+    const realIp = request.headers.get("x-real-ip");
+    const ip = forwarded?.split(",")[0] || realIp || "unknown";
+    const userAgent = request.headers.get("user-agent") || "unknown";
+
     return `xp_avulso:${ip}:${userAgent.slice(0, 50)}`;
-  }
+  },
 });
 
 /**
@@ -125,12 +125,12 @@ export const xpGrantRateLimiter = new RateLimiter({
   windowMs: 60 * 1000, // 1 minuto
   maxRequests: 10, // 10 concessões por minuto
   keyGenerator: (request: NextRequest) => {
-    const forwarded = request.headers.get('x-forwarded-for');
-    const realIp = request.headers.get('x-real-ip');
-    const ip = forwarded?.split(',')[0] || realIp || 'unknown';
-    
+    const forwarded = request.headers.get("x-forwarded-for");
+    const realIp = request.headers.get("x-real-ip");
+    const ip = forwarded?.split(",")[0] || realIp || "unknown";
+
     return `xp_grant:${ip}`;
-  }
+  },
 });
 
 /**
@@ -138,7 +138,7 @@ export const xpGrantRateLimiter = new RateLimiter({
  */
 export function withRateLimit(
   rateLimiter: RateLimiter,
-  handler: (request: NextRequest, ...args: any[]) => Promise<Response>
+  handler: (request: NextRequest, ...args: any[]) => Promise<Response>,
 ) {
   return async (request: NextRequest, ...args: any[]): Promise<Response> => {
     // Verificar rate limit
@@ -146,24 +146,30 @@ export function withRateLimit(
 
     // Adicionar headers de rate limiting
     const headers = new Headers();
-    headers.set('X-RateLimit-Limit', rateLimiter['config'].maxRequests.toString());
-    headers.set('X-RateLimit-Remaining', limitResult.remaining.toString());
-    headers.set('X-RateLimit-Reset', Math.ceil(limitResult.resetTime / 1000).toString());
+    headers.set(
+      "X-RateLimit-Limit",
+      rateLimiter["config"].maxRequests.toString(),
+    );
+    headers.set("X-RateLimit-Remaining", limitResult.remaining.toString());
+    headers.set(
+      "X-RateLimit-Reset",
+      Math.ceil(limitResult.resetTime / 1000).toString(),
+    );
 
     // Se excedeu o limite, retornar erro
     if (!limitResult.allowed) {
       return new Response(
         JSON.stringify({
-          error: 'Muitas tentativas. Tente novamente em alguns instantes.',
-          retryAfter: Math.ceil((limitResult.resetTime - Date.now()) / 1000)
+          error: "Muitas tentativas. Tente novamente em alguns instantes.",
+          retryAfter: Math.ceil((limitResult.resetTime - Date.now()) / 1000),
         }),
         {
           status: 429,
           headers: {
-            'Content-Type': 'application/json',
-            ...Object.fromEntries(headers.entries())
-          }
-        }
+            "Content-Type": "application/json",
+            ...Object.fromEntries(headers.entries()),
+          },
+        },
       );
     }
 

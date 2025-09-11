@@ -1,32 +1,32 @@
-import { BackupStorage } from '../backupStorage';
-import { BackupMetadata, BackupRegistry } from '@/types/backup';
-import { promises as fs } from 'fs';
-import path from 'path';
+import { BackupStorage } from "../backupStorage";
+import { BackupMetadata, BackupRegistry } from "@/types/backup";
+import { promises as fs } from "fs";
+import path from "path";
 
 // Mock do fs
-jest.mock('fs', () => ({
+jest.mock("fs", () => ({
   promises: {
     mkdir: jest.fn(),
     access: jest.fn(),
     readFile: jest.fn(),
     writeFile: jest.fn(),
-    unlink: jest.fn()
-  }
+    unlink: jest.fn(),
+  },
 }));
 
 const mockFs = fs as jest.Mocked<typeof fs>;
 
-describe('BackupStorage', () => {
-  const mockBackupDir = './test-backups';
-  const mockRegistryPath = path.join(mockBackupDir, 'registry.json');
+describe("BackupStorage", () => {
+  const mockBackupDir = "./test-backups";
+  const mockRegistryPath = path.join(mockBackupDir, "registry.json");
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Mock environment variables
     process.env.BACKUP_DIRECTORY = mockBackupDir;
-    process.env.BACKUP_RETENTION_DAYS = '30';
-    process.env.BACKUP_MAX_BACKUPS = '50';
+    process.env.BACKUP_RETENTION_DAYS = "30";
+    process.env.BACKUP_MAX_BACKUPS = "50";
   });
 
   afterEach(() => {
@@ -35,23 +35,28 @@ describe('BackupStorage', () => {
     delete process.env.BACKUP_MAX_BACKUPS;
   });
 
-  describe('initialize', () => {
-    it('deve criar diretórios e registry se não existirem', async () => {
-      mockFs.access.mockRejectedValueOnce(new Error('File not found'));
+  describe("initialize", () => {
+    it("deve criar diretórios e registry se não existirem", async () => {
+      mockFs.access.mockRejectedValueOnce(new Error("File not found"));
       mockFs.writeFile.mockResolvedValueOnce();
 
       await BackupStorage.initialize();
 
-      expect(mockFs.mkdir).toHaveBeenCalledWith(mockBackupDir, { recursive: true });
-      expect(mockFs.mkdir).toHaveBeenCalledWith(path.join(mockBackupDir, 'files'), { recursive: true });
+      expect(mockFs.mkdir).toHaveBeenCalledWith(mockBackupDir, {
+        recursive: true,
+      });
+      expect(mockFs.mkdir).toHaveBeenCalledWith(
+        path.join(mockBackupDir, "files"),
+        { recursive: true },
+      );
       expect(mockFs.writeFile).toHaveBeenCalledWith(
         mockRegistryPath,
         expect.stringContaining('"backups": []'),
-        'utf8'
+        "utf8",
       );
     });
 
-    it('não deve recriar registry se já existir', async () => {
+    it("não deve recriar registry se já existir", async () => {
       mockFs.access.mockResolvedValueOnce();
 
       await BackupStorage.initialize();
@@ -60,19 +65,19 @@ describe('BackupStorage', () => {
     });
   });
 
-  describe('addBackup', () => {
+  describe("addBackup", () => {
     const mockMetadata: BackupMetadata = {
-      id: 'test-backup-1',
-      filename: 'backup_2025-01-09_14-30-00.sql',
-      filepath: '/path/to/backup.sql',
+      id: "test-backup-1",
+      filename: "backup_2025-01-09_14-30-00.sql",
+      filepath: "/path/to/backup.sql",
       size: 1024,
-      checksum: 'abc123',
-      createdAt: new Date('2025-01-09T14:30:00Z'),
-      createdBy: 'admin',
-      status: 'success',
+      checksum: "abc123",
+      createdAt: new Date("2025-01-09T14:30:00Z"),
+      createdBy: "admin",
+      status: "success",
       duration: 5000,
-      databaseVersion: '15.0',
-      schemaVersion: '1.0'
+      databaseVersion: "15.0",
+      schemaVersion: "1.0",
     };
 
     beforeEach(() => {
@@ -82,8 +87,8 @@ describe('BackupStorage', () => {
         settings: {
           maxBackups: 50,
           retentionDays: 30,
-          defaultDirectory: mockBackupDir
-        }
+          defaultDirectory: mockBackupDir,
+        },
       };
 
       mockFs.access.mockResolvedValue();
@@ -91,60 +96,61 @@ describe('BackupStorage', () => {
       mockFs.writeFile.mockResolvedValue();
     });
 
-    it('deve adicionar novo backup ao registry', async () => {
+    it("deve adicionar novo backup ao registry", async () => {
       await BackupStorage.addBackup(mockMetadata);
 
       expect(mockFs.writeFile).toHaveBeenCalledWith(
         mockRegistryPath,
         expect.stringContaining(mockMetadata.id),
-        'utf8'
+        "utf8",
       );
     });
 
-    it('deve rejeitar backup com ID duplicado', async () => {
+    it("deve rejeitar backup com ID duplicado", async () => {
       const existingRegistry: BackupRegistry = {
         backups: [mockMetadata],
         lastCleanup: new Date(),
         settings: {
           maxBackups: 50,
           retentionDays: 30,
-          defaultDirectory: mockBackupDir
-        }
+          defaultDirectory: mockBackupDir,
+        },
       };
 
       mockFs.readFile.mockResolvedValue(JSON.stringify(existingRegistry));
 
-      await expect(BackupStorage.addBackup(mockMetadata))
-        .rejects.toThrow('Backup com ID test-backup-1 já existe');
+      await expect(BackupStorage.addBackup(mockMetadata)).rejects.toThrow(
+        "Backup com ID test-backup-1 já existe",
+      );
     });
   });
 
-  describe('listBackups', () => {
+  describe("listBackups", () => {
     const mockBackups: BackupMetadata[] = [
       {
-        id: 'backup-1',
-        filename: 'backup_2025-01-09_14-30-00.sql',
-        filepath: '/path/to/backup1.sql',
+        id: "backup-1",
+        filename: "backup_2025-01-09_14-30-00.sql",
+        filepath: "/path/to/backup1.sql",
         size: 1024,
-        checksum: 'abc123',
-        createdAt: new Date('2025-01-09T14:30:00Z'),
-        status: 'success',
+        checksum: "abc123",
+        createdAt: new Date("2025-01-09T14:30:00Z"),
+        status: "success",
         duration: 5000,
-        databaseVersion: '15.0',
-        schemaVersion: '1.0'
+        databaseVersion: "15.0",
+        schemaVersion: "1.0",
       },
       {
-        id: 'backup-2',
-        filename: 'backup_2025-01-08_10-15-00.sql',
-        filepath: '/path/to/backup2.sql',
+        id: "backup-2",
+        filename: "backup_2025-01-08_10-15-00.sql",
+        filepath: "/path/to/backup2.sql",
         size: 2048,
-        checksum: 'def456',
-        createdAt: new Date('2025-01-08T10:15:00Z'),
-        status: 'failed',
+        checksum: "def456",
+        createdAt: new Date("2025-01-08T10:15:00Z"),
+        status: "failed",
         duration: 3000,
-        databaseVersion: '15.0',
-        schemaVersion: '1.0'
-      }
+        databaseVersion: "15.0",
+        schemaVersion: "1.0",
+      },
     ];
 
     beforeEach(() => {
@@ -154,38 +160,38 @@ describe('BackupStorage', () => {
         settings: {
           maxBackups: 50,
           retentionDays: 30,
-          defaultDirectory: mockBackupDir
-        }
+          defaultDirectory: mockBackupDir,
+        },
       };
 
       mockFs.access.mockResolvedValue();
       mockFs.readFile.mockResolvedValue(JSON.stringify(mockRegistry));
     });
 
-    it('deve listar todos os backups ordenados por data', async () => {
+    it("deve listar todos os backups ordenados por data", async () => {
       const result = await BackupStorage.listBackups();
 
       expect(result).toHaveLength(2);
-      expect(result[0].id).toBe('backup-1'); // Mais recente primeiro
-      expect(result[1].id).toBe('backup-2');
+      expect(result[0].id).toBe("backup-1"); // Mais recente primeiro
+      expect(result[1].id).toBe("backup-2");
     });
 
-    it('deve filtrar por status', async () => {
-      const result = await BackupStorage.listBackups({ status: 'success' });
+    it("deve filtrar por status", async () => {
+      const result = await BackupStorage.listBackups({ status: "success" });
 
       expect(result).toHaveLength(1);
-      expect(result[0].id).toBe('backup-1');
+      expect(result[0].id).toBe("backup-1");
     });
 
-    it('deve aplicar paginação', async () => {
+    it("deve aplicar paginação", async () => {
       const result = await BackupStorage.listBackups({ limit: 1, offset: 1 });
 
       expect(result).toHaveLength(1);
-      expect(result[0].id).toBe('backup-2');
+      expect(result[0].id).toBe("backup-2");
     });
   });
 
-  describe('cleanupOldBackups', () => {
+  describe("cleanupOldBackups", () => {
     beforeEach(() => {
       const oldDate = new Date();
       oldDate.setDate(oldDate.getDate() - 35); // 35 dias atrás
@@ -193,36 +199,36 @@ describe('BackupStorage', () => {
       const mockRegistry: BackupRegistry = {
         backups: [
           {
-            id: 'old-backup',
-            filename: 'old_backup.sql',
-            filepath: '/path/to/old_backup.sql',
+            id: "old-backup",
+            filename: "old_backup.sql",
+            filepath: "/path/to/old_backup.sql",
             size: 1024,
-            checksum: 'old123',
+            checksum: "old123",
             createdAt: oldDate,
-            status: 'success',
+            status: "success",
             duration: 5000,
-            databaseVersion: '15.0',
-            schemaVersion: '1.0'
+            databaseVersion: "15.0",
+            schemaVersion: "1.0",
           },
           {
-            id: 'new-backup',
-            filename: 'new_backup.sql',
-            filepath: '/path/to/new_backup.sql',
+            id: "new-backup",
+            filename: "new_backup.sql",
+            filepath: "/path/to/new_backup.sql",
             size: 2048,
-            checksum: 'new456',
+            checksum: "new456",
             createdAt: new Date(),
-            status: 'success',
+            status: "success",
             duration: 3000,
-            databaseVersion: '15.0',
-            schemaVersion: '1.0'
-          }
+            databaseVersion: "15.0",
+            schemaVersion: "1.0",
+          },
         ],
         lastCleanup: new Date(),
         settings: {
           maxBackups: 50,
           retentionDays: 30,
-          defaultDirectory: mockBackupDir
-        }
+          defaultDirectory: mockBackupDir,
+        },
       };
 
       mockFs.access.mockResolvedValue();
@@ -231,58 +237,58 @@ describe('BackupStorage', () => {
       mockFs.unlink.mockResolvedValue();
     });
 
-    it('deve remover backups antigos', async () => {
+    it("deve remover backups antigos", async () => {
       const result = await BackupStorage.cleanupOldBackups();
 
       expect(result.removed).toBe(1);
       expect(result.freedSpace).toBe(1024);
       expect(result.errors).toHaveLength(0);
-      expect(mockFs.unlink).toHaveBeenCalledWith('/path/to/old_backup.sql');
+      expect(mockFs.unlink).toHaveBeenCalledWith("/path/to/old_backup.sql");
     });
   });
 
-  describe('getBackupStats', () => {
+  describe("getBackupStats", () => {
     beforeEach(() => {
       const mockRegistry: BackupRegistry = {
         backups: [
           {
-            id: 'backup-1',
-            filename: 'backup1.sql',
-            filepath: '/path/to/backup1.sql',
+            id: "backup-1",
+            filename: "backup1.sql",
+            filepath: "/path/to/backup1.sql",
             size: 1024,
-            checksum: 'abc123',
-            createdAt: new Date('2025-01-09T14:30:00Z'),
-            status: 'success',
+            checksum: "abc123",
+            createdAt: new Date("2025-01-09T14:30:00Z"),
+            status: "success",
             duration: 5000,
-            databaseVersion: '15.0',
-            schemaVersion: '1.0'
+            databaseVersion: "15.0",
+            schemaVersion: "1.0",
           },
           {
-            id: 'backup-2',
-            filename: 'backup2.sql',
-            filepath: '/path/to/backup2.sql',
+            id: "backup-2",
+            filename: "backup2.sql",
+            filepath: "/path/to/backup2.sql",
             size: 2048,
-            checksum: 'def456',
-            createdAt: new Date('2025-01-08T10:15:00Z'),
-            status: 'failed',
+            checksum: "def456",
+            createdAt: new Date("2025-01-08T10:15:00Z"),
+            status: "failed",
             duration: 3000,
-            databaseVersion: '15.0',
-            schemaVersion: '1.0'
-          }
+            databaseVersion: "15.0",
+            schemaVersion: "1.0",
+          },
         ],
         lastCleanup: new Date(),
         settings: {
           maxBackups: 50,
           retentionDays: 30,
-          defaultDirectory: mockBackupDir
-        }
+          defaultDirectory: mockBackupDir,
+        },
       };
 
       mockFs.access.mockResolvedValue();
       mockFs.readFile.mockResolvedValue(JSON.stringify(mockRegistry));
     });
 
-    it('deve calcular estatísticas corretamente', async () => {
+    it("deve calcular estatísticas corretamente", async () => {
       const stats = await BackupStorage.getBackupStats();
 
       expect(stats.total).toBe(2);
@@ -290,53 +296,53 @@ describe('BackupStorage', () => {
       expect(stats.failed).toBe(1);
       expect(stats.inProgress).toBe(0);
       expect(stats.totalSize).toBe(3072);
-      expect(stats.oldestBackup).toEqual(new Date('2025-01-08T10:15:00Z'));
-      expect(stats.newestBackup).toEqual(new Date('2025-01-09T14:30:00Z'));
+      expect(stats.oldestBackup).toEqual(new Date("2025-01-08T10:15:00Z"));
+      expect(stats.newestBackup).toEqual(new Date("2025-01-09T14:30:00Z"));
     });
   });
 
-  describe('validateRegistry', () => {
-    it('deve identificar e corrigir entradas órfãs', async () => {
+  describe("validateRegistry", () => {
+    it("deve identificar e corrigir entradas órfãs", async () => {
       const mockRegistry: BackupRegistry = {
         backups: [
           {
-            id: 'existing-backup',
-            filename: 'existing.sql',
-            filepath: '/path/to/existing.sql',
+            id: "existing-backup",
+            filename: "existing.sql",
+            filepath: "/path/to/existing.sql",
             size: 1024,
-            checksum: 'abc123',
+            checksum: "abc123",
             createdAt: new Date(),
-            status: 'success',
+            status: "success",
             duration: 5000,
-            databaseVersion: '15.0',
-            schemaVersion: '1.0'
+            databaseVersion: "15.0",
+            schemaVersion: "1.0",
           },
           {
-            id: 'missing-backup',
-            filename: 'missing.sql',
-            filepath: '/path/to/missing.sql',
+            id: "missing-backup",
+            filename: "missing.sql",
+            filepath: "/path/to/missing.sql",
             size: 2048,
-            checksum: 'def456',
+            checksum: "def456",
             createdAt: new Date(),
-            status: 'success',
+            status: "success",
             duration: 3000,
-            databaseVersion: '15.0',
-            schemaVersion: '1.0'
-          }
+            databaseVersion: "15.0",
+            schemaVersion: "1.0",
+          },
         ],
         lastCleanup: new Date(),
         settings: {
           maxBackups: 50,
           retentionDays: 30,
-          defaultDirectory: mockBackupDir
-        }
+          defaultDirectory: mockBackupDir,
+        },
       };
 
       mockFs.readFile.mockResolvedValue(JSON.stringify(mockRegistry));
       mockFs.access
         .mockResolvedValueOnce() // Registry exists (initialize call)
-        .mockRejectedValueOnce(new Error('File not found')) // First backup file missing
-        .mockRejectedValueOnce(new Error('File not found')); // Second backup file missing
+        .mockRejectedValueOnce(new Error("File not found")) // First backup file missing
+        .mockRejectedValueOnce(new Error("File not found")); // Second backup file missing
       mockFs.writeFile.mockResolvedValue();
 
       const result = await BackupStorage.validateRegistry();

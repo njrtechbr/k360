@@ -4,13 +4,9 @@
  */
 
 // Re-export dos tipos do httpClient para centralizar
-export type {
-  ApiResponse,
-  ApiError,
-  HttpClientConfig,
-} from './httpClient';
+export type { ApiResponse, ApiError, HttpClientConfig } from "./httpClient";
 
-export { HttpClientError } from './httpClient';
+export { HttpClientError } from "./httpClient";
 
 // Tipos específicos para diferentes operações
 export interface ApiListResponse<T> extends ApiResponse<T[]> {
@@ -55,20 +51,20 @@ export interface ApiQueryParams {
   limit?: number;
   search?: string;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
   filters?: Record<string, any>;
 }
 
 // Tipos de erro específicos
 export enum ApiErrorType {
-  NETWORK_ERROR = 'NETWORK_ERROR',
-  VALIDATION_ERROR = 'VALIDATION_ERROR',
-  AUTHENTICATION_ERROR = 'AUTHENTICATION_ERROR',
-  AUTHORIZATION_ERROR = 'AUTHORIZATION_ERROR',
-  NOT_FOUND_ERROR = 'NOT_FOUND_ERROR',
-  SERVER_ERROR = 'SERVER_ERROR',
-  TIMEOUT_ERROR = 'TIMEOUT_ERROR',
-  RATE_LIMIT_ERROR = 'RATE_LIMIT_ERROR',
+  NETWORK_ERROR = "NETWORK_ERROR",
+  VALIDATION_ERROR = "VALIDATION_ERROR",
+  AUTHENTICATION_ERROR = "AUTHENTICATION_ERROR",
+  AUTHORIZATION_ERROR = "AUTHORIZATION_ERROR",
+  NOT_FOUND_ERROR = "NOT_FOUND_ERROR",
+  SERVER_ERROR = "SERVER_ERROR",
+  TIMEOUT_ERROR = "TIMEOUT_ERROR",
+  RATE_LIMIT_ERROR = "RATE_LIMIT_ERROR",
 }
 
 export interface ValidationError {
@@ -85,7 +81,7 @@ export interface ApiValidationError extends ApiError {
 // Utilitários para tratamento de erro
 export const getErrorType = (error: any): ApiErrorType => {
   if (!error.status) return ApiErrorType.NETWORK_ERROR;
-  
+
   switch (error.status) {
     case 400:
       return ApiErrorType.VALIDATION_ERROR;
@@ -113,16 +109,16 @@ export const getErrorMessage = (error: any): string => {
   if (error instanceof Error) {
     return error.message;
   }
-  
-  if (typeof error === 'string') {
+
+  if (typeof error === "string") {
     return error;
   }
-  
+
   if (error?.error) {
     return error.error;
   }
-  
-  return 'Erro desconhecido';
+
+  return "Erro desconhecido";
 };
 
 export const isValidationError = (error: any): error is ApiValidationError => {

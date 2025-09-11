@@ -1,7 +1,7 @@
-import { NextRequest } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { Role } from '@prisma/client';
+import { NextRequest } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { Role } from "@prisma/client";
 
 export interface BackupAuthResult {
   success: boolean;
@@ -59,7 +59,7 @@ export const BACKUP_PERMISSIONS: Record<Role, BackupPermissions> = {
  * Verifica autenticação e autorização para operações de backup
  */
 export async function authenticateBackupRequest(
-  request: NextRequest
+  request: NextRequest,
 ): Promise<BackupAuthResult> {
   try {
     const session = await getServerSession(authOptions);
@@ -67,13 +67,13 @@ export async function authenticateBackupRequest(
     if (!session?.user) {
       return {
         success: false,
-        error: 'Usuário não autenticado',
+        error: "Usuário não autenticado",
       };
     }
 
     const user = {
       id: session.user.id,
-      email: session.user.email || '',
+      email: session.user.email || "",
       role: session.user.role as Role,
     };
 
@@ -82,10 +82,10 @@ export async function authenticateBackupRequest(
       user,
     };
   } catch (error) {
-    console.error('Erro na autenticação de backup:', error);
+    console.error("Erro na autenticação de backup:", error);
     return {
       success: false,
-      error: 'Erro interno de autenticação',
+      error: "Erro interno de autenticação",
     };
   }
 }
@@ -95,7 +95,7 @@ export async function authenticateBackupRequest(
  */
 export function hasBackupPermission(
   userRole: Role,
-  operation: keyof BackupPermissions
+  operation: keyof BackupPermissions,
 ): boolean {
   const permissions = BACKUP_PERMISSIONS[userRole];
   return permissions[operation];
@@ -106,7 +106,7 @@ export function hasBackupPermission(
  */
 export async function authorizeBackupOperation(
   request: NextRequest,
-  operation: keyof BackupPermissions
+  operation: keyof BackupPermissions,
 ): Promise<BackupAuthResult> {
   const authResult = await authenticateBackupRequest(request);
 
@@ -138,8 +138,8 @@ export function createAuthErrorResponse(error: string, status: number = 401) {
     {
       status,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
-    }
+    },
   );
 }

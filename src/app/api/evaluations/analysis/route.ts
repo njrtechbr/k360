@@ -1,20 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import type { EvaluationAnalysis } from '@/lib/types';
-
-const prisma = new PrismaClient();
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import type { EvaluationAnalysis } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Não autorizado' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
     // Por enquanto, retornamos um array vazio já que as análises de IA
@@ -24,25 +19,20 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(analysisResults);
   } catch (error) {
-    console.error('Erro ao buscar análises de IA:', error);
+    console.error("Erro ao buscar análises de IA:", error);
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
+      { error: "Erro interno do servidor" },
+      { status: 500 },
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Não autorizado' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
     const body = await request.json();
@@ -50,8 +40,8 @@ export async function POST(request: NextRequest) {
 
     if (!evaluationId || !sentiment || !summary) {
       return NextResponse.json(
-        { error: 'Dados da análise são obrigatórios' },
-        { status: 400 }
+        { error: "Dados da análise são obrigatórios" },
+        { status: 400 },
       );
     }
 
@@ -67,15 +57,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       analysis,
-      message: 'Análise salva com sucesso'
+      message: "Análise salva com sucesso",
     });
   } catch (error) {
-    console.error('Erro ao salvar análise de IA:', error);
+    console.error("Erro ao salvar análise de IA:", error);
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
+      { error: "Erro interno do servidor" },
+      { status: 500 },
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

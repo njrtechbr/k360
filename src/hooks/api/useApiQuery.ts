@@ -2,10 +2,10 @@
  * Hook base para operações de query (GET) com cache e gerenciamento de estado
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { httpClient } from '@/lib/httpClient';
-import type { ApiResponse, ApiState, ApiQueryParams } from '@/lib/api-types';
-import { getErrorMessage } from '@/lib/api-types';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { httpClient } from "@/lib/httpClient";
+import type { ApiResponse, ApiState, ApiQueryParams } from "@/lib/api-types";
+import { getErrorMessage } from "@/lib/api-types";
 
 export interface UseApiQueryOptions {
   enabled?: boolean;
@@ -26,17 +26,20 @@ export interface UseApiQueryResult<T> extends ApiState<T> {
 }
 
 // Cache simples em memória
-const queryCache = new Map<string, {
-  data: any;
-  timestamp: number;
-  staleTime: number;
-}>();
+const queryCache = new Map<
+  string,
+  {
+    data: any;
+    timestamp: number;
+    staleTime: number;
+  }
+>();
 
 export function useApiQuery<T>(
   queryKey: string[],
   url: string,
   params?: ApiQueryParams,
-  options: UseApiQueryOptions = {}
+  options: UseApiQueryOptions = {},
 ): UseApiQueryResult<T> {
   const {
     enabled = true,
@@ -70,7 +73,7 @@ export function useApiQuery<T>(
 
     const now = Date.now();
     const isExpired = now - cached.timestamp > cacheTime;
-    
+
     if (isExpired) {
       queryCache.delete(cacheKey);
       return null;
@@ -89,87 +92,90 @@ export function useApiQuery<T>(
   }, [getCachedData]);
 
   // Função principal de fetch
-  const fetchData = useCallback(async (isRetry = false) => {
-    // Cancela requisição anterior se existir
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-
-    abortControllerRef.current = new AbortController();
-
-    try {
-      setIsFetching(true);
-      
-      if (!isRetry) {
-        setState(prev => ({ ...prev, loading: true, error: null }));
+  const fetchData = useCallback(
+    async (isRetry = false) => {
+      // Cancela requisição anterior se existir
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
       }
 
-      // Constrói URL com parâmetros
-      let fullUrl = url;
-      if (params) {
-        const searchParams = new URLSearchParams();
-        Object.entries(params).forEach(([key, value]) => {
-          if (value !== undefined && value !== null) {
-            searchParams.append(key, String(value));
-          }
-        });
-        const queryString = searchParams.toString();
-        if (queryString) {
-          fullUrl += (url.includes('?') ? '&' : '?') + queryString;
+      abortControllerRef.current = new AbortController();
+
+      try {
+        setIsFetching(true);
+
+        if (!isRetry) {
+          setState((prev) => ({ ...prev, loading: true, error: null }));
         }
-      }
 
-      const response: ApiResponse<T> = await httpClient.get(fullUrl, {
-        signal: abortControllerRef.current.signal,
-      });
+        // Constrói URL com parâmetros
+        let fullUrl = url;
+        if (params) {
+          const searchParams = new URLSearchParams();
+          Object.entries(params).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) {
+              searchParams.append(key, String(value));
+            }
+          });
+          const queryString = searchParams.toString();
+          if (queryString) {
+            fullUrl += (url.includes("?") ? "&" : "?") + queryString;
+          }
+        }
 
-      if (response.success) {
-        const now = Date.now();
-        
-        // Atualiza cache
-        queryCache.set(cacheKey, {
-          data: response.data,
-          timestamp: now,
-          staleTime,
+        const response: ApiResponse<T> = await httpClient.get(fullUrl, {
+          signal: abortControllerRef.current.signal,
         });
 
-        setState({
-          data: response.data,
+        if (response.success) {
+          const now = Date.now();
+
+          // Atualiza cache
+          queryCache.set(cacheKey, {
+            data: response.data,
+            timestamp: now,
+            staleTime,
+          });
+
+          setState({
+            data: response.data,
+            loading: false,
+            error: null,
+            lastFetch: new Date(now),
+          });
+
+          onSuccess?.(response.data);
+        } else {
+          throw new Error(response.error || "Erro na requisição");
+        }
+      } catch (error: any) {
+        if (error.name === "AbortError") {
+          return; // Requisição cancelada, não atualiza estado
+        }
+
+        const errorMessage = getErrorMessage(error);
+
+        // Retry automático em caso de erro de rede
+        if (retry && !isRetry && (!error.status || error.status >= 500)) {
+          retryTimeoutRef.current = setTimeout(() => {
+            fetchData(true);
+          }, retryDelay);
+          return;
+        }
+
+        setState((prev) => ({
+          ...prev,
           loading: false,
-          error: null,
-          lastFetch: new Date(now),
-        });
+          error: errorMessage,
+        }));
 
-        onSuccess?.(response.data);
-      } else {
-        throw new Error(response.error || 'Erro na requisição');
+        onError?.(errorMessage);
+      } finally {
+        setIsFetching(false);
       }
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
-        return; // Requisição cancelada, não atualiza estado
-      }
-
-      const errorMessage = getErrorMessage(error);
-      
-      // Retry automático em caso de erro de rede
-      if (retry && !isRetry && (!error.status || error.status >= 500)) {
-        retryTimeoutRef.current = setTimeout(() => {
-          fetchData(true);
-        }, retryDelay);
-        return;
-      }
-
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        error: errorMessage,
-      }));
-
-      onError?.(errorMessage);
-    } finally {
-      setIsFetching(false);
-    }
-  }, [url, params, cacheKey, staleTime, retry, retryDelay, onSuccess, onError]);
+    },
+    [url, params, cacheKey, staleTime, retry, retryDelay, onSuccess, onError],
+  );
 
   // Função de refetch manual
   const refetch = useCallback(async () => {
@@ -220,8 +226,8 @@ export function useApiQuery<T>(
       }
     };
 
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
   }, [refetchOnWindowFocus, enabled]);
 
   return {

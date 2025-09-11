@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useAuth } from "@/hooks/useAuth";
@@ -17,14 +16,26 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 const formSchema = z.object({
-  name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
-  password: z.string().optional().refine(val => val === "" || !val || val.length >= 6, {
-    message: "A nova senha deve ter pelo menos 6 caracteres.",
-  }),
+  name: z
+    .string()
+    .min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
+  password: z
+    .string()
+    .optional()
+    .refine((val) => val === "" || !val || val.length >= 6, {
+      message: "A nova senha deve ter pelo menos 6 caracteres.",
+    }),
 });
 
 export default function ProfilePage() {
@@ -52,28 +63,38 @@ export default function ProfilePage() {
   }, [isAuthenticated, loading, router, user, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const dataToUpdate: {name: string, password?: string} = { name: values.name };
+    const dataToUpdate: { name: string; password?: string } = {
+      name: values.name,
+    };
     if (values.password) {
-        dataToUpdate.password = values.password;
+      dataToUpdate.password = values.password;
     }
     try {
       await updateProfile(dataToUpdate);
-      form.reset({ ...form.getValues(), password: '' });
+      form.reset({ ...form.getValues(), password: "" });
     } catch (error) {
-        // toast is handled in auth provider
+      // toast is handled in auth provider
     }
   }
 
   if (loading || !user) {
-    return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p>Carregando...</p>
+      </div>
+    );
   }
 
   return (
     <div className="flex items-center justify-center py-12 px-4">
       <Card className="w-full max-w-2xl shadow-lg">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold">Perfil do Usuário</CardTitle>
-          <CardDescription>Veja e edite suas informações pessoais.</CardDescription>
+          <CardTitle className="text-2xl font-bold">
+            Perfil do Usuário
+          </CardTitle>
+          <CardDescription>
+            Veja e edite suas informações pessoais.
+          </CardDescription>
         </CardHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -84,7 +105,9 @@ export default function ProfilePage() {
               </div>
               <div className="space-y-2">
                 <p className="text-sm font-medium">Nível de Acesso</p>
-                <Badge variant="secondary" className="capitalize">{user.role}</Badge>
+                <Badge variant="secondary" className="capitalize">
+                  {user.role}
+                </Badge>
               </div>
               <FormField
                 control={form.control}
@@ -106,7 +129,11 @@ export default function ProfilePage() {
                   <FormItem>
                     <FormLabel>Nova Senha</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="Deixe em branco para não alterar" {...field} />
+                      <Input
+                        type="password"
+                        placeholder="Deixe em branco para não alterar"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -115,9 +142,13 @@ export default function ProfilePage() {
             </CardContent>
             <CardFooter className="flex justify-between">
               <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
+                {form.formState.isSubmitting
+                  ? "Salvando..."
+                  : "Salvar Alterações"}
               </Button>
-               <Button variant="destructive" onClick={logout}>Sair</Button>
+              <Button variant="destructive" onClick={logout}>
+                Sair
+              </Button>
             </CardFooter>
           </form>
         </Form>

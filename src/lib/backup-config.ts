@@ -33,14 +33,14 @@ export interface MaintenanceConfig {
  * Configuração padrão do sistema de backup
  */
 export const defaultBackupConfig: BackupConfig = {
-  directory: process.env.BACKUP_DIRECTORY || './backups',
-  maxSizeGB: parseInt(process.env.BACKUP_MAX_SIZE_GB || '10'),
-  retentionDays: parseInt(process.env.BACKUP_RETENTION_DAYS || '30'),
-  maxConcurrent: parseInt(process.env.BACKUP_MAX_CONCURRENT || '2'),
-  enableCompression: process.env.BACKUP_ENABLE_COMPRESSION === 'true',
-  enableEncryption: process.env.BACKUP_ENABLE_ENCRYPTION === 'true',
-  pgdumpPath: process.env.PGDUMP_PATH || 'pg_dump',
-  pgdumpTimeout: parseInt(process.env.PGDUMP_TIMEOUT || '3600'),
+  directory: process.env.BACKUP_DIRECTORY || "./backups",
+  maxSizeGB: parseInt(process.env.BACKUP_MAX_SIZE_GB || "10"),
+  retentionDays: parseInt(process.env.BACKUP_RETENTION_DAYS || "30"),
+  maxConcurrent: parseInt(process.env.BACKUP_MAX_CONCURRENT || "2"),
+  enableCompression: process.env.BACKUP_ENABLE_COMPRESSION === "true",
+  enableEncryption: process.env.BACKUP_ENABLE_ENCRYPTION === "true",
+  pgdumpPath: process.env.PGDUMP_PATH || "pg_dump",
+  pgdumpTimeout: parseInt(process.env.PGDUMP_TIMEOUT || "3600"),
 };
 
 /**
@@ -49,7 +49,7 @@ export const defaultBackupConfig: BackupConfig = {
 export const defaultSecurityConfig: SecurityConfig = {
   maxBackupsPerUser: 10,
   maxBackupSizeGB: 5,
-  allowedDirectories: ['./backups/files'],
+  allowedDirectories: ["./backups/files"],
   encryptBackups: false,
   auditLogRetentionDays: 90,
 };
@@ -59,7 +59,7 @@ export const defaultSecurityConfig: SecurityConfig = {
  */
 export const defaultMaintenanceConfig: MaintenanceConfig = {
   autoCleanupEnabled: true,
-  cleanupSchedule: '0 2 * * *', // Todo dia às 2h da manhã
+  cleanupSchedule: "0 2 * * *", // Todo dia às 2h da manhã
   maxBackupsToKeep: 50,
   maxStorageSizeGB: 100,
   compressionThresholdMB: 100,
@@ -69,10 +69,10 @@ export const defaultMaintenanceConfig: MaintenanceConfig = {
  * Permissões de backup por role
  */
 export const backupPermissions = {
-  SUPERADMIN: ['create', 'list', 'download', 'delete', 'validate'],
-  ADMIN: ['create', 'list', 'download', 'delete', 'validate'],
-  SUPERVISOR: ['list', 'download'],
-  USUARIO: [] // Sem acesso
+  SUPERADMIN: ["create", "list", "download", "delete", "validate"],
+  ADMIN: ["create", "list", "download", "delete", "validate"],
+  SUPERVISOR: ["list", "download"],
+  USUARIO: [], // Sem acesso
 } as const;
 
 /**
@@ -80,8 +80,9 @@ export const backupPermissions = {
  */
 export function hasBackupPermission(
   userRole: string,
-  operation: string
+  operation: string,
 ): boolean {
-  const permissions = backupPermissions[userRole as keyof typeof backupPermissions];
+  const permissions =
+    backupPermissions[userRole as keyof typeof backupPermissions];
   return permissions ? permissions.includes(operation as any) : false;
 }

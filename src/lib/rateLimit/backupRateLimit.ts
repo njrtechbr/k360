@@ -1,5 +1,5 @@
-import { NextRequest } from 'next/server';
-import { Role } from '@prisma/client';
+import { NextRequest } from "next/server";
+import { Role } from "@prisma/client";
 
 interface RateLimitEntry {
   count: number;
@@ -60,10 +60,10 @@ export class BackupRateLimiter {
     userId: string,
     userRole: Role,
     operation: string,
-    ipAddress?: string
+    ipAddress?: string,
   ): RateLimitResult {
     const config = this.getRateLimitConfig(userRole, operation);
-    
+
     if (!config) {
       // Se não há configuração, permite a operação
       return {
@@ -98,7 +98,9 @@ export class BackupRateLimiter {
 
     const allowed = entry.count <= config.maxRequests;
     const remaining = Math.max(0, config.maxRequests - entry.count);
-    const retryAfter = allowed ? undefined : Math.ceil((entry.resetTime - now) / 1000);
+    const retryAfter = allowed
+      ? undefined
+      : Math.ceil((entry.resetTime - now) / 1000);
 
     return {
       allowed,
@@ -113,10 +115,10 @@ export class BackupRateLimiter {
    */
   static getUserRateLimitStats(userId: string): Record<string, RateLimitEntry> {
     const stats: Record<string, RateLimitEntry> = {};
-    
+
     for (const [key, entry] of this.store.entries()) {
       if (key.startsWith(`${userId}:`)) {
-        const operation = key.split(':')[1];
+        const operation = key.split(":")[1];
         stats[operation] = { ...entry };
       }
     }
@@ -161,7 +163,10 @@ export class BackupRateLimiter {
   /**
    * Obtém configuração de rate limit para role e operação
    */
-  private static getRateLimitConfig(role: Role, operation: string): RateLimitConfig | null {
+  private static getRateLimitConfig(
+    role: Role,
+    operation: string,
+  ): RateLimitConfig | null {
     const roleConfig = RATE_LIMIT_CONFIGS[role];
     return roleConfig?.[operation] || null;
   }
@@ -169,9 +174,13 @@ export class BackupRateLimiter {
   /**
    * Gera chave única para o rate limiter
    */
-  private static generateKey(userId: string, operation: string, ipAddress?: string): string {
+  private static generateKey(
+    userId: string,
+    operation: string,
+    ipAddress?: string,
+  ): string {
     // Inclui IP para proteção adicional contra ataques distribuídos
-    const ipSuffix = ipAddress ? `:${ipAddress}` : '';
+    const ipSuffix = ipAddress ? `:${ipAddress}` : "";
     return `${userId}:${operation}${ipSuffix}`;
   }
 
@@ -180,12 +189,17 @@ export class BackupRateLimiter {
    */
   private static startCleanupIfNeeded(): void {
     if (!this.cleanupInterval) {
-      this.cleanupInterval = setInterval(() => {
-        const removed = this.cleanup();
-        if (removed > 0) {
-          console.log(`[RATE LIMIT] Limpeza automática: ${removed} entradas removidas`);
-        }
-      }, 5 * 60 * 1000); // Limpa a cada 5 minutos
+      this.cleanupInterval = setInterval(
+        () => {
+          const removed = this.cleanup();
+          if (removed > 0) {
+            console.log(
+              `[RATE LIMIT] Limpeza automática: ${removed} entradas removidas`,
+            );
+          }
+        },
+        5 * 60 * 1000,
+      ); // Limpa a cada 5 minutos
     }
   }
 
@@ -214,29 +228,34 @@ export function applyRateLimit(
   userId: string,
   userRole: Role,
   operation: string,
-  request: NextRequest
+  request: NextRequest,
 ): RateLimitResult {
   const ipAddress = getClientIP(request);
-  return BackupRateLimiter.checkRateLimit(userId, userRole, operation, ipAddress);
+  return BackupRateLimiter.checkRateLimit(
+    userId,
+    userRole,
+    operation,
+    ipAddress,
+  );
 }
 
 /**
  * Extrai IP do cliente da requisição
  */
 function getClientIP(request: NextRequest): string {
-  const forwarded = request.headers.get('x-forwarded-for');
-  const realIP = request.headers.get('x-real-ip');
-  
+  const forwarded = request.headers.get("x-forwarded-for");
+  const realIP = request.headers.get("x-real-ip");
+
   if (forwarded) {
-    return forwarded.split(',')[0].trim();
+    return forwarded.split(",")[0].trim();
   }
-  
+
   if (realIP) {
     return realIP;
   }
 
   // Fallback para desenvolvimento
-  return 'unknown';
+  return "unknown";
 }
 
 /**
@@ -244,24 +263,24 @@ function getClientIP(request: NextRequest): string {
  */
 export function createRateLimitResponse(rateLimitResult: RateLimitResult) {
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
-    'X-RateLimit-Reset': new Date(rateLimitResult.resetTime).toISOString(),
+    "Content-Type": "application/json",
+    "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
+    "X-RateLimit-Reset": new Date(rateLimitResult.resetTime).toISOString(),
   };
 
   if (rateLimitResult.retryAfter) {
-    headers['Retry-After'] = rateLimitResult.retryAfter.toString();
+    headers["Retry-After"] = rateLimitResult.retryAfter.toString();
   }
 
   return new Response(
     JSON.stringify({
       success: false,
-      error: 'Rate limit excedido. Tente novamente mais tarde.',
+      error: "Rate limit excedido. Tente novamente mais tarde.",
       retryAfter: rateLimitResult.retryAfter,
     }),
     {
       status: 429,
       headers,
-    }
+    },
   );
 }

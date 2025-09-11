@@ -1,4 +1,4 @@
-import { Pool, PoolClient } from 'pg';
+import { Pool, PoolClient } from "pg";
 
 // Configuração do pool de conexões
 const pool = new Pool({
@@ -17,7 +17,7 @@ export class DatabaseService {
       const result = await client.query(text, params);
       return result.rows;
     } catch (error) {
-      console.error('Erro na query:', error);
+      console.error("Erro na query:", error);
       throw error;
     } finally {
       client.release();
@@ -26,16 +26,16 @@ export class DatabaseService {
 
   // Executar transação
   static async transaction<T>(
-    callback: (client: PoolClient) => Promise<T>
+    callback: (client: PoolClient) => Promise<T>,
   ): Promise<T> {
     const client = await pool.connect();
     try {
-      await client.query('BEGIN');
+      await client.query("BEGIN");
       const result = await callback(client);
-      await client.query('COMMIT');
+      await client.query("COMMIT");
       return result;
     } catch (error) {
-      await client.query('ROLLBACK');
+      await client.query("ROLLBACK");
       throw error;
     } finally {
       client.release();
@@ -63,7 +63,7 @@ export class DatabaseService {
       GROUP BY u.id, u.name, u.role
       ORDER BY total_xp DESC, u.name;
     `;
-    
+
     return await this.query(query);
   }
 
@@ -104,7 +104,7 @@ export class DatabaseService {
       ORDER BY mean_time DESC
       LIMIT 10;
     `;
-    
+
     return await this.query(query);
   }
 
@@ -131,6 +131,6 @@ export async function getUserAnalytics(userId: string) {
     GROUP BY DATE_TRUNC('day', e."data")
     ORDER BY date DESC;
   `;
-  
+
   return await DatabaseService.query(query, [userId]);
 }

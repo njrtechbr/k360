@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import React, { useState, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import React, { useState, useMemo } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import {
   RefreshCw,
   Download,
@@ -16,15 +16,15 @@ import {
   Eye,
   AlertTriangle,
   CheckCircle,
-  XCircle
-} from 'lucide-react';
-import SentimentBadge from './SentimentBadge';
-import SentimentFilters from './SentimentFilters';
+  XCircle,
+} from "lucide-react";
+import SentimentBadge from "./SentimentBadge";
+import SentimentFilters from "./SentimentFilters";
 
 export interface SentimentAnalysisData {
   id: string;
   comment: string;
-  sentiment: 'Positivo' | 'Negativo' | 'Neutro';
+  sentiment: "Positivo" | "Negativo" | "Neutro";
   confidence: number;
   keywords: string[];
   analyzedAt: string;
@@ -52,28 +52,30 @@ const SentimentAnalysisPanel: React.FC<SentimentAnalysisPanelProps> = ({
   onStartAnalysis,
   onExportData,
   onViewDetails,
-  className
+  className,
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sentimentFilter, setSentimentFilter] = useState<string>('all');
-  const [confidenceFilter, setConfidenceFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<string>('date');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sentimentFilter, setSentimentFilter] = useState<string>("all");
+  const [confidenceFilter, setConfidenceFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("date");
 
   // Estatísticas calculadas
   const stats = useMemo(() => {
     const total = analyses.length;
-    const positive = analyses.filter(a => a.sentiment === 'Positivo').length;
-    const negative = analyses.filter(a => a.sentiment === 'Negativo').length;
-    const neutral = analyses.filter(a => a.sentiment === 'Neutro').length;
-    
-    const avgConfidence = total > 0 
-      ? analyses.reduce((sum, a) => sum + a.confidence, 0) / total 
-      : 0;
-    
-    const lowConfidence = analyses.filter(a => a.confidence < 0.6).length;
-    const conflicting = analyses.filter(a => 
-      (a.sentiment === 'Positivo' && a.confidence < 0.7) ||
-      (a.sentiment === 'Negativo' && a.confidence < 0.7)
+    const positive = analyses.filter((a) => a.sentiment === "Positivo").length;
+    const negative = analyses.filter((a) => a.sentiment === "Negativo").length;
+    const neutral = analyses.filter((a) => a.sentiment === "Neutro").length;
+
+    const avgConfidence =
+      total > 0
+        ? analyses.reduce((sum, a) => sum + a.confidence, 0) / total
+        : 0;
+
+    const lowConfidence = analyses.filter((a) => a.confidence < 0.6).length;
+    const conflicting = analyses.filter(
+      (a) =>
+        (a.sentiment === "Positivo" && a.confidence < 0.7) ||
+        (a.sentiment === "Negativo" && a.confidence < 0.7),
     ).length;
 
     return {
@@ -86,7 +88,7 @@ const SentimentAnalysisPanel: React.FC<SentimentAnalysisPanelProps> = ({
       neutralPercentage: total > 0 ? (neutral / total) * 100 : 0,
       avgConfidence,
       lowConfidence,
-      conflicting
+      conflicting,
     };
   }, [analyses]);
 
@@ -96,25 +98,28 @@ const SentimentAnalysisPanel: React.FC<SentimentAnalysisPanelProps> = ({
 
     // Filtro por termo de busca
     if (searchTerm) {
-      filtered = filtered.filter(analysis => 
-        analysis.comment.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        analysis.keywords.some(keyword => 
-          keyword.toLowerCase().includes(searchTerm.toLowerCase())
-        ) ||
-        analysis.evaluation.attendantName.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(
+        (analysis) =>
+          analysis.comment.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          analysis.keywords.some((keyword) =>
+            keyword.toLowerCase().includes(searchTerm.toLowerCase()),
+          ) ||
+          analysis.evaluation.attendantName
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()),
       );
     }
 
     // Filtro por sentimento
-    if (sentimentFilter !== 'all') {
-      filtered = filtered.filter(analysis => {
+    if (sentimentFilter !== "all") {
+      filtered = filtered.filter((analysis) => {
         switch (sentimentFilter) {
-          case 'positive':
-            return analysis.sentiment === 'Positivo';
-          case 'negative':
-            return analysis.sentiment === 'Negativo';
-          case 'neutral':
-            return analysis.sentiment === 'Neutro';
+          case "positive":
+            return analysis.sentiment === "Positivo";
+          case "negative":
+            return analysis.sentiment === "Negativo";
+          case "neutral":
+            return analysis.sentiment === "Neutro";
           default:
             return true;
         }
@@ -122,14 +127,14 @@ const SentimentAnalysisPanel: React.FC<SentimentAnalysisPanelProps> = ({
     }
 
     // Filtro por confiança
-    if (confidenceFilter !== 'all') {
-      filtered = filtered.filter(analysis => {
+    if (confidenceFilter !== "all") {
+      filtered = filtered.filter((analysis) => {
         switch (confidenceFilter) {
-          case 'high':
+          case "high":
             return analysis.confidence >= 0.8;
-          case 'medium':
+          case "medium":
             return analysis.confidence >= 0.6 && analysis.confidence < 0.8;
-          case 'low':
+          case "low":
             return analysis.confidence < 0.6;
           default:
             return true;
@@ -140,15 +145,17 @@ const SentimentAnalysisPanel: React.FC<SentimentAnalysisPanelProps> = ({
     // Ordenação
     filtered.sort((a, b) => {
       switch (sortBy) {
-        case 'confidence':
+        case "confidence":
           return b.confidence - a.confidence;
-        case 'sentiment':
+        case "sentiment":
           return a.sentiment.localeCompare(b.sentiment);
-        case 'rating':
+        case "rating":
           return b.evaluation.nota - a.evaluation.nota;
-        case 'date':
+        case "date":
         default:
-          return new Date(b.analyzedAt).getTime() - new Date(a.analyzedAt).getTime();
+          return (
+            new Date(b.analyzedAt).getTime() - new Date(a.analyzedAt).getTime()
+          );
       }
     });
 
@@ -158,48 +165,54 @@ const SentimentAnalysisPanel: React.FC<SentimentAnalysisPanelProps> = ({
   // Insights automáticos
   const insights = useMemo(() => {
     const insights: string[] = [];
-    
+
     if (stats.total === 0) {
-      insights.push('📊 Nenhuma análise disponível ainda');
+      insights.push("📊 Nenhuma análise disponível ainda");
       return insights;
     }
 
     if (stats.positivePercentage > 70) {
-      insights.push('😊 Excelente! Mais de 70% dos comentários são positivos');
+      insights.push("😊 Excelente! Mais de 70% dos comentários são positivos");
     } else if (stats.negativePercentage > 30) {
-      insights.push('😟 Atenção: Mais de 30% dos comentários são negativos');
+      insights.push("😟 Atenção: Mais de 30% dos comentários são negativos");
     }
 
     if (stats.avgConfidence > 0.8) {
-      insights.push('🎯 Alta confiança nas análises (>80%)');
+      insights.push("🎯 Alta confiança nas análises (>80%)");
     } else if (stats.avgConfidence < 0.6) {
-      insights.push('⚠️ Confiança baixa - revisar análises manualmente');
+      insights.push("⚠️ Confiança baixa - revisar análises manualmente");
     }
 
     if (stats.conflicting > 0) {
-      insights.push(`🔍 ${stats.conflicting} análises conflitantes encontradas`);
+      insights.push(
+        `🔍 ${stats.conflicting} análises conflitantes encontradas`,
+      );
     }
 
     if (stats.lowConfidence > stats.total * 0.2) {
-      insights.push('📝 Muitas análises com baixa confiança');
+      insights.push("📝 Muitas análises com baixa confiança");
     }
 
     return insights;
   }, [stats]);
 
   return (
-    <div className={cn('space-y-6', className)}>
+    <div className={cn("space-y-6", className)}>
       {/* Header com ações */}
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
         <div>
           <h2 className="text-2xl font-bold">Análise de Sentimento</h2>
-          <p className="text-muted-foreground">Insights automáticos dos comentários</p>
+          <p className="text-muted-foreground">
+            Insights automáticos dos comentários
+          </p>
         </div>
         <div className="flex gap-2">
           {onStartAnalysis && (
             <Button onClick={onStartAnalysis} disabled={isLoading}>
-              <RefreshCw className={cn('h-4 w-4 mr-2', isLoading && 'animate-spin')} />
-              {isLoading ? 'Analisando...' : 'Nova Análise'}
+              <RefreshCw
+                className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")}
+              />
+              {isLoading ? "Analisando..." : "Nova Análise"}
             </Button>
           )}
           {onExportData && (
@@ -215,7 +228,9 @@ const SentimentAnalysisPanel: React.FC<SentimentAnalysisPanelProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Análises</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total de Análises
+            </CardTitle>
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -228,7 +243,9 @@ const SentimentAnalysisPanel: React.FC<SentimentAnalysisPanelProps> = ({
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Sentimento Positivo</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Sentimento Positivo
+            </CardTitle>
             <TrendingUp className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
@@ -243,7 +260,9 @@ const SentimentAnalysisPanel: React.FC<SentimentAnalysisPanelProps> = ({
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Sentimento Negativo</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Sentimento Negativo
+            </CardTitle>
             <TrendingDown className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
@@ -258,7 +277,9 @@ const SentimentAnalysisPanel: React.FC<SentimentAnalysisPanelProps> = ({
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Confiança Média</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Confiança Média
+            </CardTitle>
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -281,7 +302,10 @@ const SentimentAnalysisPanel: React.FC<SentimentAnalysisPanelProps> = ({
           <CardContent>
             <div className="space-y-2">
               {insights.map((insight, index) => (
-                <div key={index} className="flex items-center gap-2 p-2 bg-muted/50 rounded-md">
+                <div
+                  key={index}
+                  className="flex items-center gap-2 p-2 bg-muted/50 rounded-md"
+                >
                   <span className="text-sm">{insight}</span>
                 </div>
               ))}
@@ -329,10 +353,9 @@ const SentimentAnalysisPanel: React.FC<SentimentAnalysisPanelProps> = ({
         <CardContent>
           {filteredAnalyses.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              {analyses.length === 0 
-                ? 'Nenhuma análise disponível ainda'
-                : 'Nenhuma análise encontrada com os filtros aplicados'
-              }
+              {analyses.length === 0
+                ? "Nenhuma análise disponível ainda"
+                : "Nenhuma análise encontrada com os filtros aplicados"}
             </div>
           ) : (
             <div className="space-y-4">
@@ -352,23 +375,29 @@ const SentimentAnalysisPanel: React.FC<SentimentAnalysisPanelProps> = ({
                           Nota: {analysis.evaluation.nota}/5
                         </span>
                       </div>
-                      
+
                       <p className="text-sm">{analysis.comment}</p>
-                      
+
                       <div className="flex flex-wrap gap-1">
                         {analysis.keywords.map((keyword, index) => (
-                          <Badge key={index} variant="secondary" className="text-xs">
+                          <Badge
+                            key={index}
+                            variant="secondary"
+                            className="text-xs"
+                          >
                             {keyword}
                           </Badge>
                         ))}
                       </div>
-                      
+
                       <div className="text-xs text-muted-foreground">
-                        Atendente: {analysis.evaluation.attendantName} • 
-                        {new Date(analysis.analyzedAt).toLocaleDateString('pt-BR')}
+                        Atendente: {analysis.evaluation.attendantName} •
+                        {new Date(analysis.analyzedAt).toLocaleDateString(
+                          "pt-BR",
+                        )}
                       </div>
                     </div>
-                    
+
                     {onViewDetails && (
                       <Button
                         variant="ghost"

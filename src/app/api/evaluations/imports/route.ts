@@ -1,19 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-
-const prisma = new PrismaClient();
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Não autorizado' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
     const evaluationImports = await prisma.evaluationImport.findMany({
@@ -32,12 +27,12 @@ export async function GET(request: NextRequest) {
         },
       },
       orderBy: {
-        importedAt: 'desc',
+        importedAt: "desc",
       },
     });
 
     // Transformar os dados para o formato esperado
-    const formattedImports = evaluationImports.map(importRecord => ({
+    const formattedImports = evaluationImports.map((importRecord) => ({
       id: importRecord.id,
       fileName: importRecord.fileName,
       importedAt: importRecord.importedAt.toISOString(),
@@ -47,12 +42,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(formattedImports);
   } catch (error) {
-    console.error('Erro ao buscar importações de avaliações:', error);
+    console.error("Erro ao buscar importações de avaliações:", error);
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
+      { error: "Erro interno do servidor" },
+      { status: 500 },
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

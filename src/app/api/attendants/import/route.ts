@@ -1,51 +1,47 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-
-const prisma = new PrismaClient();
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { AttendantImportService } from "@/services/attendantImportService";
+import { AttendantService } from "@/services/attendantService";
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     // Debug logging
-    console.log('🔍 Session debug:', {
+    console.log("🔍 Session debug:", {
       hasSession: !!session,
       hasUser: !!session?.user,
       userId: session?.user?.id,
       userEmail: session?.user?.email,
-      userName: session?.user?.name
+      userName: session?.user?.name,
     });
-    
+
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Não autorizado' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
-    // Verify user exists in database before proceeding
-    const userExists = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { id: true, name: true, email: true }
-    });
+    // Verificar se o usuário existe no banco de dados
+    const userExists = await AttendantImportService.verifyUser(session.user.id);
 
-    console.log('👤 User verification:', {
+    console.log("👤 User verification:", {
       sessionUserId: session.user.id,
       userExists: !!userExists,
-      dbUser: userExists
     });
 
     if (!userExists) {
-      console.error('❌ User from session not found in database:', session.user.id);
+      console.error(
+        "❌ User from session not found in database:",
+        session.user.id,
+      );
       return NextResponse.json(
-        { 
-          error: 'Usuário da sessão não encontrado no banco de dados',
-          details: 'Sua sessão pode estar desatualizada. Faça logout e login novamente.',
-          sessionUserId: session.user.id
+        {
+          error: "Usuário da sessão não encontrado no banco de dados",
+          details:
+            "Sua sessão pode estar desatualizada. Faça logout e login novamente.",
+          sessionUserId: session.user.id,
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -54,91 +50,67 @@ export async function POST(request: NextRequest) {
 
     if (!attendants || !Array.isArray(attendants)) {
       return NextResponse.json(
-        { error: 'Lista de atendentes é obrigatória' },
-        { status: 400 }
+        { error: "Lista de atendentes é obrigatória" },
+        { status: 400 },
       );
     }
 
-    if (!fileName || typeof fileName !== 'string') {
+    if (!fileName || typeof fileName !== "string") {
       return NextResponse.json(
-        { error: 'Nome do arquivo é obrigatório' },
-        { status: 400 }
+        { error: "Nome do arquivo é obrigatório" },
+        { status: 400 },
       );
     }
 
-    // Criar o registro de importação
-    const attendantImport = await prisma.attendantImport.create({
-      data: {
-        fileName,
-        importedById: userExists.id, // Use the verified user ID from database
-        importedAt: new Date(),
-      },
-    });
-
-    // Preparar dados dos atendentes com importId
-    const attendantsData = attendants.map((attendant: any) => ({
-      // Remove id field - let Prisma auto-generate it
-      name: attendant.name,
-      email: attendant.email,
-      funcao: attendant.funcao,
-      setor: attendant.setor,
-      status: attendant.status,
-      avatarUrl: attendant.avatarUrl || null,
-      telefone: attendant.telefone,
-      portaria: attendant.portaria || null,
-      situacao: attendant.situacao || null,
-      dataAdmissao: new Date(attendant.dataAdmissao),
-      dataNascimento: new Date(attendant.dataNascimento),
-      rg: attendant.rg,
-      cpf: attendant.cpf,
-      importId: attendantImport.id,
-    }));
-
-    // Criar atendentes em lote usando createMany
-    const result = await prisma.attendant.createMany({
-      data: attendantsData,
-      skipDuplicates: true, // Ignora duplicatas baseadas em constraints únicos
+    // Criar o registro de importação e importar atendentes
+    const result = await AttendantImportService.importAttendants({
+      fileName,
+      attendants,
+      importedById: userExists.id,
     });
 
     return NextResponse.json({
-      message: 'Atendentes importados com sucesso',
-      importId: attendantImport.id,
-      count: result.count,
+      success: true,
+      message: "Atendentes importados com sucesso",
+      data: result,
     });
   } catch (error) {
-    console.error('Erro ao importar atendentes:', error);
-    
+    console.error("Erro ao importar atendentes:", error);
+
     // Verificar se é erro de constraint única ou duplicata
     if (error instanceof Error) {
       const errorMessage = error.message.toLowerCase();
-      if (errorMessage.includes('unique constraint') || 
-          errorMessage.includes('duplicate key') || 
-          errorMessage.includes('already exists') ||
-          errorMessage.includes('violates unique constraint')) {
+      if (
+        errorMessage.includes("unique constraint") ||
+        errorMessage.includes("duplicate key") ||
+        errorMessage.includes("already exists") ||
+        errorMessage.includes("violates unique constraint")
+      ) {
         return NextResponse.json(
-          { error: 'Alguns atendentes já existem no sistema (email ou CPF duplicado)' },
-          { status: 409 }
+          {
+            error:
+              "Alguns atendentes já existem no sistema (email ou CPF duplicado)",
+          },
+          { status: 409 },
         );
       }
-      
+
       // Log the actual error for debugging
-      console.error('Detailed error:', {
+      console.error("Detailed error:", {
         message: error.message,
         stack: error.stack,
-        name: error.name
+        name: error.name,
       });
-      
+
       return NextResponse.json(
         { error: `Erro ao processar dados: ${error.message}` },
-        { status: 500 }
+        { status: 500 },
       );
     }
-    
+
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
+      { error: "Erro interno do servidor" },
+      { status: 500 },
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

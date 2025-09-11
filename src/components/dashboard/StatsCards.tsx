@@ -1,14 +1,7 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { 
-  Users, 
-  MessageSquare, 
-  Star, 
-  Zap, 
-  Trophy,
-  Target
-} from "lucide-react";
+import { Users, MessageSquare, Star, Zap, Trophy, Target } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface DashboardStats {
@@ -52,14 +45,14 @@ export function StatsCards({ stats, isLoading }: StatsCardsProps) {
       value: stats.totalAttendants.toLocaleString(),
       icon: Users,
       color: "text-blue-500",
-      bgColor: "bg-blue-50 dark:bg-blue-950/20"
+      bgColor: "bg-blue-50 dark:bg-blue-950/20",
     },
     {
       title: "Total de Avaliações",
       value: stats.totalEvaluations.toLocaleString(),
       icon: MessageSquare,
       color: "text-green-500",
-      bgColor: "bg-green-50 dark:bg-green-950/20"
+      bgColor: "bg-green-50 dark:bg-green-950/20",
     },
     {
       title: "Nota Média Geral",
@@ -67,7 +60,7 @@ export function StatsCards({ stats, isLoading }: StatsCardsProps) {
       suffix: " ⭐",
       icon: Star,
       color: "text-yellow-500",
-      bgColor: "bg-yellow-50 dark:bg-yellow-950/20"
+      bgColor: "bg-yellow-50 dark:bg-yellow-950/20",
     },
     {
       title: "XP Total Distribuído",
@@ -75,22 +68,22 @@ export function StatsCards({ stats, isLoading }: StatsCardsProps) {
       suffix: " XP",
       icon: Zap,
       color: "text-purple-500",
-      bgColor: "bg-purple-50 dark:bg-purple-950/20"
+      bgColor: "bg-purple-50 dark:bg-purple-950/20",
     },
     {
       title: "Temporadas Ativas",
       value: stats.activeSeasons.toString(),
       icon: Target,
       color: "text-orange-500",
-      bgColor: "bg-orange-50 dark:bg-orange-950/20"
+      bgColor: "bg-orange-50 dark:bg-orange-950/20",
     },
     {
       title: "Conquistas Desbloqueadas",
       value: stats.unlockedAchievements.toLocaleString(),
       icon: Trophy,
       color: "text-amber-500",
-      bgColor: "bg-amber-50 dark:bg-amber-950/20"
-    }
+      bgColor: "bg-amber-50 dark:bg-amber-950/20",
+    },
   ];
 
   return (

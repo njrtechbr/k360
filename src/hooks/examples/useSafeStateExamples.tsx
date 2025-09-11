@@ -3,14 +3,14 @@
  * Estes exemplos mostram como migrar código existente para usar o hook seguro
  */
 
-import { useCallback, useEffect, useMemo } from 'react';
-import { useSafeState, validators } from '@/hooks/useSafeState';
-import type { Attendant, Evaluation, GamificationConfig } from '@/lib/types';
+import { useCallback, useEffect, useMemo } from "react";
+import { useSafeState, validators } from "@/hooks/useSafeState";
+import type { Attendant, Evaluation, GamificationConfig } from "@/lib/types";
 
 // Tipo para ImportStatus (não existe no types.ts, vamos definir aqui)
 interface ImportStatus {
   isOpen: boolean;
-  status: 'idle' | 'processing' | 'completed' | 'error';
+  status: "idle" | "processing" | "completed" | "error";
   progress: number;
   logs: string[];
   currentFile: string | null;
@@ -25,26 +25,28 @@ interface ImportStatus {
 export const useAttendants = () => {
   const attendantsState = useSafeState({
     initialValue: [] as Attendant[],
-    validator: validators.isArrayOfObjects(['id', 'name', 'email']),
+    validator: validators.isArrayOfObjects(["id", "name", "email"]),
     fallback: [],
-    enableWarnings: true
+    enableWarnings: true,
   });
 
   const fetchAttendants = useCallback(async () => {
     attendantsState.setLoading(true);
     attendantsState.clearError();
-    
+
     try {
-      const response = await fetch('/api/attendants');
+      const response = await fetch("/api/attendants");
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      
+
       const data = await response.json();
       attendantsState.setData(data); // Validação automática
     } catch (error) {
-      console.error('Failed to fetch attendants:', error);
-      attendantsState.setError(error instanceof Error ? error.message : 'Erro ao carregar atendentes');
+      console.error("Failed to fetch attendants:", error);
+      attendantsState.setError(
+        error instanceof Error ? error.message : "Erro ao carregar atendentes",
+      );
     } finally {
       attendantsState.setLoading(false);
     }
@@ -59,7 +61,7 @@ export const useAttendants = () => {
     loading: attendantsState.loading,
     error: attendantsState.error,
     refetch: fetchAttendants,
-    reset: attendantsState.reset
+    reset: attendantsState.reset,
   };
 };
 
@@ -69,44 +71,58 @@ export const useAttendants = () => {
 
 const INITIAL_IMPORT_STATUS: ImportStatus = {
   isOpen: false,
-  status: 'idle',
+  status: "idle",
   progress: 0,
   logs: [],
   currentFile: null,
   totalFiles: 0,
-  processedFiles: 0
+  processedFiles: 0,
 };
 
 export const useImportStatus = () => {
   const importState = useSafeState({
     initialValue: INITIAL_IMPORT_STATUS,
-    validator: validators.isObjectWithProps(['isOpen', 'status', 'progress', 'logs']),
+    validator: validators.isObjectWithProps([
+      "isOpen",
+      "status",
+      "progress",
+      "logs",
+    ]),
     fallback: INITIAL_IMPORT_STATUS,
-    enableWarnings: true
+    enableWarnings: true,
   });
 
-  const updateImportStatus = useCallback((updates: Partial<ImportStatus>) => {
-    const currentData = importState.data;
-    const newData = { ...currentData, ...updates };
-    importState.setData(newData);
-  }, [importState]);
+  const updateImportStatus = useCallback(
+    (updates: Partial<ImportStatus>) => {
+      const currentData = importState.data;
+      const newData = { ...currentData, ...updates };
+      importState.setData(newData);
+    },
+    [importState],
+  );
 
   const startImport = useCallback(() => {
     updateImportStatus({
       isOpen: true,
-      status: 'processing',
+      status: "processing",
       progress: 0,
-      logs: ['Iniciando importação...']
+      logs: ["Iniciando importação..."],
     });
   }, [updateImportStatus]);
 
-  const finishImport = useCallback((success: boolean) => {
-    updateImportStatus({
-      status: success ? 'completed' : 'error',
-      progress: 100,
-      logs: [...importState.data.logs, success ? 'Importação concluída!' : 'Erro na importação']
-    });
-  }, [updateImportStatus, importState.data.logs]);
+  const finishImport = useCallback(
+    (success: boolean) => {
+      updateImportStatus({
+        status: success ? "completed" : "error",
+        progress: 100,
+        logs: [
+          ...importState.data.logs,
+          success ? "Importação concluída!" : "Erro na importação",
+        ],
+      });
+    },
+    [updateImportStatus, importState.data.logs],
+  );
 
   return {
     importStatus: importState.data,
@@ -115,7 +131,7 @@ export const useImportStatus = () => {
     updateImportStatus,
     startImport,
     finishImport,
-    reset: importState.reset
+    reset: importState.reset,
   };
 };
 
@@ -128,20 +144,22 @@ export const useGamificationConfig = () => {
     initialValue: null as GamificationConfig | null,
     validator: (data): data is GamificationConfig | null => {
       if (data === null) return true;
-      return data && 
-        typeof data === 'object' &&
-        typeof data.xpPerEvaluation === 'number' &&
-        typeof data.levelMultiplier === 'number';
+      return (
+        data &&
+        typeof data === "object" &&
+        typeof data.xpPerEvaluation === "number" &&
+        typeof data.levelMultiplier === "number"
+      );
     },
     fallback: null,
-    enableWarnings: true
+    enableWarnings: true,
   });
 
   const fetchConfig = useCallback(async () => {
     configState.setLoading(true);
-    
+
     try {
-      const response = await fetch('/api/gamification/config');
+      const response = await fetch("/api/gamification/config");
       if (response.ok) {
         const data = await response.json();
         configState.setData(data);
@@ -150,8 +168,8 @@ export const useGamificationConfig = () => {
         configState.setData(null);
       }
     } catch (error) {
-      console.error('Failed to fetch gamification config:', error);
-      configState.setError('Erro ao carregar configuração de gamificação');
+      console.error("Failed to fetch gamification config:", error);
+      configState.setError("Erro ao carregar configuração de gamificação");
     } finally {
       configState.setLoading(false);
     }
@@ -162,7 +180,7 @@ export const useGamificationConfig = () => {
     loading: configState.loading,
     error: configState.error,
     fetchConfig,
-    hasConfig: configState.data !== null
+    hasConfig: configState.data !== null,
   };
 };
 
@@ -181,14 +199,14 @@ export const AttendantTableExample = ({
   onEdit = () => {},
   onDelete = () => {},
   onQrCode = () => {},
-  onCopyLink = () => {}
+  onCopyLink = () => {},
 }: AttendantTableProps) => {
   const { attendants, loading, error, refetch } = useAttendants();
 
   // Ordenação segura - nunca quebra mesmo se attendants for null/undefined
   const sortedAttendants = useMemo(() => {
-    return [...attendants].sort((a, b) => 
-      (a.name || '').localeCompare(b.name || '')
+    return [...attendants].sort((a, b) =>
+      (a.name || "").localeCompare(b.name || ""),
     );
   }, [attendants]);
 
@@ -207,7 +225,7 @@ export const AttendantTableExample = ({
     return (
       <div className="text-center py-8">
         <p className="text-red-600 mb-4">{error}</p>
-        <button 
+        <button
           onClick={refetch}
           className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
         >
@@ -292,47 +310,48 @@ export const useDashboardData = () => {
   const attendantsState = useSafeState({
     initialValue: [] as Attendant[],
     validator: validators.isArray,
-    fallback: []
+    fallback: [],
   });
 
   const evaluationsState = useSafeState({
     initialValue: [] as Evaluation[],
     validator: validators.isArray,
-    fallback: []
+    fallback: [],
   });
 
   const importState = useSafeState({
     initialValue: INITIAL_IMPORT_STATUS,
-    validator: validators.isObjectWithProps(['isOpen', 'status']),
-    fallback: INITIAL_IMPORT_STATUS
+    validator: validators.isObjectWithProps(["isOpen", "status"]),
+    fallback: INITIAL_IMPORT_STATUS,
   });
 
   const fetchAllData = useCallback(async () => {
     // Definir loading para todos os estados
     attendantsState.setLoading(true);
     evaluationsState.setLoading(true);
-    
+
     try {
       const [attendantsRes, evaluationsRes] = await Promise.all([
-        fetch('/api/attendants'),
-        fetch('/api/evaluations')
+        fetch("/api/attendants"),
+        fetch("/api/evaluations"),
       ]);
 
       if (attendantsRes.ok) {
         const attendantsData = await attendantsRes.json();
         attendantsState.setData(attendantsData);
       } else {
-        attendantsState.setError('Erro ao carregar atendentes');
+        attendantsState.setError("Erro ao carregar atendentes");
       }
 
       if (evaluationsRes.ok) {
         const evaluationsData = await evaluationsRes.json();
         evaluationsState.setData(evaluationsData);
       } else {
-        evaluationsState.setError('Erro ao carregar avaliações');
+        evaluationsState.setError("Erro ao carregar avaliações");
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erro de conectividade';
+      const errorMessage =
+        error instanceof Error ? error.message : "Erro de conectividade";
       attendantsState.setError(errorMessage);
       evaluationsState.setError(errorMessage);
     } finally {
@@ -350,20 +369,20 @@ export const useDashboardData = () => {
     attendants: attendantsState.data,
     attendantsLoading: attendantsState.loading,
     attendantsError: attendantsState.error,
-    
+
     evaluations: evaluationsState.data,
     evaluationsLoading: evaluationsState.loading,
     evaluationsError: evaluationsState.error,
-    
+
     importStatus: importState.data,
-    
+
     // Indicadores globais
     isAnyLoading,
     hasAnyError,
-    
+
     // Ações
     fetchAllData,
     refreshAttendants: () => attendantsState.setData([]),
-    updateImportStatus: importState.setData
+    updateImportStatus: importState.setData,
   };
 };

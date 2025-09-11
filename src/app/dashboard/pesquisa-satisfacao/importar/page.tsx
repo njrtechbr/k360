@@ -1,295 +1,412 @@
-
 "use client";
 
 import { useAuth } from "@/hooks/useAuth";
-import { usePrisma } from "@/providers/PrismaProvider";
+import { useApi } from "@/providers/ApiProvider";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Papa from "papaparse";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { FileUp, Users, Check, Wand2, ArrowRight, Sparkles } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  FileUp,
+  Users,
+  Check,
+  Wand2,
+  ArrowRight,
+  Sparkles,
+} from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { suggestAttendants, type SuggestAttendantOutput } from "@/ai/flows/suggest-attendant-flow";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  suggestAttendants,
+  type SuggestAttendantOutput,
+} from "@/ai/flows/suggest-attendant-flow";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import ImportProgressModal from "@/components/ImportProgressModal";
 
 type CsvRow = {
-    Data: string;
-    Agente: string;
-    Nota: string;
+  Data: string;
+  Agente: string;
+  Nota: string;
 };
 
 type MappedReview = {
-    agentName: string;
-    attendantId: string;
-    date: string;
-    rating: number;
-}
+  agentName: string;
+  attendantId: string;
+  date: string;
+  rating: number;
+};
 
 export default function ImportarAvaliacoesPage() {
-    const { user, isAuthenticated, loading } = useAuth();
-    const { attendants, importWhatsAppEvaluations, isProcessing } = usePrisma();
-    const router = useRouter();
-    const { toast } = useToast();
+  const { user, isAuthenticated, loading } = useAuth();
+  const { attendants, importWhatsAppEvaluations, isAnyLoading } = useApi();
+  const router = useRouter();
+  const { toast } = useToast();
 
-    const [file, setFile] = useState<File | null>(null);
-    const [parsedData, setParsedData] = useState<CsvRow[]>([]);
-    const [agentMap, setAgentMap] = useState<Record<string, string>>({});
-    const [isParsing, setIsParsing] = useState(false);
-    const [isSuggesting, setIsSuggesting] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [parsedData, setParsedData] = useState<CsvRow[]>([]);
+  const [agentMap, setAgentMap] = useState<Record<string, string>>({});
+  const [isParsing, setIsParsing] = useState(false);
+  const [isSuggesting, setIsSuggesting] = useState(false);
 
-    const uniqueAgents = useMemo(() => {
-        const agents = new Set(parsedData.map(row => row.Agente));
-        return Array.from(agents);
-    }, [parsedData]);
+  const uniqueAgents = useMemo(() => {
+    const agents = new Set(parsedData.map((row) => row.Agente));
+    return Array.from(agents);
+  }, [parsedData]);
 
-    useEffect(() => {
-        if (!loading && !isAuthenticated) {
-            router.push("/login");
-        }
-    }, [isAuthenticated, loading, router]);
-    
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            setFile(e.target.files[0]);
-            setParsedData([]);
-            setAgentMap({});
-        }
-    };
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      router.push("/login");
+    }
+  }, [isAuthenticated, loading, router]);
 
-    const handleParseFile = () => {
-        if (!file) return;
-        setIsParsing(true);
-        Papa.parse<CsvRow>(file, {
-            header: true,
-            skipEmptyLines: true,
-            complete: (results) => {
-                const validData = results.data.filter(row => row.Data && row.Agente && row.Nota);
-                setParsedData(validData);
-                setIsParsing(false);
-            },
-            error: (error) => {
-                console.error("CSV Parsing Error:", error);
-                toast({ variant: "destructive", title: "Erro ao ler o arquivo", description: "Verifique o formato do CSV." });
-                setIsParsing(false);
-            }
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+      setParsedData([]);
+      setAgentMap({});
+    }
+  };
+
+  const handleParseFile = () => {
+    if (!file) return;
+    setIsParsing(true);
+    Papa.parse<CsvRow>(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const validData = results.data.filter(
+          (row) => row.Data && row.Agente && row.Nota,
+        );
+        setParsedData(validData);
+        setIsParsing(false);
+      },
+      error: (error) => {
+        console.error("CSV Parsing Error:", error);
+        toast({
+          variant: "destructive",
+          title: "Erro ao ler o arquivo",
+          description: "Verifique o formato do CSV.",
         });
-    };
+        setIsParsing(false);
+      },
+    });
+  };
 
-    const handleMappingChange = (agentName: string, attendantId: string) => {
-        setAgentMap(prev => ({ ...prev, [agentName]: attendantId }));
-    };
-    
-    const handleAiSuggestion = async () => {
-        setIsSuggesting(true);
-        try {
-            const suggestions: SuggestAttendantOutput = await suggestAttendants({ 
-                agentNames: uniqueAgents, 
-                attendants: Array.isArray(attendants) ? attendants.map(a => ({ id: a.id, name: a.name })) : [] 
-            });
-            
-            const newAgentMap = { ...agentMap };
-            let suggestionsMade = 0;
-            for (const agentName in suggestions) {
-                const attendantId = suggestions[agentName];
-                if (attendantId) {
-                    newAgentMap[agentName] = attendantId;
-                    suggestionsMade++;
-                }
-            }
-            setAgentMap(newAgentMap);
-            toast({ title: "Sugestões Aplicadas!", description: `${suggestionsMade} mapeamentos foram sugeridos pela IA.` });
+  const handleMappingChange = (agentName: string, attendantId: string) => {
+    setAgentMap((prev) => ({ ...prev, [agentName]: attendantId }));
+  };
 
-        } catch (error) {
-            console.error("AI Suggestion Error:", error);
-            toast({ variant: "destructive", title: "Erro na Sugestão de IA", description: "Não foi possível obter sugestões da IA. Tente novamente." });
-        } finally {
-            setIsSuggesting(false);
+  const handleAiSuggestion = async () => {
+    setIsSuggesting(true);
+    try {
+      const suggestions: SuggestAttendantOutput = await suggestAttendants({
+        agentNames: uniqueAgents,
+        attendants: Array.isArray(attendants.data)
+          ? attendants.data.map((a) => ({ id: a.id, name: a.name }))
+          : [],
+      });
+
+      const newAgentMap = { ...agentMap };
+      let suggestionsMade = 0;
+      for (const agentName in suggestions) {
+        const attendantId = suggestions[agentName];
+        if (attendantId) {
+          newAgentMap[agentName] = attendantId;
+          suggestionsMade++;
         }
+      }
+      setAgentMap(newAgentMap);
+      toast({
+        title: "Sugestões Aplicadas!",
+        description: `${suggestionsMade} mapeamentos foram sugeridos pela IA.`,
+      });
+    } catch (error) {
+      console.error("AI Suggestion Error:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro na Sugestão de IA",
+        description: "Não foi possível obter sugestões da IA. Tente novamente.",
+      });
+    } finally {
+      setIsSuggesting(false);
+    }
+  };
+
+  const mappedReviews: MappedReview[] = useMemo(() => {
+    return parsedData
+      .map((row) => {
+        const attendantId = agentMap[row.Agente];
+        if (!attendantId) return null;
+
+        // Handles format "DD/MM/YYYY, HH:mm"
+        const [datePart, timePart] = row.Data.split(", ");
+        if (!datePart || !timePart) return null;
+
+        const [day, month, year] = datePart.split("/");
+        if (!day || !month || !year) return null;
+
+        const date = new Date(
+          `${year}-${month}-${day}T${timePart || "00:00:00"}`,
+        );
+        if (isNaN(date.getTime())) return null;
+
+        return {
+          agentName: row.Agente,
+          attendantId,
+          date: date.toISOString(),
+          rating: parseInt(row.Nota, 10),
+        };
+      })
+      .filter(
+        (row): row is MappedReview =>
+          row !== null && !isNaN(row.rating) && !!row.date,
+      );
+  }, [parsedData, agentMap]);
+
+  const handleImport = useCallback(async () => {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Erro de Autenticação",
+        description: "Usuário não encontrado.",
+      });
+      return;
     }
 
-    const mappedReviews: MappedReview[] = useMemo(() => {
-        return parsedData
-            .map(row => {
-                const attendantId = agentMap[row.Agente];
-                if (!attendantId) return null;
-                
-                // Handles format "DD/MM/YYYY, HH:mm"
-                const [datePart, timePart] = row.Data.split(', ');
-                if (!datePart || !timePart) return null;
+    const newEvaluationsData = mappedReviews.map((review) => ({
+      attendantId: review.attendantId,
+      nota: review.rating,
+      comentario: `Importado do WhatsApp em ${format(new Date(review.date), "dd/MM/yyyy")}`,
+      data: review.date,
+    }));
 
-                const [day, month, year] = datePart.split('/');
-                if (!day || !month || !year) return null;
-                
-                const date = new Date(`${year}-${month}-${day}T${timePart || '00:00:00'}`);
-                if (isNaN(date.getTime())) return null;
-
-                return {
-                    agentName: row.Agente,
-                    attendantId,
-                    date: date.toISOString(),
-                    rating: parseInt(row.Nota, 10),
-                }
-            })
-            .filter((row): row is MappedReview => row !== null && !isNaN(row.rating) && !!row.date);
-    }, [parsedData, agentMap]);
-    
-    const handleImport = useCallback(async () => {
-        if (!user) {
-            toast({ variant: "destructive", title: "Erro de Autenticação", description: "Usuário não encontrado."});
-            return;
-        }
-
-        const newEvaluationsData = mappedReviews.map(review => ({
-            attendantId: review.attendantId,
-            nota: review.rating,
-            comentario: `Importado do WhatsApp em ${format(new Date(review.date), 'dd/MM/yyyy')}`,
-            data: review.date,
-        }));
-
-        // Filtrar agentMap para incluir apenas mapeamentos válidos
-        const validAgentMap = Object.fromEntries(
-            Object.entries(agentMap).filter(([_, attendantId]) => 
-                attendantId && attendantId !== 'null' && attendantId !== 'undefined' && attendantId.trim() !== ''
-            )
-        );
-
-        try {
-            await importWhatsAppEvaluations(newEvaluationsData, validAgentMap, file?.name || "Arquivo Desconhecido", user.id);
-
-            setFile(null);
-            setParsedData([]);
-            setAgentMap({});
-        } catch (error) {
-            console.error("Erro durante a importação do WhatsApp:", error);
-            // Toast is handled in provider
-        }
-
-    }, [user, toast, mappedReviews, agentMap, file?.name, importWhatsAppEvaluations]);
-
-    const isMappingStarted = Object.keys(agentMap).length > 0;
-    const allAgentsMapped = uniqueAgents.length > 0 && uniqueAgents.every(agent => agentMap[agent]);
-
-    const sortedAttendants = useMemo(() => {
-        if (!Array.isArray(attendants)) {
-            return [];
-        }
-        return [...attendants].sort((a,b) => a.name.localeCompare(b.name));
-    }, [attendants])
-
-    const attendantOptions = useMemo(() => {
-        return sortedAttendants.map(att => ({
-            value: att.id,
-            label: att.name,
-        }));
-    }, [sortedAttendants]);
-
-    return (
-        <div className="space-y-8">
-            <ImportProgressModal />
-            <h1 className="text-3xl font-bold">Importar Avaliações de CSV</h1>
-            
-            <Card className="shadow-lg">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><FileUp /> 1. Upload do Arquivo CSV</CardTitle>
-                    <CardDescription>Selecione o arquivo CSV exportado da plataforma de WhatsApp.</CardDescription>
-                </CardHeader>
-                <CardContent className="flex items-center gap-4">
-                    <div className="grid w-full max-w-sm items-center gap-1.5">
-                        <Label htmlFor="csv-file">Arquivo CSV</Label>
-                        <Input id="csv-file" type="file" accept=".csv" onChange={handleFileChange} />
-                    </div>
-                    <Button onClick={handleParseFile} disabled={!file || isParsing} className="self-end">
-                        {isParsing ? "Processando..." : "Ler Arquivo"}
-                    </Button>
-                </CardContent>
-            </Card>
-
-            {uniqueAgents.length > 0 && (
-                <Card className="shadow-lg animate-in fade-in-0 slide-in-from-bottom-5 duration-500">
-                    <CardHeader>
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <CardTitle className="flex items-center gap-2"><Users /> 2. Mapeamento de Agentes</CardTitle>
-                                <CardDescription>Associe cada agente do arquivo CSV a um atendente cadastrado no sistema.</CardDescription>
-                            </div>
-                            <Button onClick={handleAiSuggestion} disabled={isSuggesting || isProcessing}>
-                                <Sparkles className="mr-2 h-4 w-4" />
-                                {isSuggesting ? "Sugerindo..." : "Sugerir com IA"}
-                            </Button>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        {uniqueAgents.map(agent => (
-                            <div key={agent} className="flex items-center gap-4 justify-between p-2 border rounded-md">
-                                <span className="font-medium">{agent}</span>
-                                <ArrowRight className="text-muted-foreground" />
-                                <Select
-                                    value={agentMap[agent]}
-                                    onValueChange={(attendantId) => handleMappingChange(agent, attendantId)}
-                                >
-                                    <SelectTrigger className="w-[250px]">
-                                        <SelectValue placeholder="Selecione um atendente" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {attendantOptions.map((option) => (
-                                            <SelectItem key={option.value} value={option.value}>
-                                                {option.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        ))}
-                    </CardContent>
-                </Card>
-            )}
-
-            {isMappingStarted && (
-                <Card className="shadow-lg animate-in fade-in-0 slide-in-from-bottom-5 duration-500">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><Check /> 3. Confirmar e Importar</CardTitle>
-                        <CardDescription>Revise os dados que serão importados. Apenas avaliações com agentes mapeados serão salvas.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="max-h-96 overflow-y-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Agente (CSV)</TableHead>
-                                        <TableHead>Atendente (Sistema)</TableHead>
-                                        <TableHead>Data</TableHead>
-                                        <TableHead className="text-right">Nota</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {mappedReviews.map((review, index) => (
-                                        <TableRow key={index}>
-                                            <TableCell><Badge variant="outline">{review.agentName}</Badge></TableCell>
-                                            <TableCell className="font-medium">{attendants.find(a => a.id === review.attendantId)?.name}</TableCell>
-                                            <TableCell>{format(new Date(review.date), 'dd/MM/yyyy')}</TableCell>
-                                            <TableCell className="text-right font-bold">{review.rating}</TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </CardContent>
-                    <CardFooter className="flex-col items-stretch gap-4">
-                        <Button onClick={handleImport} disabled={!allAgentsMapped || isProcessing} size="lg" className="w-full">
-                            <Wand2 className="mr-2 h-4 w-4" />
-                            {isProcessing ? `Importando...` : `Importar ${mappedReviews.length} Avaliações`}
-                        </Button>
-                    </CardFooter>
-                </Card>
-            )}
-        </div>
+    // Filtrar agentMap para incluir apenas mapeamentos válidos
+    const validAgentMap = Object.fromEntries(
+      Object.entries(agentMap).filter(
+        ([_, attendantId]) =>
+          attendantId &&
+          attendantId !== "null" &&
+          attendantId !== "undefined" &&
+          attendantId.trim() !== "",
+      ),
     );
+
+    try {
+      await importWhatsAppEvaluations.mutate({
+        evaluations: newEvaluationsData,
+        agentMap: validAgentMap,
+        fileName: file?.name || "Arquivo Desconhecido",
+      });
+
+      setFile(null);
+      setParsedData([]);
+      setAgentMap({});
+    } catch (error) {
+      console.error("Erro durante a importação do WhatsApp:", error);
+      // Toast is handled in provider
+    }
+  }, [
+    user,
+    toast,
+    mappedReviews,
+    agentMap,
+    file?.name,
+    importWhatsAppEvaluations,
+  ]);
+
+  const isMappingStarted = Object.keys(agentMap).length > 0;
+  const allAgentsMapped =
+    uniqueAgents.length > 0 && uniqueAgents.every((agent) => agentMap[agent]);
+
+  const sortedAttendants = useMemo(() => {
+    if (!Array.isArray(attendants.data)) {
+      return [];
+    }
+    return [...attendants.data].sort((a, b) => a.name.localeCompare(b.name));
+  }, [attendants.data]);
+
+  const attendantOptions = useMemo(() => {
+    return sortedAttendants.map((att) => ({
+      value: att.id,
+      label: att.name,
+    }));
+  }, [sortedAttendants]);
+
+  return (
+    <div className="space-y-8">
+      <ImportProgressModal />
+      <h1 className="text-3xl font-bold">Importar Avaliações de CSV</h1>
+
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileUp /> 1. Upload do Arquivo CSV
+          </CardTitle>
+          <CardDescription>
+            Selecione o arquivo CSV exportado da plataforma de WhatsApp.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center gap-4">
+          <div className="grid w-full max-w-sm items-center gap-1.5">
+            <Label htmlFor="csv-file">Arquivo CSV</Label>
+            <Input
+              id="csv-file"
+              type="file"
+              accept=".csv"
+              onChange={handleFileChange}
+            />
+          </div>
+          <Button
+            onClick={handleParseFile}
+            disabled={!file || isParsing}
+            className="self-end"
+          >
+            {isParsing ? "Processando..." : "Ler Arquivo"}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {uniqueAgents.length > 0 && (
+        <Card className="shadow-lg animate-in fade-in-0 slide-in-from-bottom-5 duration-500">
+          <CardHeader>
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Users /> 2. Mapeamento de Agentes
+                </CardTitle>
+                <CardDescription>
+                  Associe cada agente do arquivo CSV a um atendente cadastrado
+                  no sistema.
+                </CardDescription>
+              </div>
+              <Button
+                onClick={handleAiSuggestion}
+                disabled={isSuggesting || isAnyLoading}
+              >
+                <Sparkles className="mr-2 h-4 w-4" />
+                {isSuggesting ? "Sugerindo..." : "Sugerir com IA"}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {uniqueAgents.map((agent) => (
+              <div
+                key={agent}
+                className="flex items-center gap-4 justify-between p-2 border rounded-md"
+              >
+                <span className="font-medium">{agent}</span>
+                <ArrowRight className="text-muted-foreground" />
+                <Select
+                  value={agentMap[agent]}
+                  onValueChange={(attendantId) =>
+                    handleMappingChange(agent, attendantId)
+                  }
+                >
+                  <SelectTrigger className="w-[250px]">
+                    <SelectValue placeholder="Selecione um atendente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {attendantOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {isMappingStarted && (
+        <Card className="shadow-lg animate-in fade-in-0 slide-in-from-bottom-5 duration-500">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Check /> 3. Confirmar e Importar
+            </CardTitle>
+            <CardDescription>
+              Revise os dados que serão importados. Apenas avaliações com
+              agentes mapeados serão salvas.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="max-h-96 overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Agente (CSV)</TableHead>
+                    <TableHead>Atendente (Sistema)</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead className="text-right">Nota</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {mappedReviews.map((review, index) => (
+                    <TableRow key={index}>
+                      <TableCell>
+                        <Badge variant="outline">{review.agentName}</Badge>
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {
+                          attendants.data?.find(
+                            (a) => a.id === review.attendantId,
+                          )?.name
+                        }
+                      </TableCell>
+                      <TableCell>
+                        {format(new Date(review.date), "dd/MM/yyyy")}
+                      </TableCell>
+                      <TableCell className="text-right font-bold">
+                        {review.rating}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+          <CardFooter className="flex-col items-stretch gap-4">
+            <Button
+              onClick={handleImport}
+              disabled={!allAgentsMapped || importWhatsAppEvaluations.loading}
+              size="lg"
+              className="w-full"
+            >
+              <Wand2 className="mr-2 h-4 w-4" />
+              {importWhatsAppEvaluations.loading
+                ? `Importando...`
+                : `Importar ${mappedReviews.length} Avaliações`}
+            </Button>
+          </CardFooter>
+        </Card>
+      )}
+    </div>
+  );
 }

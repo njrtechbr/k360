@@ -1,38 +1,38 @@
 "use client";
 
-import { useGamificationConfig } from './useGamificationConfig';
-import { useAchievements } from './useAchievements';
-import { useSeasons } from './useSeasons';
-import { useXpAndLevels } from './useXpAndLevels';
-import { useLeaderboard } from './useLeaderboard';
+import { useGamificationConfig } from "./useGamificationConfig";
+import { useAchievements } from "./useAchievements";
+import { useSeasons } from "./useSeasons";
+import { useXpAndLevels } from "./useXpAndLevels";
+import { useLeaderboard } from "./useLeaderboard";
 import type {
   UseGamificationConfigReturn,
   UseAchievementsReturn,
   UseSeasonsReturn,
   UseXpAndLevelsReturn,
-  UseLeaderboardReturn
-} from './index';
+  UseLeaderboardReturn,
+} from "./index";
 
 export interface UseGamificationReturn {
   // Configurações
   config: UseGamificationConfigReturn;
-  
+
   // Conquistas
   achievements: UseAchievementsReturn;
-  
+
   // Temporadas
   seasons: UseSeasonsReturn;
-  
+
   // XP e Níveis
   xpAndLevels: UseXpAndLevelsReturn;
-  
+
   // Leaderboard
   leaderboard: UseLeaderboardReturn;
-  
+
   // Estado global
   isLoading: boolean;
   hasError: boolean;
-  
+
   // Ações globais
   refreshAll: () => Promise<void>;
   getOverallStats: () => {
@@ -47,12 +47,12 @@ export interface UseGamificationReturn {
 /**
  * Hook principal de gamificação que combina todos os sub-hooks
  * para fornecer uma interface unificada e completa.
- * 
+ *
  * Este hook é ideal para:
  * - Páginas principais de gamificação
  * - Dashboards completos
  * - Componentes que precisam de múltiplas funcionalidades
- * 
+ *
  * Para funcionalidades específicas, use os hooks individuais:
  * - useGamificationConfig: apenas configurações
  * - useAchievements: apenas conquistas
@@ -69,14 +69,14 @@ export function useGamification(): UseGamificationReturn {
   const leaderboard = useLeaderboard();
 
   // Estado global derivado
-  const isLoading = 
+  const isLoading =
     config.isLoading ||
     achievements.isLoading ||
     seasons.isLoading ||
     xpAndLevels.isLoading ||
     leaderboard.isLoading;
 
-  const hasError = 
+  const hasError =
     !!config.error ||
     !!achievements.error ||
     !!seasons.error ||
@@ -90,7 +90,7 @@ export function useGamification(): UseGamificationReturn {
       achievements.refreshAchievements(),
       seasons.refreshSeasons(),
       xpAndLevels.refreshData(),
-      leaderboard.refreshLeaderboard()
+      leaderboard.refreshLeaderboard(),
     ]);
   };
 
@@ -100,20 +100,24 @@ export function useGamification(): UseGamificationReturn {
     const seasonStats = seasons.getSeasonStats();
     const xpStats = xpAndLevels.getXpStats();
     const levelStats = xpAndLevels.getLevelStats();
-    
+
     // Calcular estatísticas derivadas
     const totalAttendants = leaderboard.mainLeaderboard.length;
     const totalXpDistributed = xpStats.totalXp;
-    const averageLevel = totalAttendants > 0 
-      ? leaderboard.mainLeaderboard.reduce((sum, entry) => sum + entry.level, 0) / totalAttendants
-      : 0;
+    const averageLevel =
+      totalAttendants > 0
+        ? leaderboard.mainLeaderboard.reduce(
+            (sum, entry) => sum + entry.level,
+            0,
+          ) / totalAttendants
+        : 0;
 
     return {
       totalAttendants,
       activeSeasons: seasonStats.active,
       totalAchievements: achievementStats.total,
       totalXpDistributed,
-      averageLevel: Math.round(averageLevel * 100) / 100 // 2 casas decimais
+      averageLevel: Math.round(averageLevel * 100) / 100, // 2 casas decimais
     };
   };
 
@@ -126,7 +130,7 @@ export function useGamification(): UseGamificationReturn {
     isLoading,
     hasError,
     refreshAll,
-    getOverallStats
+    getOverallStats,
   };
 }
 
@@ -135,14 +139,14 @@ export function useGamification(): UseGamificationReturn {
  * de gamificação sem todas as funcionalidades de gerenciamento.
  */
 export function useGamificationData() {
-  const { 
-    config, 
-    achievements, 
-    seasons, 
-    xpAndLevels, 
+  const {
+    config,
+    achievements,
+    seasons,
+    xpAndLevels,
     leaderboard,
     isLoading,
-    hasError 
+    hasError,
   } = useGamification();
 
   return {
@@ -154,16 +158,16 @@ export function useGamificationData() {
     activeSeason: seasons.activeSeason,
     levelRewards: xpAndLevels.levelRewards,
     mainLeaderboard: leaderboard.mainLeaderboard,
-    
+
     // Estado
     isLoading,
     hasError,
-    
+
     // Funções utilitárias mais usadas
     getLevelFromXp: xpAndLevels.getLevelFromXp,
     getLevelProgress: xpAndLevels.getLevelProgress,
     getSeasonProgress: seasons.getSeasonProgress,
-    getAttendantPosition: leaderboard.getAttendantPosition
+    getAttendantPosition: leaderboard.getAttendantPosition,
   };
 }
 
@@ -173,14 +177,14 @@ export function useGamificationData() {
  */
 export function useGamificationReadOnly() {
   const gamificationData = useGamificationData();
-  
+
   return {
     ...gamificationData,
-    
+
     // Funções de cálculo e consulta apenas
     calculateXpFromEvaluation: useXpAndLevels().calculateXpFromEvaluation,
     filterAchievements: useAchievements().filterAchievements,
     getUpcomingRewards: useXpAndLevels().getUpcomingRewards,
-    getOverallStats: useGamification().getOverallStats
+    getOverallStats: useGamification().getOverallStats,
   };
 }

@@ -1,33 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { AchievementsService } from '@/services/gamification';
-
-const prisma = new PrismaClient();
+import { NextRequest, NextResponse } from "next/server";
+import { AchievementsService } from "@/services/gamification";
+import { prisma } from "@/lib/prisma";
 
 // GET /api/gamification/achievements/attendant/[id]
 // Buscar achievements de um atendente específico
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const attendantId = params.id;
     const { searchParams } = new URL(request.url);
-    const includeStats = searchParams.get('includeStats') === 'true';
-    const includeRecent = searchParams.get('includeRecent') === 'true';
-    const category = searchParams.get('category');
-    const unlockedOnly = searchParams.get('unlockedOnly') === 'true';
+    const includeStats = searchParams.get("includeStats") === "true";
+    const includeRecent = searchParams.get("includeRecent") === "true";
+    const category = searchParams.get("category");
+    const unlockedOnly = searchParams.get("unlockedOnly") === "true";
 
     // Verificar se atendente existe
     const attendant = await prisma.user.findUnique({
       where: { id: attendantId },
-      select: { id: true, name: true, email: true, department: true }
+      select: { id: true, name: true, email: true, department: true },
     });
 
     if (!attendant) {
       return NextResponse.json(
-        { error: 'Atendente não encontrado' },
-        { status: 404 }
+        { error: "Atendente não encontrado" },
+        { status: 404 },
       );
     }
 
@@ -40,39 +38,39 @@ export async function GET(
     const attendantAchievements = await prisma.attendantAchievement.findMany({
       where: {
         attendantId,
-        ...whereClause
+        ...whereClause,
       },
       include: {
-        achievement: true
+        achievement: true,
       },
       orderBy: {
-        unlockedAt: 'desc'
-      }
+        unlockedAt: "desc",
+      },
     });
 
     // Buscar todos os achievements para comparação
     const allAchievements = await prisma.achievement.findMany({
       where: category ? { category } : {},
-      orderBy: { difficulty: 'asc' }
+      orderBy: { difficulty: "asc" },
     });
 
     // Combinar dados
-    const achievementsWithProgress = allAchievements.map(achievement => {
+    const achievementsWithProgress = allAchievements.map((achievement) => {
       const attendantProgress = attendantAchievements.find(
-        aa => aa.achievementId === achievement.id
+        (aa) => aa.achievementId === achievement.id,
       );
-      
+
       return {
         ...achievement,
         isUnlocked: !!attendantProgress,
         unlockedAt: attendantProgress?.unlockedAt || null,
-        progress: attendantProgress?.progress || 0
+        progress: attendantProgress?.progress || 0,
       };
     });
 
     // Filtrar apenas desbloqueados se solicitado
-    let filteredAchievements = unlockedOnly 
-      ? achievementsWithProgress.filter(a => a.isUnlocked)
+    let filteredAchievements = unlockedOnly
+      ? achievementsWithProgress.filter((a) => a.isUnlocked)
       : achievementsWithProgress;
 
     let result: any = {
@@ -81,24 +79,25 @@ export async function GET(
       summary: {
         total: allAchievements.length,
         unlocked: attendantAchievements.length,
-        progress: allAchievements.length > 0 
-          ? (attendantAchievements.length / allAchievements.length) * 100 
-          : 0
-      }
+        progress:
+          allAchievements.length > 0
+            ? (attendantAchievements.length / allAchievements.length) * 100
+            : 0,
+      },
     };
 
     // Incluir achievements recentes se solicitado
     if (includeRecent) {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      
+
       const recentAchievements = attendantAchievements.filter(
-        aa => aa.unlockedAt && aa.unlockedAt >= thirtyDaysAgo
+        (aa) => aa.unlockedAt && aa.unlockedAt >= thirtyDaysAgo,
       );
 
-      result.recentAchievements = recentAchievements.map(aa => ({
+      result.recentAchievements = recentAchievements.map((aa) => ({
         ...aa.achievement,
-        unlockedAt: aa.unlockedAt
+        unlockedAt: aa.unlockedAt,
       }));
     }
 
@@ -106,67 +105,80 @@ export async function GET(
     if (includeStats) {
       // Estatísticas por categoria
       const categoryStats = await Promise.all(
-        ['ATTENDANCE', 'PERFORMANCE', 'ENGAGEMENT', 'MILESTONE'].map(async (cat) => {
-          const categoryAchievements = allAchievements.filter(a => a.category === cat);
-          const unlockedInCategory = attendantAchievements.filter(
-            aa => aa.achievement.category === cat
-          );
-          
-          return {
-            category: cat,
-            total: categoryAchievements.length,
-            unlocked: unlockedInCategory.length,
-            progress: categoryAchievements.length > 0 
-              ? (unlockedInCategory.length / categoryAchievements.length) * 100 
-              : 0
-          };
-        })
+        ["ATTENDANCE", "PERFORMANCE", "ENGAGEMENT", "MILESTONE"].map(
+          async (cat) => {
+            const categoryAchievements = allAchievements.filter(
+              (a) => a.category === cat,
+            );
+            const unlockedInCategory = attendantAchievements.filter(
+              (aa) => aa.achievement.category === cat,
+            );
+
+            return {
+              category: cat,
+              total: categoryAchievements.length,
+              unlocked: unlockedInCategory.length,
+              progress:
+                categoryAchievements.length > 0
+                  ? (unlockedInCategory.length / categoryAchievements.length) *
+                    100
+                  : 0,
+            };
+          },
+        ),
       );
 
       // Estatísticas por dificuldade
       const difficultyStats = await Promise.all(
-        ['EASY', 'MEDIUM', 'HARD', 'LEGENDARY'].map(async (diff) => {
-          const difficultyAchievements = allAchievements.filter(a => a.difficulty === diff);
-          const unlockedInDifficulty = attendantAchievements.filter(
-            aa => aa.achievement.difficulty === diff
+        ["EASY", "MEDIUM", "HARD", "LEGENDARY"].map(async (diff) => {
+          const difficultyAchievements = allAchievements.filter(
+            (a) => a.difficulty === diff,
           );
-          
+          const unlockedInDifficulty = attendantAchievements.filter(
+            (aa) => aa.achievement.difficulty === diff,
+          );
+
           return {
             difficulty: diff,
             total: difficultyAchievements.length,
             unlocked: unlockedInDifficulty.length,
-            progress: difficultyAchievements.length > 0 
-              ? (unlockedInDifficulty.length / difficultyAchievements.length) * 100 
-              : 0
+            progress:
+              difficultyAchievements.length > 0
+                ? (unlockedInDifficulty.length /
+                    difficultyAchievements.length) *
+                  100
+                : 0,
           };
-        })
+        }),
       );
 
       // XP total dos achievements
       const totalXpFromAchievements = attendantAchievements.reduce(
-        (sum, aa) => sum + (aa.achievement.xpReward || 0), 0
+        (sum, aa) => sum + (aa.achievement.xpReward || 0),
+        0,
       );
 
       // Próximos achievements sugeridos
-      const nextAchievements = AchievementsService.findNewlyUnlockedAchievements(
-        allAchievements,
-        attendantAchievements.map(aa => aa.achievement)
-      ).slice(0, 5);
+      const nextAchievements =
+        AchievementsService.findNewlyUnlockedAchievements(
+          allAchievements,
+          attendantAchievements.map((aa) => aa.achievement),
+        ).slice(0, 5);
 
       result.stats = {
         categoryStats,
         difficultyStats,
         totalXpFromAchievements,
-        nextSuggested: nextAchievements
+        nextSuggested: nextAchievements,
       };
     }
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error('Erro ao buscar achievements do atendente:', error);
+    console.error("Erro ao buscar achievements do atendente:", error);
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
+      { error: "Erro interno do servidor" },
+      { status: 500 },
     );
   }
 }
@@ -175,7 +187,7 @@ export async function GET(
 // Desbloquear achievement para um atendente
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const attendantId = params.id;
@@ -184,32 +196,32 @@ export async function POST(
 
     if (!achievementId) {
       return NextResponse.json(
-        { error: 'ID do achievement é obrigatório' },
-        { status: 400 }
+        { error: "ID do achievement é obrigatório" },
+        { status: 400 },
       );
     }
 
     // Verificar se atendente existe
     const attendant = await prisma.user.findUnique({
-      where: { id: attendantId }
+      where: { id: attendantId },
     });
 
     if (!attendant) {
       return NextResponse.json(
-        { error: 'Atendente não encontrado' },
-        { status: 404 }
+        { error: "Atendente não encontrado" },
+        { status: 404 },
       );
     }
 
     // Verificar se achievement existe
     const achievement = await prisma.achievement.findUnique({
-      where: { id: achievementId }
+      where: { id: achievementId },
     });
 
     if (!achievement) {
       return NextResponse.json(
-        { error: 'Achievement não encontrado' },
-        { status: 404 }
+        { error: "Achievement não encontrado" },
+        { status: 404 },
       );
     }
 
@@ -218,36 +230,46 @@ export async function POST(
       where: {
         attendantId_achievementId: {
           attendantId,
-          achievementId
-        }
-      }
+          achievementId,
+        },
+      },
     });
 
     if (existingProgress) {
       // Atualizar progresso se ainda não foi completamente desbloqueado
-      if (existingProgress.progress < 100 && progress > existingProgress.progress) {
+      if (
+        existingProgress.progress < 100 &&
+        progress > existingProgress.progress
+      ) {
         const updatedProgress = await prisma.attendantAchievement.update({
           where: {
             attendantId_achievementId: {
               attendantId,
-              achievementId
-            }
+              achievementId,
+            },
           },
           data: {
             progress,
-            unlockedAt: progress >= 100 ? new Date() : existingProgress.unlockedAt
-          }
+            unlockedAt:
+              progress >= 100 ? new Date() : existingProgress.unlockedAt,
+          },
         });
 
         return NextResponse.json({
-          message: progress >= 100 ? 'Achievement desbloqueado!' : 'Progresso atualizado',
+          message:
+            progress >= 100
+              ? "Achievement desbloqueado!"
+              : "Progresso atualizado",
           data: updatedProgress,
-          achievement
+          achievement,
         });
       } else {
         return NextResponse.json(
-          { error: 'Achievement já foi desbloqueado ou progresso é menor que o atual' },
-          { status: 400 }
+          {
+            error:
+              "Achievement já foi desbloqueado ou progresso é menor que o atual",
+          },
+          { status: 400 },
         );
       }
     }
@@ -258,15 +280,15 @@ export async function POST(
         attendantId,
         achievementId,
         progress,
-        unlockedAt: progress >= 100 ? new Date() : null
-      }
+        unlockedAt: progress >= 100 ? new Date() : null,
+      },
     });
 
     // Se achievement foi completamente desbloqueado, adicionar XP
     if (progress >= 100 && achievement.xpReward > 0) {
       // Buscar temporada ativa
       const activeSeason = await prisma.gamificationSeason.findFirst({
-        where: { isActive: true }
+        where: { isActive: true },
       });
 
       if (activeSeason) {
@@ -275,28 +297,34 @@ export async function POST(
             attendantId,
             seasonId: activeSeason.id,
             xpGained: achievement.xpReward,
-            source: 'ACHIEVEMENT',
+            source: "ACHIEVEMENT",
             reason: `Achievement desbloqueado: ${achievement.name}`,
             metadata: {
               achievementId: achievement.id,
-              achievementName: achievement.name
-            }
-          }
+              achievementName: achievement.name,
+            },
+          },
         });
       }
     }
 
-    return NextResponse.json({
-      message: progress >= 100 ? 'Achievement desbloqueado com sucesso!' : 'Progresso registrado',
-      data: attendantAchievement,
-      achievement,
-      xpAwarded: progress >= 100 ? achievement.xpReward : 0
-    }, { status: 201 });
-  } catch (error) {
-    console.error('Erro ao desbloquear achievement:', error);
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
+      {
+        message:
+          progress >= 100
+            ? "Achievement desbloqueado com sucesso!"
+            : "Progresso registrado",
+        data: attendantAchievement,
+        achievement,
+        xpAwarded: progress >= 100 ? achievement.xpReward : 0,
+      },
+      { status: 201 },
+    );
+  } catch (error) {
+    console.error("Erro ao desbloquear achievement:", error);
+    return NextResponse.json(
+      { error: "Erro interno do servidor" },
+      { status: 500 },
     );
   }
 }
@@ -305,7 +333,7 @@ export async function POST(
 // Atualizar progresso de achievement
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const attendantId = params.id;
@@ -314,15 +342,15 @@ export async function PUT(
 
     if (!achievementId || progress === undefined) {
       return NextResponse.json(
-        { error: 'achievementId e progress são obrigatórios' },
-        { status: 400 }
+        { error: "achievementId e progress são obrigatórios" },
+        { status: 400 },
       );
     }
 
     if (progress < 0 || progress > 100) {
       return NextResponse.json(
-        { error: 'Progresso deve estar entre 0 e 100' },
-        { status: 400 }
+        { error: "Progresso deve estar entre 0 e 100" },
+        { status: 400 },
       );
     }
 
@@ -331,42 +359,49 @@ export async function PUT(
       where: {
         attendantId_achievementId: {
           attendantId,
-          achievementId
-        }
+          achievementId,
+        },
       },
       include: {
-        achievement: true
-      }
+        achievement: true,
+      },
     });
 
     if (!existingProgress) {
       return NextResponse.json(
-        { error: 'Progresso de achievement não encontrado' },
-        { status: 404 }
+        { error: "Progresso de achievement não encontrado" },
+        { status: 404 },
       );
     }
 
     // Atualizar progresso
     const wasUnlocked = existingProgress.progress >= 100;
     const willBeUnlocked = progress >= 100;
-    
+
     const updatedProgress = await prisma.attendantAchievement.update({
       where: {
         attendantId_achievementId: {
           attendantId,
-          achievementId
-        }
+          achievementId,
+        },
       },
       data: {
         progress,
-        unlockedAt: willBeUnlocked && !wasUnlocked ? new Date() : existingProgress.unlockedAt
-      }
+        unlockedAt:
+          willBeUnlocked && !wasUnlocked
+            ? new Date()
+            : existingProgress.unlockedAt,
+      },
     });
 
     // Se achievement foi desbloqueado agora, adicionar XP
-    if (willBeUnlocked && !wasUnlocked && existingProgress.achievement.xpReward > 0) {
+    if (
+      willBeUnlocked &&
+      !wasUnlocked &&
+      existingProgress.achievement.xpReward > 0
+    ) {
       const activeSeason = await prisma.gamificationSeason.findFirst({
-        where: { isActive: true }
+        where: { isActive: true },
       });
 
       if (activeSeason) {
@@ -375,30 +410,34 @@ export async function PUT(
             attendantId,
             seasonId: activeSeason.id,
             xpGained: existingProgress.achievement.xpReward,
-            source: 'ACHIEVEMENT',
+            source: "ACHIEVEMENT",
             reason: `Achievement desbloqueado: ${existingProgress.achievement.name}`,
             metadata: {
               achievementId: existingProgress.achievement.id,
-              achievementName: existingProgress.achievement.name
-            }
-          }
+              achievementName: existingProgress.achievement.name,
+            },
+          },
         });
       }
     }
 
     return NextResponse.json({
-      message: willBeUnlocked && !wasUnlocked 
-        ? 'Achievement desbloqueado!' 
-        : 'Progresso atualizado',
+      message:
+        willBeUnlocked && !wasUnlocked
+          ? "Achievement desbloqueado!"
+          : "Progresso atualizado",
       data: updatedProgress,
       achievement: existingProgress.achievement,
-      xpAwarded: willBeUnlocked && !wasUnlocked ? existingProgress.achievement.xpReward : 0
+      xpAwarded:
+        willBeUnlocked && !wasUnlocked
+          ? existingProgress.achievement.xpReward
+          : 0,
     });
   } catch (error) {
-    console.error('Erro ao atualizar progresso:', error);
+    console.error("Erro ao atualizar progresso:", error);
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
+      { error: "Erro interno do servidor" },
+      { status: 500 },
     );
   }
 }
@@ -407,17 +446,17 @@ export async function PUT(
 // Remover achievement de um atendente
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const attendantId = params.id;
     const { searchParams } = new URL(request.url);
-    const achievementId = searchParams.get('achievementId');
+    const achievementId = searchParams.get("achievementId");
 
     if (!achievementId) {
       return NextResponse.json(
-        { error: 'achievementId é obrigatório' },
-        { status: 400 }
+        { error: "achievementId é obrigatório" },
+        { status: 400 },
       );
     }
 
@@ -426,18 +465,18 @@ export async function DELETE(
       where: {
         attendantId_achievementId: {
           attendantId,
-          achievementId
-        }
+          achievementId,
+        },
       },
       include: {
-        achievement: true
-      }
+        achievement: true,
+      },
     });
 
     if (!existingProgress) {
       return NextResponse.json(
-        { error: 'Achievement não encontrado para este atendente' },
-        { status: 404 }
+        { error: "Achievement não encontrado para este atendente" },
+        { status: 404 },
       );
     }
 
@@ -446,9 +485,9 @@ export async function DELETE(
       where: {
         attendantId_achievementId: {
           attendantId,
-          achievementId
-        }
-      }
+          achievementId,
+        },
+      },
     });
 
     // Se achievement estava desbloqueado, remover XP relacionado
@@ -456,25 +495,28 @@ export async function DELETE(
       await prisma.xpEvent.deleteMany({
         where: {
           attendantId,
-          source: 'ACHIEVEMENT',
+          source: "ACHIEVEMENT",
           metadata: {
-            path: ['achievementId'],
-            equals: achievementId
-          }
-        }
+            path: ["achievementId"],
+            equals: achievementId,
+          },
+        },
       });
     }
 
     return NextResponse.json({
-      message: 'Achievement removido com sucesso',
+      message: "Achievement removido com sucesso",
       removedAchievement: existingProgress.achievement,
-      xpRemoved: existingProgress.progress >= 100 ? existingProgress.achievement.xpReward : 0
+      xpRemoved:
+        existingProgress.progress >= 100
+          ? existingProgress.achievement.xpReward
+          : 0,
     });
   } catch (error) {
-    console.error('Erro ao remover achievement:', error);
+    console.error("Erro ao remover achievement:", error);
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
+      { error: "Erro interno do servidor" },
+      { status: 500 },
     );
   }
 }

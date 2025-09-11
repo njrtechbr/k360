@@ -1,7 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { BackupErrorHandler, BackupErrorType, ErrorSeverity } from '@/services/backupErrorHandler';
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import {
+  BackupErrorHandler,
+  BackupErrorType,
+  ErrorSeverity,
+} from "@/services/backupErrorHandler";
 
 /**
  * GET /api/backup/error-logs
@@ -12,49 +16,54 @@ export async function GET(request: NextRequest) {
     // Verificar autenticação
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Não autenticado' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
     }
 
     // Verificar permissões (apenas ADMIN e SUPERADMIN podem ver logs de erro)
-    if (!['ADMIN', 'SUPERADMIN'].includes(session.user.role)) {
+    if (!["ADMIN", "SUPERADMIN"].includes(session.user.role)) {
       return NextResponse.json(
-        { error: 'Sem permissão para acessar logs de erro' },
-        { status: 403 }
+        { error: "Sem permissão para acessar logs de erro" },
+        { status: 403 },
       );
     }
 
     // Obter parâmetros da query
     const { searchParams } = new URL(request.url);
-    const errorType = searchParams.get('errorType') as BackupErrorType | null;
-    const severity = searchParams.get('severity') as ErrorSeverity | null;
-    const resolved = searchParams.get('resolved') === 'true' ? true : 
-                    searchParams.get('resolved') === 'false' ? false : undefined;
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const startDate = searchParams.get('startDate') ? new Date(searchParams.get('startDate')!) : undefined;
-    const endDate = searchParams.get('endDate') ? new Date(searchParams.get('endDate')!) : undefined;
+    const errorType = searchParams.get("errorType") as BackupErrorType | null;
+    const severity = searchParams.get("severity") as ErrorSeverity | null;
+    const resolved =
+      searchParams.get("resolved") === "true"
+        ? true
+        : searchParams.get("resolved") === "false"
+          ? false
+          : undefined;
+    const limit = parseInt(searchParams.get("limit") || "50");
+    const startDate = searchParams.get("startDate")
+      ? new Date(searchParams.get("startDate")!)
+      : undefined;
+    const endDate = searchParams.get("endDate")
+      ? new Date(searchParams.get("endDate")!)
+      : undefined;
 
     // Validar parâmetros
     if (limit < 1 || limit > 1000) {
       return NextResponse.json(
-        { error: 'Parâmetro limit deve estar entre 1 e 1000' },
-        { status: 400 }
+        { error: "Parâmetro limit deve estar entre 1 e 1000" },
+        { status: 400 },
       );
     }
 
     if (errorType && !Object.values(BackupErrorType).includes(errorType)) {
       return NextResponse.json(
-        { error: 'Tipo de erro inválido' },
-        { status: 400 }
+        { error: "Tipo de erro inválido" },
+        { status: 400 },
       );
     }
 
     if (severity && !Object.values(ErrorSeverity).includes(severity)) {
       return NextResponse.json(
-        { error: 'Severidade inválida' },
-        { status: 400 }
+        { error: "Severidade inválida" },
+        { status: 400 },
       );
     }
 
@@ -65,7 +74,7 @@ export async function GET(request: NextRequest) {
       resolved,
       startDate,
       endDate,
-      limit
+      limit,
     });
 
     return NextResponse.json({
@@ -79,21 +88,20 @@ export async function GET(request: NextRequest) {
           resolved,
           startDate: startDate?.toISOString(),
           endDate: endDate?.toISOString(),
-          limit
+          limit,
         },
-        timestamp: new Date().toISOString()
-      }
-    });
-
-  } catch (error) {
-    console.error('Erro ao obter logs de erro:', error);
-    
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Erro interno do servidor ao obter logs' 
+        timestamp: new Date().toISOString(),
       },
-      { status: 500 }
+    });
+  } catch (error) {
+    console.error("Erro ao obter logs de erro:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Erro interno do servidor ao obter logs",
+      },
+      { status: 500 },
     );
   }
 }
@@ -107,17 +115,14 @@ export async function DELETE(request: NextRequest) {
     // Verificar autenticação
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Não autenticado' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
     }
 
     // Verificar permissões (apenas SUPERADMIN pode limpar logs)
-    if (session.user.role !== 'SUPERADMIN') {
+    if (session.user.role !== "SUPERADMIN") {
       return NextResponse.json(
-        { error: 'Apenas SUPERADMIN pode limpar logs de erro' },
-        { status: 403 }
+        { error: "Apenas SUPERADMIN pode limpar logs de erro" },
+        { status: 403 },
       );
     }
 
@@ -128,8 +133,8 @@ export async function DELETE(request: NextRequest) {
     // Validar parâmetros
     if (daysToKeep < 1 || daysToKeep > 365) {
       return NextResponse.json(
-        { error: 'Parâmetro daysToKeep deve estar entre 1 e 365' },
-        { status: 400 }
+        { error: "Parâmetro daysToKeep deve estar entre 1 e 365" },
+        { status: 400 },
       );
     }
 
@@ -141,19 +146,18 @@ export async function DELETE(request: NextRequest) {
       data: {
         removedCount,
         daysToKeep,
-        timestamp: new Date().toISOString()
-      }
-    });
-
-  } catch (error) {
-    console.error('Erro ao limpar logs:', error);
-    
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Erro interno do servidor ao limpar logs' 
+        timestamp: new Date().toISOString(),
       },
-      { status: 500 }
+    });
+  } catch (error) {
+    console.error("Erro ao limpar logs:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Erro interno do servidor ao limpar logs",
+      },
+      { status: 500 },
     );
   }
 }

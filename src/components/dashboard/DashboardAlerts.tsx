@@ -1,31 +1,37 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  AlertTriangle, 
-  Info, 
-  CheckCircle, 
+import {
+  AlertTriangle,
+  Info,
+  CheckCircle,
   XCircle,
   Clock,
   TrendingDown,
   TrendingUp,
-  Users
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 
 interface DashboardAlert {
   id: string;
-  type: 'info' | 'warning' | 'error' | 'success';
+  type: "info" | "warning" | "error" | "success";
   title: string;
   description: string;
   action?: {
     label: string;
     href: string;
   };
-  priority: 'low' | 'medium' | 'high';
+  priority: "low" | "medium" | "high";
   timestamp: Date;
 }
 
@@ -35,17 +41,17 @@ interface DashboardAlertsProps {
     totalEvaluations: number;
     totalAttendants: number;
     averageRating: number;
-    recentTrend: 'up' | 'down' | 'stable';
+    recentTrend: "up" | "down" | "stable";
   };
 }
 
 const getAlertIcon = (type: string) => {
   switch (type) {
-    case 'warning':
+    case "warning":
       return <AlertTriangle className="h-4 w-4" />;
-    case 'error':
+    case "error":
       return <XCircle className="h-4 w-4" />;
-    case 'success':
+    case "success":
       return <CheckCircle className="h-4 w-4" />;
     default:
       return <Info className="h-4 w-4" />;
@@ -54,23 +60,23 @@ const getAlertIcon = (type: string) => {
 
 const getAlertVariant = (type: string) => {
   switch (type) {
-    case 'warning':
-      return 'default' as const;
-    case 'error':
-      return 'destructive' as const;
+    case "warning":
+      return "default" as const;
+    case "error":
+      return "destructive" as const;
     default:
-      return 'default' as const;
+      return "default" as const;
   }
 };
 
 const getPriorityColor = (priority: string) => {
   switch (priority) {
-    case 'high':
-      return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400';
-    case 'medium':
-      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400';
+    case "high":
+      return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400";
+    case "medium":
+      return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400";
     default:
-      return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400';
+      return "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400";
   }
 };
 
@@ -83,60 +89,61 @@ export function DashboardAlerts({ alerts, stats }: DashboardAlertsProps) {
       // Alerta de nota média baixa
       if (stats.averageRating < 3.0) {
         systemAlerts.push({
-          id: 'low-rating',
-          type: 'warning',
-          title: 'Nota Média Baixa',
+          id: "low-rating",
+          type: "warning",
+          title: "Nota Média Baixa",
           description: `A nota média geral está em ${stats.averageRating.toFixed(1)}/5.0. Considere revisar os processos de atendimento.`,
           action: {
-            label: 'Ver Relatórios',
-            href: '/dashboard/pesquisa-satisfacao/relatorios'
+            label: "Ver Relatórios",
+            href: "/dashboard/pesquisa-satisfacao/relatorios",
           },
-          priority: 'high',
-          timestamp: new Date()
+          priority: "high",
+          timestamp: new Date(),
         });
       }
 
       // Alerta de tendência negativa
-      if (stats.recentTrend === 'down') {
+      if (stats.recentTrend === "down") {
         systemAlerts.push({
-          id: 'negative-trend',
-          type: 'warning',
-          title: 'Tendência Negativa',
-          description: 'As avaliações recentes mostram uma tendência de queda. Monitore de perto.',
+          id: "negative-trend",
+          type: "warning",
+          title: "Tendência Negativa",
+          description:
+            "As avaliações recentes mostram uma tendência de queda. Monitore de perto.",
           action: {
-            label: 'Analisar Tendência',
-            href: '/dashboard/pesquisa-satisfacao/analises'
+            label: "Analisar Tendência",
+            href: "/dashboard/pesquisa-satisfacao/analises",
           },
-          priority: 'medium',
-          timestamp: new Date()
+          priority: "medium",
+          timestamp: new Date(),
         });
       }
 
       // Alerta de poucos atendentes
       if (stats.totalAttendants < 5) {
         systemAlerts.push({
-          id: 'few-attendants',
-          type: 'info',
-          title: 'Poucos Atendentes Cadastrados',
+          id: "few-attendants",
+          type: "info",
+          title: "Poucos Atendentes Cadastrados",
           description: `Apenas ${stats.totalAttendants} atendentes cadastrados. Considere adicionar mais membros da equipe.`,
           action: {
-            label: 'Gerenciar Atendentes',
-            href: '/dashboard/rh/atendentes'
+            label: "Gerenciar Atendentes",
+            href: "/dashboard/rh/atendentes",
           },
-          priority: 'low',
-          timestamp: new Date()
+          priority: "low",
+          timestamp: new Date(),
         });
       }
 
       // Alerta de tendência positiva
-      if (stats.recentTrend === 'up' && stats.averageRating >= 4.0) {
+      if (stats.recentTrend === "up" && stats.averageRating >= 4.0) {
         systemAlerts.push({
-          id: 'positive-trend',
-          type: 'success',
-          title: 'Excelente Performance!',
+          id: "positive-trend",
+          type: "success",
+          title: "Excelente Performance!",
           description: `Nota média de ${stats.averageRating.toFixed(1)}/5.0 com tendência crescente. Parabéns à equipe!`,
-          priority: 'low',
-          timestamp: new Date()
+          priority: "low",
+          timestamp: new Date(),
         });
       }
     }
@@ -161,12 +168,14 @@ export function DashboardAlerts({ alerts, stats }: DashboardAlertsProps) {
             <CheckCircle className="h-5 w-5 text-green-500" />
             Sistema Funcionando Normalmente
           </CardTitle>
-          <CardDescription>Nenhum alerta ou notificação no momento</CardDescription>
+          <CardDescription>
+            Nenhum alerta ou notificação no momento
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Clock className="h-4 w-4" />
-            Última verificação: {new Date().toLocaleTimeString('pt-BR')}
+            Última verificação: {new Date().toLocaleTimeString("pt-BR")}
           </div>
         </CardContent>
       </Card>
@@ -182,10 +191,13 @@ export function DashboardAlerts({ alerts, stats }: DashboardAlertsProps) {
             Alertas e Notificações
           </div>
           <Badge variant="outline">
-            {sortedAlerts.length} {sortedAlerts.length === 1 ? 'alerta' : 'alertas'}
+            {sortedAlerts.length}{" "}
+            {sortedAlerts.length === 1 ? "alerta" : "alertas"}
           </Badge>
         </CardTitle>
-        <CardDescription>Informações importantes sobre o sistema</CardDescription>
+        <CardDescription>
+          Informações importantes sobre o sistema
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {sortedAlerts.slice(0, 5).map((alert) => (
@@ -198,12 +210,15 @@ export function DashboardAlerts({ alerts, stats }: DashboardAlertsProps) {
                     <AlertTitle className="text-sm font-medium">
                       {alert.title}
                     </AlertTitle>
-                    <Badge 
-                      variant="outline" 
+                    <Badge
+                      variant="outline"
                       className={`text-xs ${getPriorityColor(alert.priority)}`}
                     >
-                      {alert.priority === 'high' ? 'Alta' : 
-                       alert.priority === 'medium' ? 'Média' : 'Baixa'}
+                      {alert.priority === "high"
+                        ? "Alta"
+                        : alert.priority === "medium"
+                          ? "Média"
+                          : "Baixa"}
                     </Badge>
                   </div>
                   <AlertDescription className="text-sm">
@@ -221,15 +236,15 @@ export function DashboardAlerts({ alerts, stats }: DashboardAlertsProps) {
                 </div>
               </div>
               <div className="text-xs text-muted-foreground ml-2">
-                {alert.timestamp.toLocaleTimeString('pt-BR', { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
+                {alert.timestamp.toLocaleTimeString("pt-BR", {
+                  hour: "2-digit",
+                  minute: "2-digit",
                 })}
               </div>
             </div>
           </Alert>
         ))}
-        
+
         {sortedAlerts.length > 5 && (
           <div className="text-center pt-2">
             <Button variant="ghost" size="sm">

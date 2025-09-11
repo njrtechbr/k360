@@ -1,16 +1,16 @@
-import { jest } from '@jest/globals';
-import fs from 'fs';
-import path from 'path';
+import { jest } from "@jest/globals";
+import fs from "fs";
+import path from "path";
 
 // Configuração global para testes de integração
 beforeAll(() => {
   // Configurar variáveis de ambiente para testes
-  process.env.NODE_ENV = 'test';
-  process.env.BACKUP_DIRECTORY = path.join(process.cwd(), 'test-backups');
-  process.env.BACKUP_MAX_SIZE_GB = '1'; // Limite menor para testes
-  process.env.BACKUP_RETENTION_DAYS = '7';
-  process.env.BACKUP_MAX_CONCURRENT = '2';
-  
+  process.env.NODE_ENV = "test";
+  process.env.BACKUP_DIRECTORY = path.join(process.cwd(), "test-backups");
+  process.env.BACKUP_MAX_SIZE_GB = "1"; // Limite menor para testes
+  process.env.BACKUP_RETENTION_DAYS = "7";
+  process.env.BACKUP_MAX_CONCURRENT = "2";
+
   // Criar diretório de backup de teste se não existir
   const testBackupDir = process.env.BACKUP_DIRECTORY;
   if (!fs.existsSync(testBackupDir)) {
@@ -33,7 +33,7 @@ global.console = {
   log: jest.fn(),
   info: jest.fn(),
   warn: jest.fn(),
-  error: originalConsole.error // Manter errors visíveis
+  error: originalConsole.error, // Manter errors visíveis
 };
 
 // Configurar timeouts mais longos para testes de performance
@@ -44,33 +44,35 @@ global.fetch = jest.fn();
 
 // Utilitários de teste compartilhados
 export const testUtils = {
-  createTestBackupFile: (filename: string, content: string = 'SELECT 1;') => {
+  createTestBackupFile: (filename: string, content: string = "SELECT 1;") => {
     const filepath = path.join(process.env.BACKUP_DIRECTORY!, filename);
     fs.writeFileSync(filepath, content);
     return filepath;
   },
-  
+
   cleanupTestFiles: (filenames: string[]) => {
-    filenames.forEach(filename => {
+    filenames.forEach((filename) => {
       const filepath = path.join(process.env.BACKUP_DIRECTORY!, filename);
       if (fs.existsSync(filepath)) {
         fs.unlinkSync(filepath);
       }
     });
   },
-  
+
   generateLargeContent: (sizeInBytes: number) => {
-    const baseContent = 'SELECT * FROM test_table WHERE id = 1;\n';
+    const baseContent = "SELECT * FROM test_table WHERE id = 1;\n";
     const repetitions = Math.ceil(sizeInBytes / baseContent.length);
     return baseContent.repeat(repetitions).substring(0, sizeInBytes);
   },
-  
-  measureExecutionTime: async <T>(fn: () => Promise<T>): Promise<{ result: T; duration: number }> => {
+
+  measureExecutionTime: async <T>(
+    fn: () => Promise<T>,
+  ): Promise<{ result: T; duration: number }> => {
     const start = performance.now();
     const result = await fn();
     const end = performance.now();
     return { result, duration: end - start };
-  }
+  },
 };
 
 // Declarar tipos globais para TypeScript

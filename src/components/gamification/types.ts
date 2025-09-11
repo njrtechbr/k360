@@ -1,4 +1,4 @@
-import { LucideIcon } from 'lucide-react';
+import { LucideIcon } from "lucide-react";
 
 // Base types
 export interface Season {
@@ -17,7 +17,7 @@ export interface Achievement {
   name: string;
   description: string;
   category: string;
-  difficulty: 'easy' | 'medium' | 'hard' | 'legendary';
+  difficulty: "easy" | "medium" | "hard" | "legendary";
   xpReward: number;
   icon?: string;
   active: boolean;

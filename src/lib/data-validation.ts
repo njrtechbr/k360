@@ -1,11 +1,17 @@
 /**
  * Utilitários de validação de dados seguros
- * 
+ *
  * Este arquivo implementa funções de validação robustas para prevenir erros
  * de runtime causados por dados null, undefined ou com tipos incorretos.
  */
 
-import { Attendant, Evaluation, GamificationConfig, XpEvent, UnlockedAchievement } from './types';
+import {
+  Attendant,
+  Evaluation,
+  GamificationConfig,
+  XpEvent,
+  UnlockedAchievement,
+} from "./types";
 
 // ============================================================================
 // TIPOS DE VALIDAÇÃO
@@ -38,7 +44,7 @@ export interface ImportStatus {
   logs: string[];
   progress: number;
   title: string;
-  status: 'processing' | 'done' | 'error' | 'idle';
+  status: "processing" | "done" | "error" | "idle";
 }
 
 // ============================================================================
@@ -62,30 +68,33 @@ export function isNonEmptyArray<T>(value: unknown): value is [T, ...T[]] {
 /**
  * Verifica se um valor é um objeto válido (não null, não array)
  */
-export function isValidObject(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
+export function isValidObject(
+  value: unknown,
+): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 /**
  * Verifica se um valor é uma string não vazia
  */
 export function isNonEmptyString(value: unknown): value is string {
-  return typeof value === 'string' && value.trim().length > 0;
+  return typeof value === "string" && value.trim().length > 0;
 }
 
 /**
  * Verifica se um valor é um número válido
  */
 export function isValidNumber(value: unknown): value is number {
-  return typeof value === 'number' && !isNaN(value) && isFinite(value);
+  return typeof value === "number" && !isNaN(value) && isFinite(value);
 }
 
 /**
  * Verifica se um valor é um UUID válido
  */
 export function isValidUUID(value: unknown): value is string {
-  if (typeof value !== 'string') return false;
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (typeof value !== "string") return false;
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   return uuidRegex.test(value);
 }
 
@@ -98,9 +107,9 @@ export function isValidUUID(value: unknown): value is string {
  */
 export function isValidAttendant(data: unknown): data is Attendant {
   if (!isValidObject(data)) return false;
-  
+
   const attendant = data as Record<string, unknown>;
-  
+
   return (
     isValidUUID(attendant.id) &&
     isNonEmptyString(attendant.name) &&
@@ -121,8 +130,8 @@ export function isValidAttendant(data: unknown): data is Attendant {
  */
 export function isValidAttendantArray(data: unknown): data is Attendant[] {
   if (!isValidArray(data)) return false;
-  
-  return data.every(item => isValidAttendant(item));
+
+  return data.every((item) => isValidAttendant(item));
 }
 
 /**
@@ -130,16 +139,16 @@ export function isValidAttendantArray(data: unknown): data is Attendant[] {
  */
 export function isValidEvaluation(data: unknown): data is Evaluation {
   if (!isValidObject(data)) return false;
-  
+
   const evaluation = data as Record<string, unknown>;
-  
+
   return (
     isValidUUID(evaluation.id) &&
     isValidUUID(evaluation.attendantId) &&
     isValidNumber(evaluation.nota) &&
     evaluation.nota >= 1 &&
     evaluation.nota <= 5 &&
-    typeof evaluation.comentario === 'string' &&
+    typeof evaluation.comentario === "string" &&
     isNonEmptyString(evaluation.data) &&
     isValidNumber(evaluation.xpGained) &&
     evaluation.xpGained >= 0
@@ -151,8 +160,8 @@ export function isValidEvaluation(data: unknown): data is Evaluation {
  */
 export function isValidEvaluationArray(data: unknown): data is Evaluation[] {
   if (!isValidArray(data)) return false;
-  
-  return data.every(item => isValidEvaluation(item));
+
+  return data.every((item) => isValidEvaluation(item));
 }
 
 /**
@@ -160,19 +169,21 @@ export function isValidEvaluationArray(data: unknown): data is Evaluation[] {
  */
 export function isValidImportStatus(data: unknown): data is ImportStatus {
   if (!isValidObject(data)) return false;
-  
+
   const importStatus = data as Record<string, unknown>;
-  
+
   return (
-    typeof importStatus.isOpen === 'boolean' &&
+    typeof importStatus.isOpen === "boolean" &&
     isValidArray(importStatus.logs) &&
-    importStatus.logs.every(log => typeof log === 'string') &&
+    importStatus.logs.every((log) => typeof log === "string") &&
     isValidNumber(importStatus.progress) &&
     importStatus.progress >= 0 &&
     importStatus.progress <= 100 &&
     isNonEmptyString(importStatus.title) &&
     isNonEmptyString(importStatus.status) &&
-    ['processing', 'done', 'error', 'idle'].includes(importStatus.status as string)
+    ["processing", "done", "error", "idle"].includes(
+      importStatus.status as string,
+    )
   );
 }
 
@@ -181,9 +192,9 @@ export function isValidImportStatus(data: unknown): data is ImportStatus {
  */
 export function isValidXpEvent(data: unknown): data is XpEvent {
   if (!isValidObject(data)) return false;
-  
+
   const xpEvent = data as Record<string, unknown>;
-  
+
   return (
     isValidUUID(xpEvent.id) &&
     isValidUUID(xpEvent.attendantId) &&
@@ -195,7 +206,7 @@ export function isValidXpEvent(data: unknown): data is XpEvent {
     xpEvent.multiplier >= 0 &&
     isNonEmptyString(xpEvent.reason) &&
     isNonEmptyString(xpEvent.date) &&
-    ['evaluation', 'achievement'].includes(xpEvent.type as string) &&
+    ["evaluation", "achievement"].includes(xpEvent.type as string) &&
     isValidUUID(xpEvent.relatedId)
   );
 }
@@ -205,8 +216,8 @@ export function isValidXpEvent(data: unknown): data is XpEvent {
  */
 export function isValidXpEventArray(data: unknown): data is XpEvent[] {
   if (!isValidArray(data)) return false;
-  
-  return data.every(item => isValidXpEvent(item));
+
+  return data.every((item) => isValidXpEvent(item));
 }
 
 // ============================================================================
@@ -216,12 +227,14 @@ export function isValidXpEventArray(data: unknown): data is XpEvent[] {
 /**
  * Valida e retorna um array seguro de Attendants
  */
-export function validateAttendantArray(data: unknown): ValidationResult<Attendant[]> {
+export function validateAttendantArray(
+  data: unknown,
+): ValidationResult<Attendant[]> {
   if (data === null || data === undefined) {
     return {
       isValid: false,
       data: [],
-      errors: ['Dados de atendentes são null ou undefined']
+      errors: ["Dados de atendentes são null ou undefined"],
     };
   }
 
@@ -229,7 +242,7 @@ export function validateAttendantArray(data: unknown): ValidationResult<Attendan
     return {
       isValid: false,
       data: [],
-      errors: ['Dados não são um array válido']
+      errors: ["Dados não são um array válido"],
     };
   }
 
@@ -247,19 +260,21 @@ export function validateAttendantArray(data: unknown): ValidationResult<Attendan
   return {
     isValid: errors.length === 0,
     data: validAttendants,
-    errors
+    errors,
   };
 }
 
 /**
  * Valida e retorna um array seguro de Evaluations
  */
-export function validateEvaluationArray(data: unknown): ValidationResult<Evaluation[]> {
+export function validateEvaluationArray(
+  data: unknown,
+): ValidationResult<Evaluation[]> {
   if (data === null || data === undefined) {
     return {
       isValid: false,
       data: [],
-      errors: ['Dados de avaliações são null ou undefined']
+      errors: ["Dados de avaliações são null ou undefined"],
     };
   }
 
@@ -267,7 +282,7 @@ export function validateEvaluationArray(data: unknown): ValidationResult<Evaluat
     return {
       isValid: false,
       data: [],
-      errors: ['Dados não são um array válido']
+      errors: ["Dados não são um array válido"],
     };
   }
 
@@ -285,27 +300,29 @@ export function validateEvaluationArray(data: unknown): ValidationResult<Evaluat
   return {
     isValid: errors.length === 0,
     data: validEvaluations,
-    errors
+    errors,
   };
 }
 
 /**
  * Valida e retorna um ImportStatus seguro
  */
-export function validateImportStatus(data: unknown): ValidationResult<ImportStatus> {
+export function validateImportStatus(
+  data: unknown,
+): ValidationResult<ImportStatus> {
   const defaultImportStatus: ImportStatus = {
     isOpen: false,
     logs: [],
     progress: 0,
-    title: 'Aguardando',
-    status: 'idle'
+    title: "Aguardando",
+    status: "idle",
   };
 
   if (data === null || data === undefined) {
     return {
       isValid: false,
       data: defaultImportStatus,
-      errors: ['ImportStatus é null ou undefined']
+      errors: ["ImportStatus é null ou undefined"],
     };
   }
 
@@ -313,14 +330,14 @@ export function validateImportStatus(data: unknown): ValidationResult<ImportStat
     return {
       isValid: true,
       data: data,
-      errors: []
+      errors: [],
     };
   }
 
   return {
     isValid: false,
     data: defaultImportStatus,
-    errors: ['ImportStatus não possui estrutura válida']
+    errors: ["ImportStatus não possui estrutura válida"],
   };
 }
 
@@ -335,10 +352,10 @@ export function safeArrayOperation<T, R>(
   data: unknown,
   operation: (array: T[]) => R,
   fallback: R,
-  validator?: (item: unknown) => item is T
+  validator?: (item: unknown) => item is T,
 ): R {
   if (!isValidArray(data)) {
-    console.warn('safeArrayOperation: dados não são um array válido', data);
+    console.warn("safeArrayOperation: dados não são um array válido", data);
     return fallback;
   }
 
@@ -346,14 +363,16 @@ export function safeArrayOperation<T, R>(
     if (validator) {
       const validItems = data.filter(validator);
       if (validItems.length !== data.length) {
-        console.warn(`safeArrayOperation: ${data.length - validItems.length} itens inválidos removidos`);
+        console.warn(
+          `safeArrayOperation: ${data.length - validItems.length} itens inválidos removidos`,
+        );
       }
       return operation(validItems);
     }
-    
+
     return operation(data);
   } catch (error) {
-    console.error('safeArrayOperation: erro durante operação', error);
+    console.error("safeArrayOperation: erro durante operação", error);
     return fallback;
   }
 }
@@ -364,13 +383,13 @@ export function safeArrayOperation<T, R>(
 export function safeFindInArray<T>(
   data: unknown,
   predicate: (item: T) => boolean,
-  validator?: (item: unknown) => item is T
+  validator?: (item: unknown) => item is T,
 ): T | undefined {
   return safeArrayOperation(
     data,
     (array: T[]) => array.find(predicate),
     undefined,
-    validator
+    validator,
   );
 }
 
@@ -380,13 +399,13 @@ export function safeFindInArray<T>(
 export function safeMapArray<T, R>(
   data: unknown,
   mapper: (item: T, index: number) => R,
-  validator?: (item: unknown) => item is T
+  validator?: (item: unknown) => item is T,
 ): R[] {
   return safeArrayOperation(
     data,
     (array: T[]) => array.map(mapper),
     [],
-    validator
+    validator,
   );
 }
 
@@ -396,13 +415,13 @@ export function safeMapArray<T, R>(
 export function safeFilterArray<T>(
   data: unknown,
   predicate: (item: T) => boolean,
-  validator?: (item: unknown) => item is T
+  validator?: (item: unknown) => item is T,
 ): T[] {
   return safeArrayOperation(
     data,
     (array: T[]) => array.filter(predicate),
     [],
-    validator
+    validator,
   );
 }
 
@@ -413,13 +432,13 @@ export function safeReduceArray<T, R>(
   data: unknown,
   reducer: (acc: R, item: T, index: number) => R,
   initialValue: R,
-  validator?: (item: unknown) => item is T
+  validator?: (item: unknown) => item is T,
 ): R {
   return safeArrayOperation(
     data,
     (array: T[]) => array.reduce(reducer, initialValue),
     initialValue,
-    validator
+    validator,
   );
 }
 
@@ -429,17 +448,22 @@ export function safeReduceArray<T, R>(
 export function safeObjectProperty<T>(
   obj: unknown,
   property: string,
-  fallback: T
+  fallback: T,
 ): T {
   if (!isValidObject(obj)) {
-    console.warn(`safeObjectProperty: objeto inválido para propriedade '${property}'`, obj);
+    console.warn(
+      `safeObjectProperty: objeto inválido para propriedade '${property}'`,
+      obj,
+    );
     return fallback;
   }
 
   const value = (obj as Record<string, unknown>)[property];
-  
+
   if (value === null || value === undefined) {
-    console.warn(`safeObjectProperty: propriedade '${property}' é null/undefined`);
+    console.warn(
+      `safeObjectProperty: propriedade '${property}' é null/undefined`,
+    );
     return fallback;
   }
 
@@ -459,13 +483,16 @@ export function safeArrayLength(data: unknown): number {
 /**
  * Obtém o primeiro elemento de um array de forma segura
  */
-export function safeArrayFirst<T>(data: unknown, validator?: (item: unknown) => item is T): T | undefined {
+export function safeArrayFirst<T>(
+  data: unknown,
+  validator?: (item: unknown) => item is T,
+): T | undefined {
   if (!isValidArray(data) || data.length === 0) {
     return undefined;
   }
 
   const firstItem = data[0];
-  
+
   if (validator && !validator(firstItem)) {
     return undefined;
   }
@@ -476,13 +503,16 @@ export function safeArrayFirst<T>(data: unknown, validator?: (item: unknown) => 
 /**
  * Obtém o último elemento de um array de forma segura
  */
-export function safeArrayLast<T>(data: unknown, validator?: (item: unknown) => item is T): T | undefined {
+export function safeArrayLast<T>(
+  data: unknown,
+  validator?: (item: unknown) => item is T,
+): T | undefined {
   if (!isValidArray(data) || data.length === 0) {
     return undefined;
   }
 
   const lastItem = data[data.length - 1];
-  
+
   if (validator && !validator(lastItem)) {
     return undefined;
   }
@@ -502,7 +532,7 @@ export function createSafeDataState<T>(initialData: T): SafeDataState<T> {
     data: initialData,
     loading: false,
     error: null,
-    lastFetch: undefined
+    lastFetch: undefined,
   };
 }
 
@@ -511,12 +541,12 @@ export function createSafeDataState<T>(initialData: T): SafeDataState<T> {
  */
 export function updateSafeDataState<T>(
   currentState: SafeDataState<T>,
-  updates: Partial<SafeDataState<T>>
+  updates: Partial<SafeDataState<T>>,
 ): SafeDataState<T> {
   return {
     ...currentState,
     ...updates,
-    lastFetch: updates.data !== undefined ? new Date() : currentState.lastFetch
+    lastFetch: updates.data !== undefined ? new Date() : currentState.lastFetch,
   };
 }
 
@@ -552,8 +582,8 @@ export const DEFAULT_IMPORT_STATUS: ImportStatus = {
   isOpen: false,
   logs: [],
   progress: 0,
-  title: 'Aguardando',
-  status: 'idle'
+  title: "Aguardando",
+  status: "idle",
 };
 
 /**

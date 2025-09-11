@@ -3,14 +3,21 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { XpGrantPageClient } from "./XpGrantPageClient";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Gift, AlertTriangle, Clock, Users, Zap } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Conceder XP Avulso | Dashboard",
-  description: "Conceda pontos de experiência extras para reconhecer ações excepcionais dos atendentes",
+  description:
+    "Conceda pontos de experiência extras para reconhecer ações excepcionais dos atendentes",
 };
 
 export default async function ConcederXpPage() {
@@ -30,9 +37,12 @@ export default async function ConcederXpPage() {
       {/* Cabeçalho */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Conceder XP Avulso</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Conceder XP Avulso
+          </h1>
           <p className="text-muted-foreground">
-            Reconheça ações e comportamentos excepcionais concedendo pontos de experiência extras
+            Reconheça ações e comportamentos excepcionais concedendo pontos de
+            experiência extras
           </p>
         </div>
         <Badge variant="outline" className="flex items-center gap-2">
@@ -46,16 +56,18 @@ export default async function ConcederXpPage() {
         <Alert>
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            <strong>Importante:</strong> O XP avulso só pode ser concedido quando há uma temporada ativa. 
-            Verifique se existe uma temporada em andamento antes de prosseguir.
+            <strong>Importante:</strong> O XP avulso só pode ser concedido
+            quando há uma temporada ativa. Verifique se existe uma temporada em
+            andamento antes de prosseguir.
           </AlertDescription>
         </Alert>
 
         <Alert>
           <Clock className="h-4 w-4" />
           <AlertDescription>
-            <strong>Limites diários:</strong> Cada administrador pode conceder até 1.000 pontos 
-            e realizar até 50 concessões por dia para manter a integridade do sistema.
+            <strong>Limites diários:</strong> Cada administrador pode conceder
+            até 1.000 pontos e realizar até 50 concessões por dia para manter a
+            integridade do sistema.
           </AlertDescription>
         </Alert>
       </div>
@@ -69,13 +81,15 @@ export default async function ConcederXpPage() {
                 <Users size={20} />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Atendentes Ativos</p>
+                <p className="text-sm text-muted-foreground">
+                  Atendentes Ativos
+                </p>
                 <p className="text-2xl font-bold">-</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -83,13 +97,15 @@ export default async function ConcederXpPage() {
                 <Gift size={20} />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Tipos Disponíveis</p>
+                <p className="text-sm text-muted-foreground">
+                  Tipos Disponíveis
+                </p>
                 <p className="text-2xl font-bold">-</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -97,13 +113,15 @@ export default async function ConcederXpPage() {
                 <Zap size={20} />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Suas Concessões Hoje</p>
+                <p className="text-sm text-muted-foreground">
+                  Suas Concessões Hoje
+                </p>
                 <p className="text-2xl font-bold">-</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -111,7 +129,9 @@ export default async function ConcederXpPage() {
                 <Clock size={20} />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Pontos Restantes</p>
+                <p className="text-sm text-muted-foreground">
+                  Pontos Restantes
+                </p>
                 <p className="text-2xl font-bold">-</p>
               </div>
             </div>
@@ -143,7 +163,7 @@ export default async function ConcederXpPage() {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex items-start gap-3">
               <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
                 2
@@ -155,7 +175,7 @@ export default async function ConcederXpPage() {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex items-start gap-3">
               <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
                 3
@@ -167,7 +187,7 @@ export default async function ConcederXpPage() {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex items-start gap-3">
               <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
                 4
@@ -199,7 +219,7 @@ export default async function ConcederXpPage() {
                 <li>• Mantenha consistência nos critérios</li>
               </ul>
             </div>
-            
+
             <div className="space-y-2">
               <p className="font-medium text-sm">❌ Evite</p>
               <ul className="text-sm text-muted-foreground space-y-1 ml-4">

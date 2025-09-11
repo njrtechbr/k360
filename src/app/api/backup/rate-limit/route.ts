@@ -1,34 +1,34 @@
-import { NextRequest } from 'next/server';
-import { BackupRateLimiter } from '@/lib/rateLimit/backupRateLimit';
-import { withBackupSecurity } from '@/lib/middleware/backupSecurityMiddleware';
+import { NextRequest } from "next/server";
+import { BackupRateLimiter } from "@/lib/rateLimit/backupRateLimit";
+import { withBackupSecurity } from "@/lib/middleware/backupSecurityMiddleware";
 
 interface RateLimitQuery {
   userId?: string;
 }
 
 interface RateLimitAction {
-  action: 'reset' | 'stats' | 'cleanup';
+  action: "reset" | "stats" | "cleanup";
   userId?: string;
   operation?: string;
 }
 
 export async function GET(request: NextRequest) {
-  return withBackupSecurity(request, 'canList', async (context) => {
+  return withBackupSecurity(request, "canList", async (context) => {
     try {
       // Apenas ADMIN e SUPERADMIN podem ver rate limit stats
-      if (!['ADMIN', 'SUPERADMIN'].includes(context.user.role)) {
-        throw new Error('Permissões insuficientes para visualizar rate limits');
+      if (!["ADMIN", "SUPERADMIN"].includes(context.user.role)) {
+        throw new Error("Permissões insuficientes para visualizar rate limits");
       }
 
       const { searchParams } = new URL(request.url);
       const query: RateLimitQuery = {
-        userId: searchParams.get('userId') || undefined,
+        userId: searchParams.get("userId") || undefined,
       };
 
       if (query.userId) {
         // Obter stats de um usuário específico
         const userStats = BackupRateLimiter.getUserRateLimitStats(query.userId);
-        
+
         return {
           success: true,
           data: {
@@ -41,42 +41,41 @@ export async function GET(request: NextRequest) {
         return {
           success: true,
           data: {
-            message: 'Rate limiting ativo',
+            message: "Rate limiting ativo",
             timestamp: new Date().toISOString(),
           },
         };
       }
-
     } catch (error) {
-      console.error('[RATE_LIMIT_STATS_ERROR]', error);
+      console.error("[RATE_LIMIT_STATS_ERROR]", error);
       throw error;
     }
   });
 }
 
 export async function POST(request: NextRequest) {
-  return withBackupSecurity(request, 'canCreate', async (context) => {
+  return withBackupSecurity(request, "canCreate", async (context) => {
     try {
       // Apenas SUPERADMIN pode executar operações de rate limit
-      if (context.user.role !== 'SUPERADMIN') {
-        throw new Error('Apenas SUPERADMIN pode gerenciar rate limits');
+      if (context.user.role !== "SUPERADMIN") {
+        throw new Error("Apenas SUPERADMIN pode gerenciar rate limits");
       }
 
       const body: RateLimitAction = await request.json();
 
       if (!body.action) {
-        throw new Error('Ação é obrigatória');
+        throw new Error("Ação é obrigatória");
       }
 
       switch (body.action) {
-        case 'reset':
+        case "reset":
           if (!body.userId) {
-            throw new Error('userId é obrigatório para reset');
+            throw new Error("userId é obrigatório para reset");
           }
 
           const resetCount = BackupRateLimiter.resetUserRateLimit(
-            body.userId, 
-            body.operation
+            body.userId,
+            body.operation,
           );
 
           return {
@@ -85,7 +84,7 @@ export async function POST(request: NextRequest) {
             resetCount,
           };
 
-        case 'cleanup':
+        case "cleanup":
           const cleanupCount = BackupRateLimiter.cleanup();
 
           return {
@@ -94,12 +93,12 @@ export async function POST(request: NextRequest) {
             cleanupCount,
           };
 
-        case 'stats':
+        case "stats":
           // Retornar estatísticas gerais do rate limiter
           return {
             success: true,
             data: {
-              message: 'Rate limiter operacional',
+              message: "Rate limiter operacional",
               timestamp: new Date().toISOString(),
             },
           };
@@ -107,9 +106,8 @@ export async function POST(request: NextRequest) {
         default:
           throw new Error(`Ação '${body.action}' não reconhecida`);
       }
-
     } catch (error) {
-      console.error('[RATE_LIMIT_MANAGEMENT_ERROR]', error);
+      console.error("[RATE_LIMIT_MANAGEMENT_ERROR]", error);
       throw error;
     }
   });

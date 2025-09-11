@@ -1,7 +1,7 @@
 // Hooks para pesquisa de satisfação
-export { useEvaluations } from './useEvaluations';
-export { useSurvey } from './useSurvey';
-export { useEvaluationAnalytics } from './useEvaluationAnalytics';
+export { useEvaluations } from "./useEvaluations";
+export { useSurvey } from "./useSurvey";
+export { useEvaluationAnalytics } from "./useEvaluationAnalytics";
 
 // Types
 export type {
@@ -12,5 +12,5 @@ export type {
   RatingDistribution,
   AttendantRating,
   TrendData,
-  SentimentByAttendant
-} from './types';
+  SentimentByAttendant,
+} from "./types";

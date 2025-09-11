@@ -1,18 +1,24 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  MessageSquare, 
-  Trophy, 
-  UserPlus, 
-  Zap, 
+import {
+  MessageSquare,
+  Trophy,
+  UserPlus,
+  Zap,
   Star,
   Calendar,
   Clock,
-  TrendingUp
+  TrendingUp,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -20,7 +26,12 @@ import Link from "next/link";
 
 interface ActivityItem {
   id: string;
-  type: 'evaluation' | 'achievement' | 'xp_event' | 'attendant_added' | 'season_started';
+  type:
+    | "evaluation"
+    | "achievement"
+    | "xp_event"
+    | "attendant_added"
+    | "season_started";
   title: string;
   description: string;
   timestamp: Date;
@@ -48,15 +59,15 @@ interface RecentActivityProps {
 
 const getActivityIcon = (type: string) => {
   switch (type) {
-    case 'evaluation':
+    case "evaluation":
       return <MessageSquare className="h-4 w-4 text-blue-500" />;
-    case 'achievement':
+    case "achievement":
       return <Trophy className="h-4 w-4 text-amber-500" />;
-    case 'xp_event':
+    case "xp_event":
       return <Zap className="h-4 w-4 text-purple-500" />;
-    case 'attendant_added':
+    case "attendant_added":
       return <UserPlus className="h-4 w-4 text-green-500" />;
-    case 'season_started':
+    case "season_started":
       return <Calendar className="h-4 w-4 text-orange-500" />;
     default:
       return <Clock className="h-4 w-4 text-gray-500" />;
@@ -65,26 +76,35 @@ const getActivityIcon = (type: string) => {
 
 const getActivityColor = (type: string) => {
   switch (type) {
-    case 'evaluation':
-      return 'border-l-blue-500';
-    case 'achievement':
-      return 'border-l-amber-500';
-    case 'xp_event':
-      return 'border-l-purple-500';
-    case 'attendant_added':
-      return 'border-l-green-500';
-    case 'season_started':
-      return 'border-l-orange-500';
+    case "evaluation":
+      return "border-l-blue-500";
+    case "achievement":
+      return "border-l-amber-500";
+    case "xp_event":
+      return "border-l-purple-500";
+    case "attendant_added":
+      return "border-l-green-500";
+    case "season_started":
+      return "border-l-orange-500";
     default:
-      return 'border-l-gray-300';
+      return "border-l-gray-300";
   }
 };
 
 const getInitials = (name: string) => {
-  return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .substring(0, 2)
+    .toUpperCase();
 };
 
-export function RecentActivity({ activities, isLoading, maxItems = 10 }: RecentActivityProps) {
+export function RecentActivity({
+  activities,
+  isLoading,
+  maxItems = 10,
+}: RecentActivityProps) {
   if (isLoading) {
     return (
       <Card>
@@ -98,7 +118,10 @@ export function RecentActivity({ activities, isLoading, maxItems = 10 }: RecentA
         <CardContent>
           <div className="space-y-4">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex items-start gap-3 p-3 rounded-lg border animate-pulse">
+              <div
+                key={i}
+                className="flex items-start gap-3 p-3 rounded-lg border animate-pulse"
+              >
                 <div className="w-8 h-8 bg-muted rounded-full" />
                 <div className="flex-1 space-y-2">
                   <div className="h-4 bg-muted rounded w-3/4" />
@@ -160,7 +183,7 @@ export function RecentActivity({ activities, isLoading, maxItems = 10 }: RecentA
                 <div className="flex items-center justify-center w-8 h-8 rounded-full bg-background border">
                   {getActivityIcon(activity.type)}
                 </div>
-                
+
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1">
@@ -170,12 +193,13 @@ export function RecentActivity({ activities, isLoading, maxItems = 10 }: RecentA
                       <p className="text-sm text-muted-foreground mt-1">
                         {activity.description}
                       </p>
-                      
+
                       {/* Metadados específicos por tipo */}
                       <div className="flex items-center gap-2 mt-2">
                         {activity.metadata?.rating && (
                           <Badge variant="outline" className="text-xs">
-                            {activity.metadata.rating} <Star className="h-3 w-3 ml-1" />
+                            {activity.metadata.rating}{" "}
+                            <Star className="h-3 w-3 ml-1" />
                           </Badge>
                         )}
                         {activity.metadata?.xp && (
@@ -194,7 +218,7 @@ export function RecentActivity({ activities, isLoading, maxItems = 10 }: RecentA
                       {(activity.user || activity.attendant) && (
                         <div className="flex items-center gap-2 mt-2">
                           {activity.attendant && (
-                            <Link 
+                            <Link
                               href={`/dashboard/rh/atendentes/${activity.attendant.id}`}
                               className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
                             >
@@ -221,11 +245,11 @@ export function RecentActivity({ activities, isLoading, maxItems = 10 }: RecentA
                         </div>
                       )}
                     </div>
-                    
+
                     <div className="text-xs text-muted-foreground whitespace-nowrap">
-                      {formatDistanceToNow(activity.timestamp, { 
-                        addSuffix: true, 
-                        locale: ptBR 
+                      {formatDistanceToNow(activity.timestamp, {
+                        addSuffix: true,
+                        locale: ptBR,
                       })}
                     </div>
                   </div>
@@ -234,7 +258,7 @@ export function RecentActivity({ activities, isLoading, maxItems = 10 }: RecentA
             ))}
           </div>
         </ScrollArea>
-        
+
         {activities.length > maxItems && (
           <div className="text-center pt-4 border-t">
             <p className="text-sm text-muted-foreground">

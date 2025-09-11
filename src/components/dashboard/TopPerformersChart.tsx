@@ -1,8 +1,18 @@
 "use client";
 
 import { Bar, BarChart, XAxis, YAxis } from "recharts";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Trophy, Medal, Award } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +39,12 @@ const chartConfig = {
 };
 
 const getInitials = (name: string) => {
-  return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .substring(0, 2)
+    .toUpperCase();
 };
 
 const getPositionIcon = (position: number) => {
@@ -41,11 +56,18 @@ const getPositionIcon = (position: number) => {
     case 3:
       return <Award className="h-4 w-4 text-amber-600" />;
     default:
-      return <span className="text-sm font-bold text-muted-foreground">#{position}</span>;
+      return (
+        <span className="text-sm font-bold text-muted-foreground">
+          #{position}
+        </span>
+      );
   }
 };
 
-export function TopPerformersChart({ data, isLoading }: TopPerformersChartProps) {
+export function TopPerformersChart({
+  data,
+  isLoading,
+}: TopPerformersChartProps) {
   if (isLoading) {
     return (
       <Card>
@@ -65,10 +87,10 @@ export function TopPerformersChart({ data, isLoading }: TopPerformersChartProps)
     );
   }
 
-  const chartData = data.slice(0, 5).map(item => ({
-    name: item.attendantName.split(' ')[0], // Primeiro nome para o gráfico
+  const chartData = data.slice(0, 5).map((item) => ({
+    name: item.attendantName.split(" ")[0], // Primeiro nome para o gráfico
     totalXp: item.totalXp,
-    fullName: item.attendantName
+    fullName: item.attendantName,
   }));
 
   return (
@@ -85,20 +107,20 @@ export function TopPerformersChart({ data, isLoading }: TopPerformersChartProps)
         <ChartContainer config={chartConfig} className="h-[200px]">
           <BarChart data={chartData} layout="horizontal">
             <XAxis type="number" hide />
-            <YAxis 
-              type="category" 
-              dataKey="name" 
+            <YAxis
+              type="category"
+              dataKey="name"
               tickLine={false}
               axisLine={false}
               tickMargin={8}
               width={60}
             />
-            <ChartTooltip 
+            <ChartTooltip
               content={
-                <ChartTooltipContent 
+                <ChartTooltipContent
                   formatter={(value, _name, props) => [
                     `${value} XP`,
-                    props.payload?.fullName || 'XP Total'
+                    props.payload?.fullName || "XP Total",
                   ]}
                 />
               }
@@ -113,20 +135,28 @@ export function TopPerformersChart({ data, isLoading }: TopPerformersChartProps)
 
         {/* Lista detalhada */}
         <div className="space-y-3">
-          <h4 className="font-semibold text-sm text-muted-foreground">Ranking Completo</h4>
+          <h4 className="font-semibold text-sm text-muted-foreground">
+            Ranking Completo
+          </h4>
           {data.slice(0, 10).map((performer) => (
-            <div key={performer.attendantId} className="flex items-center justify-between p-3 rounded-lg border">
+            <div
+              key={performer.attendantId}
+              className="flex items-center justify-between p-3 rounded-lg border"
+            >
               <div className="flex items-center gap-3">
                 <div className="flex items-center justify-center w-8 h-8">
                   {getPositionIcon(performer.position)}
                 </div>
                 <Avatar className="h-10 w-10">
-                  <AvatarFallback>{getInitials(performer.attendantName)}</AvatarFallback>
+                  <AvatarFallback>
+                    {getInitials(performer.attendantName)}
+                  </AvatarFallback>
                 </Avatar>
                 <div>
                   <p className="font-medium">{performer.attendantName}</p>
                   <p className="text-sm text-muted-foreground">
-                    {performer.evaluationCount} avaliações • {performer.averageRating.toFixed(1)} ⭐
+                    {performer.evaluationCount} avaliações •{" "}
+                    {performer.averageRating.toFixed(1)} ⭐
                   </p>
                 </div>
               </div>

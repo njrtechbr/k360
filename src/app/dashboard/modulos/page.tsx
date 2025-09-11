@@ -1,8 +1,7 @@
-
 "use client";
 
 import { useAuth } from "@/hooks/useAuth";
-import { usePrisma } from "@/providers/PrismaProvider";
+import { useApi } from "@/providers/ApiProvider";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -18,25 +17,70 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
 import { ROLES, type Module } from "@/lib/types";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Pencil, Power, PowerOff, Trash2 } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const formSchema = z.object({
-  name: z.string().min(3, { message: "O nome do módulo deve ter pelo menos 3 caracteres." }),
-  description: z.string().min(10, { message: "A descrição deve ter pelo menos 10 caracteres." }),
-  path: z.string().min(1, { message: "O caminho é obrigatório." }).refine(val => val.startsWith('/'), { message: "O caminho deve começar com /" }),
+  name: z
+    .string()
+    .min(3, { message: "O nome do módulo deve ter pelo menos 3 caracteres." }),
+  description: z
+    .string()
+    .min(10, { message: "A descrição deve ter pelo menos 10 caracteres." }),
+  path: z
+    .string()
+    .min(1, { message: "O caminho é obrigatório." })
+    .refine((val) => val.startsWith("/"), {
+      message: "O caminho deve começar com /",
+    }),
 });
 
 export default function ModulosPage() {
   const { user, isAuthenticated, authLoading, modules } = useAuth();
-  const { addModule, updateModule, toggleModuleStatus, deleteModule } = usePrisma();
+  const { addModule, updateModule, toggleModuleStatus, deleteModule } =
+    useApi();
   const router = useRouter();
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -54,7 +98,11 @@ export default function ModulosPage() {
   });
 
   useEffect(() => {
-    if (!authLoading && (!isAuthenticated || (user?.role !== ROLES.ADMIN && user?.role !== ROLES.SUPERADMIN))) {
+    if (
+      !authLoading &&
+      (!isAuthenticated ||
+        (user?.role !== ROLES.ADMIN && user?.role !== ROLES.SUPERADMIN))
+    ) {
       router.push("/dashboard");
     }
   }, [isAuthenticated, authLoading, router, user]);
@@ -69,12 +117,13 @@ export default function ModulosPage() {
     }
   }, [selectedModule, editForm]);
 
-
   async function onAddSubmit(values: z.infer<typeof formSchema>) {
     try {
       await addModule(values);
       form.reset();
-    } catch (error) { /* toast handled in auth provider */ }
+    } catch (error) {
+      /* toast handled in auth provider */
+    }
   }
 
   async function onEditSubmit(values: z.infer<typeof formSchema>) {
@@ -83,7 +132,9 @@ export default function ModulosPage() {
       await updateModule(selectedModule.id, values);
       setIsEditDialogOpen(false);
       setSelectedModule(null);
-    } catch (error) { /* toast handled in auth provider */ }
+    } catch (error) {
+      /* toast handled in auth provider */
+    }
   }
 
   async function onToggleStatus() {
@@ -94,10 +145,12 @@ export default function ModulosPage() {
   async function onDeleteConfirm() {
     if (!selectedModule) return;
     try {
-        await deleteModule(selectedModule.id);
-        setIsDeleteDialogOpen(false);
-        setSelectedModule(null);
-    } catch(error) { /* toast handled */ }
+      await deleteModule(selectedModule.id);
+      setIsDeleteDialogOpen(false);
+      setSelectedModule(null);
+    } catch (error) {
+      /* toast handled */
+    }
   }
 
   const handleEditClick = (mod: Module) => {
@@ -114,209 +167,267 @@ export default function ModulosPage() {
     setSelectedModule(mod);
     // Use a timeout to ensure the state is set before the async operation
     setTimeout(() => onToggleStatus(), 0);
-  }
+  };
 
   if (authLoading || !user) {
-    return <div className="flex items-center justify-center h-full"><p>Carregando...</p></div>;
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p>Carregando...</p>
+      </div>
+    );
   }
-  
-  const sortedModules = [...(modules || [])].sort((a, b) => a.name.localeCompare(b.name));
+
+  const sortedModules = [...(modules || [])].sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
 
   return (
     <div className="space-y-8">
-        <h1 className="text-3xl font-bold">Gerenciamento de Módulos</h1>
-        <div className="grid md:grid-cols-3 gap-8 items-start">
-            <Card className="md:col-span-1 shadow-lg">
-                <CardHeader>
-                    <CardTitle>Adicionar Novo Módulo</CardTitle>
-                    <CardDescription>Crie um novo módulo para o sistema.</CardDescription>
-                </CardHeader>
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onAddSubmit)}>
-                        <CardContent className="space-y-6">
-                            <FormField 
-                                control={form.control} 
-                                name="name" 
-                                render={({ field }) => ( 
-                                    <FormItem> 
-                                        <FormLabel>Nome do Módulo</FormLabel> 
-                                        <FormControl> 
-                                            <Input placeholder="Ex: Contabilidade" {...field} /> 
-                                        </FormControl> 
-                                        <FormMessage /> 
-                                    </FormItem> 
-                                )}
-                            />
-                            <FormField 
-                                control={form.control} 
-                                name="path" 
-                                render={({ field }) => ( 
-                                    <FormItem> 
-                                        <FormLabel>Caminho do Módulo</FormLabel> 
-                                        <FormControl> 
-                                            <Input placeholder="/dashboard/contabilidade" {...field} /> 
-                                        </FormControl> 
-                                        <FormMessage /> 
-                                    </FormItem> 
-                                )}
-                            />
-                            <FormField 
-                                control={form.control} 
-                                name="description" 
-                                render={({ field }) => ( 
-                                    <FormItem> 
-                                        <FormLabel>Descrição</FormLabel> 
-                                        <FormControl> 
-                                            <Textarea placeholder="Descreva o que este módulo faz." {...field} /> 
-                                        </FormControl> 
-                                        <FormMessage /> 
-                                    </FormItem> 
-                                )}
-                            />
-                        </CardContent>
-                        <CardFooter>
-                            <Button type="submit" disabled={form.formState.isSubmitting} className="w-full">
-                                {form.formState.isSubmitting ? 'Adicionando...' : 'Adicionar Módulo'}
-                            </Button>
-                        </CardFooter>
-                    </form>
-                </Form>
-            </Card>
-
-
-            <Card className="md:col-span-2 shadow-lg">
-                <CardHeader>
-                    <CardTitle>Módulos Existentes</CardTitle>
-                    <CardDescription>Lista de todos os módulos cadastrados.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Nome</TableHead>
-                                <TableHead>Caminho</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Ações</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {sortedModules.map((mod) => (
-                                <TableRow key={mod.id}>
-                                    <TableCell className="font-medium capitalize">{mod.name}</TableCell>
-                                    <TableCell><Badge variant="outline">{mod.path}</Badge></TableCell>
-                                    <TableCell>
-                                        <Badge variant={mod.active ? "secondary" : "destructive"}>
-                                            {mod.active ? "Ativo" : "Inativo"}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                         <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                                    <span className="sr-only">Abrir menu</span>
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => handleEditClick(mod)}>
-                                                    <Pencil className="mr-2 h-4 w-4" /> Editar
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => handleToggleClick(mod)}>
-                                                    {mod.active ? <PowerOff className="mr-2 h-4 w-4" /> : <Power className="mr-2 h-4 w-4" />}
-                                                    {mod.active ? 'Desativar' : 'Ativar'}
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteClick(mod)}>
-                                                    <Trash2 className="mr-2 h-4 w-4" /> Excluir
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-        </div>
-
-        {/* Edit Dialog */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-            <DialogContent>
-                 <DialogHeader>
-                    <DialogTitle>Editar Módulo</DialogTitle>
-                    <DialogDescription>Altere as informações do módulo.</DialogDescription>
-                </DialogHeader>
-                <Form {...editForm}>
-                    <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
-                         <FormField
-                            control={editForm.control}
-                            name="name"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Nome do Módulo</FormLabel>
-                                <FormControl>
-                                    <Input {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
+      <h1 className="text-3xl font-bold">Gerenciamento de Módulos</h1>
+      <div className="grid md:grid-cols-3 gap-8 items-start">
+        <Card className="md:col-span-1 shadow-lg">
+          <CardHeader>
+            <CardTitle>Adicionar Novo Módulo</CardTitle>
+            <CardDescription>
+              Crie um novo módulo para o sistema.
+            </CardDescription>
+          </CardHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onAddSubmit)}>
+              <CardContent className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome do Módulo</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: Contabilidade" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="path"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Caminho do Módulo</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="/dashboard/contabilidade"
+                          {...field}
                         />
-                         <FormField
-                            control={editForm.control}
-                            name="path"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Caminho do Módulo</FormLabel>
-                                <FormControl>
-                                    <Input {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Descrição</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Descreva o que este módulo faz."
+                          {...field}
                         />
-                        <FormField
-                            control={editForm.control}
-                            name="description"
-                            render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Descrição</FormLabel>
-                                <FormControl>
-                                    <Textarea {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+              <CardFooter>
+                <Button
+                  type="submit"
+                  disabled={form.formState.isSubmitting}
+                  className="w-full"
+                >
+                  {form.formState.isSubmitting
+                    ? "Adicionando..."
+                    : "Adicionar Módulo"}
+                </Button>
+              </CardFooter>
+            </form>
+          </Form>
+        </Card>
+
+        <Card className="md:col-span-2 shadow-lg">
+          <CardHeader>
+            <CardTitle>Módulos Existentes</CardTitle>
+            <CardDescription>
+              Lista de todos os módulos cadastrados.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Caminho</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sortedModules.map((mod) => (
+                  <TableRow key={mod.id}>
+                    <TableCell className="font-medium capitalize">
+                      {mod.name}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{mod.path}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={mod.active ? "secondary" : "destructive"}>
+                        {mod.active ? "Ativo" : "Inativo"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Abrir menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => handleEditClick(mod)}
+                          >
+                            <Pencil className="mr-2 h-4 w-4" /> Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleToggleClick(mod)}
+                          >
+                            {mod.active ? (
+                              <PowerOff className="mr-2 h-4 w-4" />
+                            ) : (
+                              <Power className="mr-2 h-4 w-4" />
                             )}
-                        />
-                        <DialogFooter>
-                            <Button type="button" variant="secondary" onClick={() => setIsEditDialogOpen(false)}>Cancelar</Button>
-                            <Button type="submit" disabled={editForm.formState.isSubmitting}>
-                                {editForm.formState.isSubmitting ? 'Salvando...' : 'Salvar Alterações'}
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </Form>
-            </DialogContent>
-        </Dialog>
+                            {mod.active ? "Desativar" : "Ativar"}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-red-600"
+                            onClick={() => handleDeleteClick(mod)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
 
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Módulo</DialogTitle>
+            <DialogDescription>
+              Altere as informações do módulo.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...editForm}>
+            <form
+              onSubmit={editForm.handleSubmit(onEditSubmit)}
+              className="space-y-4"
+            >
+              <FormField
+                control={editForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome do Módulo</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editForm.control}
+                name="path"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Caminho do Módulo</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Descrição</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setIsEditDialogOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={editForm.formState.isSubmitting}
+                >
+                  {editForm.formState.isSubmitting
+                    ? "Salvando..."
+                    : "Salvar Alterações"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
 
-        {/* Delete Alert Dialog */}
-        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        Esta ação não pode ser desfeita. Isso excluirá permanentemente o módulo "{selectedModule?.name}" 
-                        e o removerá de todos os usuários associados a ele.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={onDeleteConfirm} className="bg-destructive hover:bg-destructive/90">
-                       Excluir
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+      {/* Delete Alert Dialog */}
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Isso excluirá permanentemente o
+              módulo "{selectedModule?.name}" e o removerá de todos os usuários
+              associados a ele.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={onDeleteConfirm}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -24,7 +24,7 @@ export interface BackupMetadata {
   checksum: string;
   createdAt: Date;
   createdBy?: string;
-  status: 'success' | 'failed' | 'in_progress';
+  status: "success" | "failed" | "in_progress";
   duration: number;
   databaseVersion: string;
   schemaVersion: string;

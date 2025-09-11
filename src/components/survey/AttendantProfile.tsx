@@ -1,30 +1,30 @@
 "use client";
 
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Progress } from '@/components/ui/progress';
-import { Separator } from '@/components/ui/separator';
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  Star, 
-  TrendingUp, 
-  TrendingDown, 
-  MessageSquare, 
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import {
+  User,
+  Mail,
+  Phone,
+  Star,
+  TrendingUp,
+  TrendingDown,
+  MessageSquare,
   Calendar,
   Award,
-  BarChart3
-} from 'lucide-react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
-import type { Attendant, Evaluation } from '@/lib/types';
-import RatingStars from './RatingStars';
-import SentimentBadge from './SentimentBadge';
+  BarChart3,
+} from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+import type { Attendant, Evaluation } from "@/lib/types";
+import RatingStars from "./RatingStars";
+import SentimentBadge from "./SentimentBadge";
 
 export interface AttendantProfileProps {
   attendant: Attendant;
@@ -41,13 +41,15 @@ export default function AttendantProfile({
   showActions = true,
   onEditAttendant,
   onViewEvaluations,
-  className
+  className,
 }: AttendantProfileProps) {
   // Calcular estatísticas
   const stats = React.useMemo(() => {
-    const attendantEvaluations = evaluations.filter(e => e.attendantId === attendant.id);
+    const attendantEvaluations = evaluations.filter(
+      (e) => e.attendantId === attendant.id,
+    );
     const totalEvaluations = attendantEvaluations.length;
-    
+
     if (totalEvaluations === 0) {
       return {
         totalEvaluations: 0,
@@ -56,39 +58,50 @@ export default function AttendantProfile({
         ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
         commentsCount: 0,
         lastEvaluation: null,
-        trend: 'neutral' as const
+        trend: "neutral" as const,
       };
     }
 
-    const totalRating = attendantEvaluations.reduce((sum, e) => sum + e.nota, 0);
+    const totalRating = attendantEvaluations.reduce(
+      (sum, e) => sum + e.nota,
+      0,
+    );
     const averageRating = totalRating / totalEvaluations;
-    const satisfiedEvaluations = attendantEvaluations.filter(e => e.nota >= 4).length;
+    const satisfiedEvaluations = attendantEvaluations.filter(
+      (e) => e.nota >= 4,
+    ).length;
     const satisfactionRate = (satisfiedEvaluations / totalEvaluations) * 100;
-    const commentsCount = attendantEvaluations.filter(e => e.comentario && e.comentario.trim()).length;
-    
+    const commentsCount = attendantEvaluations.filter(
+      (e) => e.comentario && e.comentario.trim(),
+    ).length;
+
     // Distribuição de notas
-    const ratingDistribution = attendantEvaluations.reduce((acc, e) => {
-      acc[e.nota as keyof typeof acc]++;
-      return acc;
-    }, { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 });
+    const ratingDistribution = attendantEvaluations.reduce(
+      (acc, e) => {
+        acc[e.nota as keyof typeof acc]++;
+        return acc;
+      },
+      { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+    );
 
     // Última avaliação
     const sortedEvaluations = attendantEvaluations.sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
     const lastEvaluation = sortedEvaluations[0];
 
     // Tendência (comparar últimas 5 com 5 anteriores)
-    let trend: 'up' | 'down' | 'neutral' = 'neutral';
+    let trend: "up" | "down" | "neutral" = "neutral";
     if (totalEvaluations >= 10) {
       const recent5 = sortedEvaluations.slice(0, 5);
       const previous5 = sortedEvaluations.slice(5, 10);
-      
+
       const recentAvg = recent5.reduce((sum, e) => sum + e.nota, 0) / 5;
       const previousAvg = previous5.reduce((sum, e) => sum + e.nota, 0) / 5;
-      
-      if (recentAvg > previousAvg + 0.2) trend = 'up';
-      else if (recentAvg < previousAvg - 0.2) trend = 'down';
+
+      if (recentAvg > previousAvg + 0.2) trend = "up";
+      else if (recentAvg < previousAvg - 0.2) trend = "down";
     }
 
     return {
@@ -98,7 +111,7 @@ export default function AttendantProfile({
       ratingDistribution,
       commentsCount,
       lastEvaluation,
-      trend
+      trend,
     };
   }, [attendant.id, evaluations]);
 
@@ -133,7 +146,7 @@ export default function AttendantProfile({
               </div>
             </div>
           </div>
-          
+
           {showActions && (
             <div className="flex gap-2">
               {onEditAttendant && (
@@ -158,7 +171,7 @@ export default function AttendantProfile({
           )}
         </div>
       </CardHeader>
-      
+
       <CardContent className="space-y-6">
         {/* Informações de Contato */}
         <div className="space-y-2">
@@ -190,7 +203,7 @@ export default function AttendantProfile({
             <BarChart3 className="h-4 w-4" />
             Estatísticas de Avaliação
           </h4>
-          
+
           {stats.totalEvaluations === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -201,8 +214,12 @@ export default function AttendantProfile({
               {/* Métricas Principais */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold">{stats.totalEvaluations}</div>
-                  <div className="text-xs text-muted-foreground">Avaliações</div>
+                  <div className="text-2xl font-bold">
+                    {stats.totalEvaluations}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Avaliações
+                  </div>
                 </div>
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-1">
@@ -217,15 +234,25 @@ export default function AttendantProfile({
                   <div className="text-2xl font-bold">
                     {stats.satisfactionRate.toFixed(0)}%
                   </div>
-                  <div className="text-xs text-muted-foreground">Satisfação</div>
+                  <div className="text-xs text-muted-foreground">
+                    Satisfação
+                  </div>
                 </div>
                 <div className="text-center">
                   <div className="flex items-center justify-center gap-1">
-                    <span className="text-2xl font-bold">{stats.commentsCount}</span>
-                    {stats.trend === 'up' && <TrendingUp className="h-4 w-4 text-green-500" />}
-                    {stats.trend === 'down' && <TrendingDown className="h-4 w-4 text-red-500" />}
+                    <span className="text-2xl font-bold">
+                      {stats.commentsCount}
+                    </span>
+                    {stats.trend === "up" && (
+                      <TrendingUp className="h-4 w-4 text-green-500" />
+                    )}
+                    {stats.trend === "down" && (
+                      <TrendingDown className="h-4 w-4 text-red-500" />
+                    )}
                   </div>
-                  <div className="text-xs text-muted-foreground">Comentários</div>
+                  <div className="text-xs text-muted-foreground">
+                    Comentários
+                  </div>
                 </div>
               </div>
 
@@ -264,17 +291,29 @@ export default function AttendantProfile({
                   </h5>
                   <div className="bg-muted/50 rounded-lg p-3 space-y-2">
                     <div className="flex items-center justify-between">
-                      <RatingStars value={stats.lastEvaluation.nota} readOnly size="sm" />
+                      <RatingStars
+                        value={stats.lastEvaluation.nota}
+                        readOnly
+                        size="sm"
+                      />
                       <span className="text-sm text-muted-foreground">
-                        {format(new Date(stats.lastEvaluation.createdAt), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                        {format(
+                          new Date(stats.lastEvaluation.createdAt),
+                          "dd/MM/yyyy HH:mm",
+                          { locale: ptBR },
+                        )}
                       </span>
                     </div>
                     {stats.lastEvaluation.comentario && (
                       <div className="space-y-1">
-                        <p className="text-sm">{stats.lastEvaluation.comentario}</p>
+                        <p className="text-sm">
+                          {stats.lastEvaluation.comentario}
+                        </p>
                         {stats.lastEvaluation.sentimentAnalysis && (
-                          <SentimentBadge 
-                            sentiment={stats.lastEvaluation.sentimentAnalysis.sentiment}
+                          <SentimentBadge
+                            sentiment={
+                              stats.lastEvaluation.sentimentAnalysis.sentiment
+                            }
                             size="sm"
                           />
                         )}

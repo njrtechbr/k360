@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -23,16 +22,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
-  name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
+  name: z
+    .string()
+    .min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
   email: z.string().email({ message: "Por favor, insira um email válido." }),
-  password: z.string().min(6, { message: "A senha deve ter pelo menos 6 caracteres." }),
+  password: z
+    .string()
+    .min(6, { message: "A senha deve ter pelo menos 6 caracteres." }),
   role: z.nativeEnum(ROLES),
   modules: z.array(z.string()).refine((value) => value.some((item) => item), {
     message: "Você deve selecionar pelo menos um módulo.",
@@ -42,7 +51,7 @@ const formSchema = z.object({
 export default function RegisterPage() {
   const { register, modules, user, isAuthenticated } = useAuth();
   const router = useRouter();
-  
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -67,7 +76,7 @@ export default function RegisterPage() {
     }
   }
 
-  const activeModules = modules?.filter(m => m.active) || [];
+  const activeModules = modules?.filter((m) => m.active) || [];
 
   // Users registering publicly should only be able to select USER or SUPERVISOR roles.
   // Admin roles should be assigned by other admins.
@@ -78,7 +87,9 @@ export default function RegisterPage() {
       <Card className="w-full max-w-md shadow-2xl rounded-2xl animate-in fade-in zoom-in-95">
         <CardHeader>
           <CardTitle className="text-2xl font-bold">Criar uma conta</CardTitle>
-          <CardDescription>Insira seus dados para se registrar no sistema.</CardDescription>
+          <CardDescription>
+            Insira seus dados para se registrar no sistema.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -116,7 +127,11 @@ export default function RegisterPage() {
                   <FormItem>
                     <FormLabel>Senha</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="********" {...field} />
+                      <Input
+                        type="password"
+                        placeholder="********"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -128,7 +143,10 @@ export default function RegisterPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Nível de Acesso</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione um nível de acesso" />
@@ -136,7 +154,11 @@ export default function RegisterPage() {
                       </FormControl>
                       <SelectContent>
                         {publicRoles.map((role) => (
-                          <SelectItem key={role} value={role} className="capitalize">
+                          <SelectItem
+                            key={role}
+                            value={role}
+                            className="capitalize"
+                          >
                             {role}
                           </SelectItem>
                         ))}
@@ -158,46 +180,53 @@ export default function RegisterPage() {
                       </FormDescription>
                     </div>
                     <div className="max-h-32 overflow-y-auto pr-2 space-y-2">
-                        {activeModules.map((item) => (
+                      {activeModules.map((item) => (
                         <FormField
-                            key={item.id}
-                            control={form.control}
-                            name="modules"
-                            render={({ field }) => {
+                          key={item.id}
+                          control={form.control}
+                          name="modules"
+                          render={({ field }) => {
                             return (
-                                <FormItem
+                              <FormItem
                                 key={item.id}
                                 className="flex flex-row items-start space-x-3 space-y-0"
-                                >
+                              >
                                 <FormControl>
-                                    <Checkbox
+                                  <Checkbox
                                     checked={field.value?.includes(item.id)}
                                     onCheckedChange={(checked) => {
-                                        return checked
-                                        ? field.onChange([...(field.value || []), item.id])
+                                      return checked
+                                        ? field.onChange([
+                                            ...(field.value || []),
+                                            item.id,
+                                          ])
                                         : field.onChange(
                                             (field.value || [])?.filter(
-                                                (value) => value !== item.id
-                                            )
-                                            )
+                                              (value) => value !== item.id,
+                                            ),
+                                          );
                                     }}
-                                    />
+                                  />
                                 </FormControl>
                                 <FormLabel className="font-normal capitalize">
-                                    {item.name}
+                                  {item.name}
                                 </FormLabel>
-                                </FormItem>
-                            )
-                            }}
+                              </FormItem>
+                            );
+                          }}
                         />
-                        ))}
+                      ))}
                     </div>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Registrando...' : 'Registrar'}
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={form.formState.isSubmitting}
+              >
+                {form.formState.isSubmitting ? "Registrando..." : "Registrar"}
               </Button>
             </form>
           </Form>

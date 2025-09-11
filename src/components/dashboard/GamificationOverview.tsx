@@ -1,16 +1,22 @@
 "use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-import { 
-  Gamepad2, 
-  Trophy, 
-  Zap, 
+import {
+  Gamepad2,
+  Trophy,
+  Zap,
   Target,
   TrendingUp,
   Award,
-  Star
+  Star,
 } from "lucide-react";
 
 interface GamificationOverviewData {
@@ -39,7 +45,11 @@ interface GamificationOverviewProps {
   isLoading?: boolean;
 }
 
-export function GamificationOverview({ data, popularAchievements, isLoading }: GamificationOverviewProps) {
+export function GamificationOverview({
+  data,
+  popularAchievements,
+  isLoading,
+}: GamificationOverviewProps) {
   if (isLoading) {
     return (
       <Card>
@@ -59,9 +69,10 @@ export function GamificationOverview({ data, popularAchievements, isLoading }: G
     );
   }
 
-  const unlockRate = data.activeAchievements > 0 
-    ? (data.totalUnlocked / data.activeAchievements) * 100 
-    : 0;
+  const unlockRate =
+    data.activeAchievements > 0
+      ? (data.totalUnlocked / data.activeAchievements) * 100
+      : 0;
 
   return (
     <div className="grid gap-6">
@@ -71,8 +82,12 @@ export function GamificationOverview({ data, popularAchievements, isLoading }: G
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">XP Total</p>
-                <p className="text-2xl font-bold">{data.totalXpDistributed.toLocaleString()}</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  XP Total
+                </p>
+                <p className="text-2xl font-bold">
+                  {data.totalXpDistributed.toLocaleString()}
+                </p>
               </div>
               <Zap className="h-8 w-8 text-yellow-500" />
             </div>
@@ -83,7 +98,9 @@ export function GamificationOverview({ data, popularAchievements, isLoading }: G
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Conquistas Ativas</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Conquistas Ativas
+                </p>
                 <p className="text-2xl font-bold">{data.activeAchievements}</p>
               </div>
               <Target className="h-8 w-8 text-blue-500" />
@@ -95,7 +112,9 @@ export function GamificationOverview({ data, popularAchievements, isLoading }: G
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Desbloqueadas</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Desbloqueadas
+                </p>
                 <p className="text-2xl font-bold">{data.totalUnlocked}</p>
               </div>
               <Trophy className="h-8 w-8 text-amber-500" />
@@ -107,7 +126,9 @@ export function GamificationOverview({ data, popularAchievements, isLoading }: G
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Taxa de Desbloqueio</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Taxa de Desbloqueio
+                </p>
                 <p className="text-2xl font-bold">{unlockRate.toFixed(1)}%</p>
               </div>
               <TrendingUp className="h-8 w-8 text-green-500" />
@@ -138,7 +159,10 @@ export function GamificationOverview({ data, popularAchievements, isLoading }: G
                   </p>
                 </div>
               </div>
-              <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+              <Badge
+                variant="secondary"
+                className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+              >
                 #{1}
               </Badge>
             </div>
@@ -159,17 +183,28 @@ export function GamificationOverview({ data, popularAchievements, isLoading }: G
           <CardContent>
             <div className="space-y-4">
               {popularAchievements.map((achievement, index) => (
-                <div key={achievement.achievementId} className="flex items-center justify-between p-3 rounded-lg border">
+                <div
+                  key={achievement.achievementId}
+                  className="flex items-center justify-between p-3 rounded-lg border"
+                >
                   <div className="flex items-center gap-3">
                     <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted">
                       <span className="text-sm font-bold">#{index + 1}</span>
                     </div>
-                    <div className="p-2 rounded-full" style={{ backgroundColor: `${achievement.color}20` }}>
-                      <Trophy className="h-4 w-4" style={{ color: achievement.color }} />
+                    <div
+                      className="p-2 rounded-full"
+                      style={{ backgroundColor: `${achievement.color}20` }}
+                    >
+                      <Trophy
+                        className="h-4 w-4"
+                        style={{ color: achievement.color }}
+                      />
                     </div>
                     <div>
                       <h4 className="font-medium">{achievement.title}</h4>
-                      <p className="text-sm text-muted-foreground">{achievement.description}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {achievement.description}
+                      </p>
                     </div>
                   </div>
                   <div className="text-right">

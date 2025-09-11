@@ -1,26 +1,42 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  Zap, 
-  Star, 
-  Trophy, 
+import {
+  Zap,
+  Star,
+  Trophy,
   Calendar,
   User,
   MessageSquare,
   Gift,
-  Award
+  Award,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getLevelFromXp } from "@/lib/xp";
 import { GamificationService } from "@/services/gamificationService";
-import { XpAvulsoService, XpGrantWithRelations } from "@/services/xpAvulsoService";
+import {
+  XpAvulsoService,
+  XpGrantWithRelations,
+} from "@/services/xpAvulsoService";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import XpNotificationBadge from "@/components/gamification/notifications/XpNotificationBadge";
@@ -30,7 +46,7 @@ interface AttendantXpDisplayProps {
   attendantId: string;
   className?: string;
   showHistory?: boolean;
-  variant?: 'default' | 'compact' | 'detailed';
+  variant?: "default" | "compact" | "detailed";
 }
 
 interface XpBreakdown {
@@ -46,10 +62,12 @@ export default function AttendantXpDisplay({
   attendantId,
   className,
   showHistory = true,
-  variant = 'default'
+  variant = "default",
 }: AttendantXpDisplayProps) {
   const [xpBreakdown, setXpBreakdown] = useState<XpBreakdown | null>(null);
-  const [avulsoHistory, setAvulsoHistory] = useState<XpGrantWithRelations[]>([]);
+  const [avulsoHistory, setAvulsoHistory] = useState<XpGrantWithRelations[]>(
+    [],
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,14 +81,21 @@ export default function AttendantXpDisplay({
       setError(null);
 
       // Buscar dados de XP separados por tipo
-      const [totalXpResponse, avulsoGrantsResponse, evaluationXpResponse] = await Promise.all([
-        // XP total
-        fetch(`/api/gamification/attendants/${attendantId}/xp-total`).catch(() => null),
-        // Histórico de XP avulso
-        fetch(`/api/gamification/xp-grants/attendant/${attendantId}`).catch(() => null),
-        // XP de avaliações
-        fetch(`/api/gamification/xp-events/attendant/${attendantId}?type=evaluation`).catch(() => null)
-      ]);
+      const [totalXpResponse, avulsoGrantsResponse, evaluationXpResponse] =
+        await Promise.all([
+          // XP total
+          fetch(`/api/gamification/attendants/${attendantId}/xp-total`).catch(
+            () => null,
+          ),
+          // Histórico de XP avulso
+          fetch(`/api/gamification/xp-grants/attendant/${attendantId}`).catch(
+            () => null,
+          ),
+          // XP de avaliações
+          fetch(
+            `/api/gamification/xp-events/attendant/${attendantId}?type=evaluation`,
+          ).catch(() => null),
+        ]);
 
       let totalXp = 0;
       let avulsoXp = 0;
@@ -99,14 +124,21 @@ export default function AttendantXpDisplay({
       // Processar XP de avaliações
       if (evaluationXpResponse?.ok) {
         const evaluationEvents = await evaluationXpResponse.json();
-        evaluationXp = evaluationEvents.reduce((sum: number, event: any) => sum + event.points, 0);
+        evaluationXp = evaluationEvents.reduce(
+          (sum: number, event: any) => sum + event.points,
+          0,
+        );
       } else {
         // Fallback: calcular como total - avulso
         evaluationXp = Math.max(0, totalXp - avulsoXp);
       }
-      
+
       // Calcular nível e progresso
-      const { level, progress, xpForNextLevel: nextLevelXp } = getLevelFromXp(totalXp);
+      const {
+        level,
+        progress,
+        xpForNextLevel: nextLevelXp,
+      } = getLevelFromXp(totalXp);
       const xpForNextLevel = nextLevelXp - totalXp;
 
       setXpBreakdown({
@@ -115,13 +147,13 @@ export default function AttendantXpDisplay({
         avulsoXp,
         level,
         progress,
-        xpForNextLevel
+        xpForNextLevel,
       });
 
       setAvulsoHistory(avulsoGrants);
     } catch (err) {
-      console.error('Erro ao carregar dados de XP:', err);
-      setError('Erro ao carregar dados de XP');
+      console.error("Erro ao carregar dados de XP:", err);
+      setError("Erro ao carregar dados de XP");
     } finally {
       setLoading(false);
     }
@@ -144,29 +176,36 @@ export default function AttendantXpDisplay({
       <Card className={className}>
         <CardContent className="p-6">
           <div className="text-center text-muted-foreground">
-            {error || 'Erro ao carregar dados'}
+            {error || "Erro ao carregar dados"}
           </div>
         </CardContent>
       </Card>
     );
   }
 
-  if (variant === 'compact') {
+  if (variant === "compact") {
     return (
-      <div className={cn("flex items-center gap-4 p-4 border rounded-lg bg-muted/50", className)}>
+      <div
+        className={cn(
+          "flex items-center gap-4 p-4 border rounded-lg bg-muted/50",
+          className,
+        )}
+      >
         <div className="flex items-center gap-2">
           <Zap className="h-5 w-5 text-yellow-500" />
-          <span className="text-xl font-bold">{xpBreakdown.totalXp.toLocaleString()}</span>
+          <span className="text-xl font-bold">
+            {xpBreakdown.totalXp.toLocaleString()}
+          </span>
           <span className="text-sm text-muted-foreground">XP</span>
         </div>
-        
+
         <Separator orientation="vertical" className="h-8" />
-        
+
         <Badge variant="secondary" className="flex items-center gap-1">
           <Trophy className="h-3 w-3" />
           Nível {xpBreakdown.level}
         </Badge>
-        
+
         {xpBreakdown.avulsoXp > 0 && (
           <>
             <Separator orientation="vertical" className="h-8" />
@@ -196,7 +235,7 @@ export default function AttendantXpDisplay({
           </div>
           <div className="flex items-center gap-2">
             <XpNotificationBadge attendantId={attendantId} />
-            <XpAvulsoNotification 
+            <XpAvulsoNotification
               attendantId={attendantId}
               onNotificationReceived={(data) => {
                 // Recarregar dados quando receber nova notificação
@@ -206,7 +245,7 @@ export default function AttendantXpDisplay({
           </div>
         </div>
       </CardHeader>
-      
+
       <CardContent className="space-y-6">
         {/* Resumo Principal */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -214,7 +253,9 @@ export default function AttendantXpDisplay({
           <div className="text-center p-4 border rounded-lg bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20">
             <div className="flex items-center justify-center gap-2 mb-2">
               <Zap className="h-6 w-6 text-yellow-500" />
-              <span className="text-sm font-medium text-muted-foreground">XP Total</span>
+              <span className="text-sm font-medium text-muted-foreground">
+                XP Total
+              </span>
             </div>
             <div className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">
               {xpBreakdown.totalXp.toLocaleString()}
@@ -229,13 +270,18 @@ export default function AttendantXpDisplay({
           <div className="text-center p-4 border rounded-lg bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20">
             <div className="flex items-center justify-center gap-2 mb-2">
               <Star className="h-6 w-6 text-green-500" />
-              <span className="text-sm font-medium text-muted-foreground">Avaliações</span>
+              <span className="text-sm font-medium text-muted-foreground">
+                Avaliações
+              </span>
             </div>
             <div className="text-2xl font-bold text-green-600 dark:text-green-400">
               {xpBreakdown.evaluationXp.toLocaleString()}
             </div>
             <div className="text-xs text-muted-foreground mt-1">
-              {((xpBreakdown.evaluationXp / xpBreakdown.totalXp) * 100).toFixed(1)}% do total
+              {((xpBreakdown.evaluationXp / xpBreakdown.totalXp) * 100).toFixed(
+                1,
+              )}
+              % do total
             </div>
           </div>
 
@@ -243,16 +289,17 @@ export default function AttendantXpDisplay({
           <div className="text-center p-4 border rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20">
             <div className="flex items-center justify-center gap-2 mb-2">
               <Gift className="h-6 w-6 text-blue-500" />
-              <span className="text-sm font-medium text-muted-foreground">XP Avulso</span>
+              <span className="text-sm font-medium text-muted-foreground">
+                XP Avulso
+              </span>
             </div>
             <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
               {xpBreakdown.avulsoXp.toLocaleString()}
             </div>
             <div className="text-xs text-muted-foreground mt-1">
-              {xpBreakdown.totalXp > 0 
+              {xpBreakdown.totalXp > 0
                 ? `${((xpBreakdown.avulsoXp / xpBreakdown.totalXp) * 100).toFixed(1)}% do total`
-                : '0% do total'
-              }
+                : "0% do total"}
             </div>
           </div>
         </div>
@@ -260,7 +307,9 @@ export default function AttendantXpDisplay({
         {/* Progresso para Próximo Nível */}
         <div className="space-y-2">
           <div className="flex justify-between items-center">
-            <span className="text-sm font-medium">Progresso para Nível {xpBreakdown.level + 1}</span>
+            <span className="text-sm font-medium">
+              Progresso para Nível {xpBreakdown.level + 1}
+            </span>
             <span className="text-sm text-muted-foreground">
               {xpBreakdown.progress.toFixed(1)}%
             </span>
@@ -268,7 +317,9 @@ export default function AttendantXpDisplay({
           <Progress value={xpBreakdown.progress} className="h-3" />
           <div className="flex justify-between text-xs text-muted-foreground">
             <span>Nível {xpBreakdown.level}</span>
-            <span>{xpBreakdown.xpForNextLevel.toLocaleString()} XP restantes</span>
+            <span>
+              {xpBreakdown.xpForNextLevel.toLocaleString()} XP restantes
+            </span>
           </div>
         </div>
 
@@ -276,17 +327,24 @@ export default function AttendantXpDisplay({
         {showHistory && (
           <div className="space-y-4">
             <Separator />
-            
+
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Award className="h-5 w-5 text-blue-500" />
-                <h3 className="text-lg font-semibold">Histórico de XP Avulso</h3>
-                <Badge variant="outline">{avulsoHistory.length} concessões</Badge>
+                <h3 className="text-lg font-semibold">
+                  Histórico de XP Avulso
+                </h3>
+                <Badge variant="outline">
+                  {avulsoHistory.length} concessões
+                </Badge>
               </div>
-              
+
               {avulsoHistory.length > 0 && (
                 <div className="text-sm text-muted-foreground">
-                  Total: <span className="font-medium text-blue-600">{xpBreakdown?.avulsoXp.toLocaleString()} XP</span>
+                  Total:{" "}
+                  <span className="font-medium text-blue-600">
+                    {xpBreakdown?.avulsoXp.toLocaleString()} XP
+                  </span>
                 </div>
               )}
             </div>
@@ -309,17 +367,23 @@ export default function AttendantXpDisplay({
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4 text-muted-foreground" />
-                            {format(new Date(grant.grantedAt), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                            {format(
+                              new Date(grant.grantedAt),
+                              "dd/MM/yyyy HH:mm",
+                              { locale: ptBR },
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <div 
-                              className="w-3 h-3 rounded-full flex-shrink-0" 
+                            <div
+                              className="w-3 h-3 rounded-full flex-shrink-0"
                               style={{ backgroundColor: grant.type.color }}
                             />
                             <div className="min-w-0">
-                              <div className="font-medium truncate">{grant.type.name}</div>
+                              <div className="font-medium truncate">
+                                {grant.type.name}
+                              </div>
                               <div className="text-xs text-muted-foreground truncate">
                                 {grant.type.description}
                               </div>
@@ -334,19 +398,26 @@ export default function AttendantXpDisplay({
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <User className="h-4 w-4 text-muted-foreground" />
-                            <span className="truncate">{grant.granter.name}</span>
+                            <span className="truncate">
+                              {grant.granter.name}
+                            </span>
                           </div>
                         </TableCell>
                         <TableCell>
                           {grant.justification ? (
                             <div className="flex items-center gap-2 max-w-xs">
                               <MessageSquare className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                              <span className="text-sm truncate" title={grant.justification}>
+                              <span
+                                className="text-sm truncate"
+                                title={grant.justification}
+                              >
                                 {grant.justification}
                               </span>
                             </div>
                           ) : (
-                            <span className="text-muted-foreground text-sm">-</span>
+                            <span className="text-muted-foreground text-sm">
+                              -
+                            </span>
                           )}
                         </TableCell>
                       </TableRow>
@@ -358,7 +429,9 @@ export default function AttendantXpDisplay({
               <div className="text-center py-8 text-muted-foreground">
                 <Gift className="h-12 w-12 mx-auto mb-3 opacity-50" />
                 <p className="text-lg font-medium">Nenhum XP avulso recebido</p>
-                <p className="text-sm">Este atendente ainda não recebeu pontos de XP avulso.</p>
+                <p className="text-sm">
+                  Este atendente ainda não recebeu pontos de XP avulso.
+                </p>
               </div>
             )}
           </div>
@@ -402,25 +475,34 @@ export default function AttendantXpDisplay({
             </h4>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Concessões XP Avulso:</span>
+                <span className="text-muted-foreground">
+                  Concessões XP Avulso:
+                </span>
                 <span className="font-medium">{avulsoHistory.length}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Média por concessão:</span>
+                <span className="text-muted-foreground">
+                  Média por concessão:
+                </span>
                 <span className="font-medium">
-                  {avulsoHistory.length > 0 
-                    ? Math.round((xpBreakdown?.avulsoXp || 0) / avulsoHistory.length)
-                    : 0
-                  } XP
+                  {avulsoHistory.length > 0
+                    ? Math.round(
+                        (xpBreakdown?.avulsoXp || 0) / avulsoHistory.length,
+                      )
+                    : 0}{" "}
+                  XP
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">% XP Avulso:</span>
                 <span className="font-medium">
                   {xpBreakdown?.totalXp && xpBreakdown.totalXp > 0
-                    ? ((xpBreakdown.avulsoXp / xpBreakdown.totalXp) * 100).toFixed(1)
-                    : 0
-                  }%
+                    ? (
+                        (xpBreakdown.avulsoXp / xpBreakdown.totalXp) *
+                        100
+                      ).toFixed(1)
+                    : 0}
+                  %
                 </span>
               </div>
             </div>

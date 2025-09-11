@@ -1,16 +1,36 @@
-
 "use client";
 
 import { useAuth } from "@/hooks/useAuth";
-import { usePrisma } from "@/providers/PrismaProvider";
+import { useApi } from "@/providers/ApiProvider";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { type Attendant } from "@/lib/types";
 import { PlusCircle, AlertTriangle } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import AttendantForm from "@/components/rh/AttendantForm";
@@ -20,40 +40,45 @@ import { validateAttendantArray } from "@/lib/data-validation";
 
 export default function AtendentesPage() {
   const { user, isAuthenticated, authLoading } = useAuth();
-  const { 
-    appLoading,
-    attendants, 
-    addAttendant, 
-    updateAttendant, 
-    deleteAttendants, 
-    funcoes, 
+  const {
+    isAnyLoading,
+    attendants,
+    addAttendant,
+    updateAttendant,
+    deleteAttendants,
+    funcoes,
     setores,
-    fetchAllData
-  } = usePrisma();
+    fetchAllData,
+  } = useApi();
   const router = useRouter();
   const { toast } = useToast();
 
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isQrCodeDialogOpen, setIsQrCodeDialogOpen] = useState(false);
-  const [selectedAttendant, setSelectedAttendant] = useState<Attendant | null>(null);
+  const [selectedAttendant, setSelectedAttendant] = useState<Attendant | null>(
+    null,
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Validação segura dos dados de attendants com memoização
   const validatedAttendants = useMemo(() => {
-    const validation = validateAttendantArray(attendants);
-    
+    const validation = validateAttendantArray(attendants.data);
+
     if (!validation.isValid && validation.errors.length > 0) {
-      console.warn('AtendentesPage: Problemas na validação de attendants:', validation.errors);
+      console.warn(
+        "AtendentesPage: Problemas na validação de attendants:",
+        validation.errors,
+      );
     }
-    
+
     return validation.data || [];
-  }, [attendants]);
+  }, [attendants.data]);
 
   // Estados derivados para melhor controle
   const hasAttendantsData = validatedAttendants.length > 0;
-  const isLoading = appLoading || authLoading;
-  
+  const isLoading = isAnyLoading || authLoading;
+
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       router.push("/login");
@@ -64,16 +89,19 @@ export default function AtendentesPage() {
     setIsSubmitting(true);
     try {
       if (selectedAttendant) {
-        await updateAttendant(selectedAttendant.id, data);
-        toast({ 
-          title: "Atendente atualizado!", 
-          description: "As informações foram salvas com sucesso." 
+        await updateAttendant.mutate({
+          attendantId: selectedAttendant.id,
+          data,
+        });
+        toast({
+          title: "Atendente atualizado!",
+          description: "As informações foram salvas com sucesso.",
         });
       } else {
-        await addAttendant(data);
-        toast({ 
-          title: "Atendente adicionado!", 
-          description: "O novo atendente foi cadastrado com sucesso." 
+        await addAttendant.mutate(data);
+        toast({
+          title: "Atendente adicionado!",
+          description: "O novo atendente foi cadastrado com sucesso.",
         });
       }
       setIsFormDialogOpen(false);
@@ -93,14 +121,14 @@ export default function AtendentesPage() {
   const handleDeleteConfirm = async () => {
     if (!selectedAttendant) return;
     try {
-      await deleteAttendants([selectedAttendant.id]);
-      toast({ 
-        title: "Atendente excluído!", 
-        description: "O atendente foi removido do sistema." 
+      await deleteAttendants.mutate([selectedAttendant.id]);
+      toast({
+        title: "Atendente excluído!",
+        description: "O atendente foi removido do sistema.",
       });
       setIsDeleteDialogOpen(false);
       setSelectedAttendant(null);
-    } catch(error) {
+    } catch (error) {
       // Error handling is done by the auth provider
     }
   };
@@ -119,17 +147,18 @@ export default function AtendentesPage() {
     setSelectedAttendant(attendant);
     setIsDeleteDialogOpen(true);
   };
-  
+
   const handleCopyLink = (attendant: Attendant) => {
     const url = `${window.location.origin}/survey?attendantId=${attendant.id}`;
     navigator.clipboard.writeText(url).then(() => {
-      toast({ 
-        title: "Link copiado!", 
-        description: "O link de avaliação foi copiado para a área de transferência." 
+      toast({
+        title: "Link copiado!",
+        description:
+          "O link de avaliação foi copiado para a área de transferência.",
       });
     });
   };
-  
+
   const handleQrCode = (attendant: Attendant) => {
     setSelectedAttendant(attendant);
     setIsQrCodeDialogOpen(true);
@@ -140,14 +169,14 @@ export default function AtendentesPage() {
       await fetchAllData();
       toast({
         title: "Dados atualizados",
-        description: "Os dados foram recarregados com sucesso."
+        description: "Os dados foram recarregados com sucesso.",
       });
     } catch (error) {
-      console.error('Erro ao recarregar dados:', error);
+      console.error("Erro ao recarregar dados:", error);
       toast({
         variant: "destructive",
         title: "Erro ao recarregar",
-        description: "Não foi possível recarregar os dados. Tente novamente."
+        description: "Não foi possível recarregar os dados. Tente novamente.",
       });
     }
   };
@@ -164,8 +193,6 @@ export default function AtendentesPage() {
     );
   }
 
-
-
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -176,7 +203,7 @@ export default function AtendentesPage() {
           </p>
         </div>
         <Button onClick={handleAdd}>
-          <PlusCircle className="mr-2 h-4 w-4" /> 
+          <PlusCircle className="mr-2 h-4 w-4" />
           Adicionar Atendente
         </Button>
       </div>
@@ -185,7 +212,8 @@ export default function AtendentesPage() {
         <CardHeader>
           <CardTitle>Atendentes Cadastrados</CardTitle>
           <CardDescription>
-            Lista de todos os atendentes cadastrados no sistema com suas informações principais.
+            Lista de todos os atendentes cadastrados no sistema com suas
+            informações principais.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -207,19 +235,20 @@ export default function AtendentesPage() {
         <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>
-              {selectedAttendant ? 'Editar Atendente' : 'Adicionar Novo Atendente'}
+              {selectedAttendant
+                ? "Editar Atendente"
+                : "Adicionar Novo Atendente"}
             </DialogTitle>
             <DialogDescription>
-              {selectedAttendant 
-                ? 'Altere as informações do atendente conforme necessário.' 
-                : 'Preencha os dados do novo atendente para cadastrá-lo no sistema.'
-              }
+              {selectedAttendant
+                ? "Altere as informações do atendente conforme necessário."
+                : "Preencha os dados do novo atendente para cadastrá-lo no sistema."}
             </DialogDescription>
           </DialogHeader>
           <AttendantForm
             attendant={selectedAttendant}
-            funcoes={funcoes}
-            setores={setores}
+            funcoes={funcoes.data}
+            setores={setores.data}
             onSubmit={handleFormSubmit}
             onCancel={handleFormCancel}
             isSubmitting={isSubmitting}
@@ -235,19 +264,23 @@ export default function AtendentesPage() {
       />
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. O atendente "{selectedAttendant?.name}" será 
-              permanentemente removido do sistema, incluindo todas as suas avaliações e dados relacionados.
+              Esta ação não pode ser desfeita. O atendente "
+              {selectedAttendant?.name}" será permanentemente removido do
+              sistema, incluindo todas as suas avaliações e dados relacionados.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDeleteConfirm} 
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
               className="bg-destructive hover:bg-destructive/90"
             >
               Excluir Atendente

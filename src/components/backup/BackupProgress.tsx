@@ -1,19 +1,25 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Database, 
-  Loader2, 
-  CheckCircle, 
-  XCircle, 
-  X, 
+import {
+  Database,
+  Loader2,
+  CheckCircle,
+  XCircle,
+  X,
   Clock,
   Activity,
   AlertTriangle,
@@ -21,7 +27,7 @@ import {
   Wifi,
   WifiOff,
   Pause,
-  Play
+  Play,
 } from "lucide-react";
 
 interface BackupProgressProps {
@@ -30,18 +36,22 @@ interface BackupProgressProps {
   message: string;
   backupId?: string;
   onCancel?: () => void;
-  onProgressUpdate?: (progress: number, message: string, status: string) => void;
+  onProgressUpdate?: (
+    progress: number,
+    message: string,
+    status: string,
+  ) => void;
 }
 
 interface LogEntry {
   timestamp: Date;
-  level: 'info' | 'warning' | 'error' | 'success';
+  level: "info" | "warning" | "error" | "success";
   message: string;
   details?: string;
 }
 
 interface BackupStatus {
-  status: 'in_progress' | 'completed' | 'failed';
+  status: "in_progress" | "completed" | "failed";
   progress: number;
   message: string;
   elapsedTime?: {
@@ -51,54 +61,59 @@ interface BackupStatus {
   lastUpdate?: string;
 }
 
-export function BackupProgress({ 
-  isActive, 
-  progress, 
-  message, 
+export function BackupProgress({
+  isActive,
+  progress,
+  message,
   backupId,
   onCancel,
-  onProgressUpdate
+  onProgressUpdate,
 }: BackupProgressProps) {
   const { toast } = useToast();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isPolling, setIsPolling] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'error'>('disconnected');
+  const [connectionStatus, setConnectionStatus] = useState<
+    "connected" | "disconnected" | "error"
+  >("disconnected");
   const [isPaused, setIsPaused] = useState(false);
   const [currentStatus, setCurrentStatus] = useState<BackupStatus | null>(null);
-  
+
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const retryCountRef = useRef(0);
   const maxRetries = 5;
   const pollingInterval = 2000; // 2 segundos
 
   // Adicionar log com detalhes
-  const addLog = useCallback((level: LogEntry['level'], message: string, details?: string) => {
-    const newLog: LogEntry = {
-      timestamp: new Date(),
-      level,
-      message,
-      details
-    };
-    
-    setLogs(prev => {
-      const updated = [...prev, newLog];
-      // Manter apenas os últimos 50 logs para performance
-      return updated.slice(-50);
-    });
-  }, []);
+  const addLog = useCallback(
+    (level: LogEntry["level"], message: string, details?: string) => {
+      const newLog: LogEntry = {
+        timestamp: new Date(),
+        level,
+        message,
+        details,
+      };
+
+      setLogs((prev) => {
+        const updated = [...prev, newLog];
+        // Manter apenas os últimos 50 logs para performance
+        return updated.slice(-50);
+      });
+    },
+    [],
+  );
 
   // Função para fazer polling do status
   const pollBackupStatus = useCallback(async () => {
     if (!backupId || isPaused) return;
 
     try {
-      setConnectionStatus('connected');
+      setConnectionStatus("connected");
       const response = await fetch(`/api/backup/status/${backupId}`, {
-        method: 'GET',
+        method: "GET",
         headers: {
-          'Cache-Control': 'no-cache',
+          "Cache-Control": "no-cache",
         },
       });
 
@@ -107,18 +122,18 @@ export function BackupProgress({
       }
 
       const data = await response.json();
-      
+
       if (data.success) {
         const status: BackupStatus = {
           status: data.status,
           progress: data.progress,
           message: data.message,
           elapsedTime: data.elapsedTime,
-          lastUpdate: data.lastUpdate
+          lastUpdate: data.lastUpdate,
         };
 
         setCurrentStatus(status);
-        
+
         // Atualizar progresso via callback
         if (onProgressUpdate) {
           onProgressUpdate(status.progress, status.message, status.status);
@@ -127,51 +142,62 @@ export function BackupProgress({
         // Adicionar log se houve mudança significativa
         const progressChanged = Math.abs(status.progress - progress) >= 5;
         const messageChanged = status.message !== message;
-        
+
         if (progressChanged || messageChanged) {
-          addLog('info', status.message, `Progresso: ${status.progress}%`);
+          addLog("info", status.message, `Progresso: ${status.progress}%`);
         }
 
         // Parar polling se completou ou falhou
-        if (status.status === 'completed' || status.status === 'failed') {
+        if (status.status === "completed" || status.status === "failed") {
           setIsPolling(false);
           addLog(
-            status.status === 'completed' ? 'success' : 'error',
-            status.status === 'completed' 
-              ? 'Backup concluído com sucesso!' 
-              : 'Backup falhou durante a execução',
-            status.elapsedTime?.formatted ? `Tempo total: ${status.elapsedTime.formatted}` : undefined
+            status.status === "completed" ? "success" : "error",
+            status.status === "completed"
+              ? "Backup concluído com sucesso!"
+              : "Backup falhou durante a execução",
+            status.elapsedTime?.formatted
+              ? `Tempo total: ${status.elapsedTime.formatted}`
+              : undefined,
           );
         }
 
         retryCountRef.current = 0; // Reset retry count on success
       } else {
-        throw new Error(data.error || 'Erro desconhecido');
+        throw new Error(data.error || "Erro desconhecido");
       }
     } catch (error) {
-      console.error('Erro no polling:', error);
-      setConnectionStatus('error');
-      
+      console.error("Erro no polling:", error);
+      setConnectionStatus("error");
+
       retryCountRef.current++;
-      
+
       if (retryCountRef.current <= maxRetries) {
-        addLog('warning', `Erro de conexão (tentativa ${retryCountRef.current}/${maxRetries})`, 
-              error instanceof Error ? error.message : 'Erro desconhecido');
-        
+        addLog(
+          "warning",
+          `Erro de conexão (tentativa ${retryCountRef.current}/${maxRetries})`,
+          error instanceof Error ? error.message : "Erro desconhecido",
+        );
+
         // Aumentar intervalo de retry exponencialmente
-        setTimeout(() => {
-          if (isPolling && !isPaused) {
-            pollBackupStatus();
-          }
-        }, Math.min(1000 * Math.pow(2, retryCountRef.current), 10000));
+        setTimeout(
+          () => {
+            if (isPolling && !isPaused) {
+              pollBackupStatus();
+            }
+          },
+          Math.min(1000 * Math.pow(2, retryCountRef.current), 10000),
+        );
       } else {
-        addLog('error', 'Falha na conexão após múltiplas tentativas', 
-              'Verifique sua conexão de rede');
+        addLog(
+          "error",
+          "Falha na conexão após múltiplas tentativas",
+          "Verifique sua conexão de rede",
+        );
         setIsPolling(false);
         toast({
           variant: "destructive",
           title: "Erro de conexão",
-          description: "Não foi possível obter atualizações de progresso"
+          description: "Não foi possível obter atualizações de progresso",
         });
       }
     }
@@ -180,8 +206,15 @@ export function BackupProgress({
   // Iniciar/parar polling
   useEffect(() => {
     if (isActive && backupId && isPolling && !isPaused) {
-      pollingIntervalRef.current = setInterval(pollBackupStatus, pollingInterval);
-      addLog('info', 'Monitoramento de progresso iniciado', `Atualizações a cada ${pollingInterval/1000}s`);
+      pollingIntervalRef.current = setInterval(
+        pollBackupStatus,
+        pollingInterval,
+      );
+      addLog(
+        "info",
+        "Monitoramento de progresso iniciado",
+        `Atualizações a cada ${pollingInterval / 1000}s`,
+      );
     } else if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
       pollingIntervalRef.current = null;
@@ -199,16 +232,22 @@ export function BackupProgress({
   useEffect(() => {
     if (isActive && !startTime) {
       setStartTime(new Date());
-      setLogs([{
-        timestamp: new Date(),
-        level: 'info',
-        message: 'Iniciando processo de backup...',
-        details: backupId ? `ID: ${backupId}` : undefined
-      }]);
-      
+      setLogs([
+        {
+          timestamp: new Date(),
+          level: "info",
+          message: "Iniciando processo de backup...",
+          details: backupId ? `ID: ${backupId}` : undefined,
+        },
+      ]);
+
       if (backupId) {
         setIsPolling(true);
-        addLog('info', 'Sistema de monitoramento ativado', 'Polling em tempo real iniciado');
+        addLog(
+          "info",
+          "Sistema de monitoramento ativado",
+          "Polling em tempo real iniciado",
+        );
       }
     }
 
@@ -216,7 +255,7 @@ export function BackupProgress({
       setStartTime(null);
       setElapsedTime(0);
       setIsPolling(false);
-      setConnectionStatus('disconnected');
+      setConnectionStatus("disconnected");
       setCurrentStatus(null);
       retryCountRef.current = 0;
     }
@@ -225,10 +264,12 @@ export function BackupProgress({
   // Atualizar tempo decorrido
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    
+
     if (isActive && startTime) {
       interval = setInterval(() => {
-        setElapsedTime(Math.floor((new Date().getTime() - startTime.getTime()) / 1000));
+        setElapsedTime(
+          Math.floor((new Date().getTime() - startTime.getTime()) / 1000),
+        );
       }, 1000);
     }
 
@@ -245,25 +286,36 @@ export function BackupProgress({
     }
 
     try {
-      addLog('warning', 'Solicitando cancelamento da operação...', 'Aguarde a confirmação');
-      
+      addLog(
+        "warning",
+        "Solicitando cancelamento da operação...",
+        "Aguarde a confirmação",
+      );
+
       // Aqui você implementaria a chamada para cancelar o backup
       // Por enquanto, vamos simular o cancelamento
       const response = await fetch(`/api/backup/cancel/${backupId}`, {
-        method: 'POST',
+        method: "POST",
       });
 
       if (response.ok) {
-        addLog('info', 'Operação cancelada com sucesso', 'O backup foi interrompido');
+        addLog(
+          "info",
+          "Operação cancelada com sucesso",
+          "O backup foi interrompido",
+        );
         setIsPolling(false);
         if (onCancel) onCancel();
       } else {
-        throw new Error('Falha ao cancelar operação');
+        throw new Error("Falha ao cancelar operação");
       }
     } catch (error) {
-      addLog('error', 'Erro ao cancelar operação', 
-            error instanceof Error ? error.message : 'Erro desconhecido');
-      
+      addLog(
+        "error",
+        "Erro ao cancelar operação",
+        error instanceof Error ? error.message : "Erro desconhecido",
+      );
+
       // Fallback: chamar onCancel mesmo se a API falhar
       if (onCancel) onCancel();
     }
@@ -271,22 +323,23 @@ export function BackupProgress({
 
   // Pausar/retomar polling
   const togglePolling = useCallback(() => {
-    setIsPaused(prev => {
+    setIsPaused((prev) => {
       const newPaused = !prev;
-      addLog('info', newPaused ? 'Monitoramento pausado' : 'Monitoramento retomado', 
-            newPaused ? 'Atualizações suspensas' : 'Atualizações reativadas');
+      addLog(
+        "info",
+        newPaused ? "Monitoramento pausado" : "Monitoramento retomado",
+        newPaused ? "Atualizações suspensas" : "Atualizações reativadas",
+      );
       return newPaused;
     });
   }, [addLog]);
 
-  const getLogLevel = (progress: number): LogEntry['level'] => {
-    if (progress === 100) return 'success';
-    if (progress > 80) return 'info';
-    if (progress > 50) return 'info';
-    return 'info';
+  const getLogLevel = (progress: number): LogEntry["level"] => {
+    if (progress === 100) return "success";
+    if (progress > 80) return "info";
+    if (progress > 50) return "info";
+    return "info";
   };
-
-
 
   const getStatusIcon = () => {
     if (progress === 100) {
@@ -311,16 +364,16 @@ export function BackupProgress({
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const getLogIcon = (level: LogEntry['level']) => {
+  const getLogIcon = (level: LogEntry["level"]) => {
     switch (level) {
-      case 'success':
+      case "success":
         return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'error':
+      case "error":
         return <XCircle className="h-4 w-4 text-red-500" />;
-      case 'warning':
+      case "warning":
         return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
       default:
         return <Info className="h-4 w-4 text-blue-500" />;
@@ -339,7 +392,7 @@ export function BackupProgress({
             {getStatusIcon()}
             <div>
               <CardTitle className="text-lg">
-                {progress === 100 ? 'Backup Concluído' : 'Criando Backup'}
+                {progress === 100 ? "Backup Concluído" : "Criando Backup"}
               </CardTitle>
               <CardDescription className="flex items-center gap-2">
                 {getStatusBadge()}
@@ -352,17 +405,25 @@ export function BackupProgress({
                 {/* Indicador de conexão */}
                 {isActive && backupId && (
                   <span className="flex items-center gap-1 text-xs">
-                    {connectionStatus === 'connected' && !isPaused && (
-                      <><Wifi className="h-3 w-3 text-green-500" /> Online</>
+                    {connectionStatus === "connected" && !isPaused && (
+                      <>
+                        <Wifi className="h-3 w-3 text-green-500" /> Online
+                      </>
                     )}
-                    {connectionStatus === 'disconnected' && (
-                      <><WifiOff className="h-3 w-3 text-gray-500" /> Offline</>
+                    {connectionStatus === "disconnected" && (
+                      <>
+                        <WifiOff className="h-3 w-3 text-gray-500" /> Offline
+                      </>
                     )}
-                    {connectionStatus === 'error' && (
-                      <><WifiOff className="h-3 w-3 text-red-500" /> Erro</>
+                    {connectionStatus === "error" && (
+                      <>
+                        <WifiOff className="h-3 w-3 text-red-500" /> Erro
+                      </>
                     )}
                     {isPaused && (
-                      <><Pause className="h-3 w-3 text-yellow-500" /> Pausado</>
+                      <>
+                        <Pause className="h-3 w-3 text-yellow-500" /> Pausado
+                      </>
                     )}
                   </span>
                 )}
@@ -379,9 +440,13 @@ export function BackupProgress({
                 className="text-blue-600 hover:text-blue-700"
               >
                 {isPaused ? (
-                  <><Play className="h-4 w-4 mr-1" /> Retomar</>
+                  <>
+                    <Play className="h-4 w-4 mr-1" /> Retomar
+                  </>
                 ) : (
-                  <><Pause className="h-4 w-4 mr-1" /> Pausar</>
+                  <>
+                    <Pause className="h-4 w-4 mr-1" /> Pausar
+                  </>
                 )}
               </Button>
             )}
@@ -407,10 +472,7 @@ export function BackupProgress({
             <span>Progresso</span>
             <span>{progress}%</span>
           </div>
-          <Progress 
-            value={progress} 
-            className="h-2"
-          />
+          <Progress value={progress} className="h-2" />
         </div>
 
         {/* Mensagem atual */}
@@ -432,7 +494,7 @@ export function BackupProgress({
               <div className="flex items-center gap-2">
                 {isActive && backupId && (
                   <Badge variant="outline" className="text-xs">
-                    {isPolling && !isPaused ? 'Monitorando' : 'Pausado'}
+                    {isPolling && !isPaused ? "Monitorando" : "Pausado"}
                   </Badge>
                 )}
                 <Button
@@ -450,20 +512,26 @@ export function BackupProgress({
                 <ScrollArea className="h-40">
                   <div className="space-y-2">
                     {logs.map((log, index) => (
-                      <div key={index} className="flex items-start gap-2 text-xs border-b border-border/50 pb-2 last:border-0">
+                      <div
+                        key={index}
+                        className="flex items-start gap-2 text-xs border-b border-border/50 pb-2 last:border-0"
+                      >
                         {getLogIcon(log.level)}
                         <div className="flex-1 space-y-1">
                           <div className="flex items-center gap-2">
                             <span className="text-muted-foreground font-mono">
-                              {log.timestamp.toLocaleTimeString('pt-BR')}
+                              {log.timestamp.toLocaleTimeString("pt-BR")}
                             </span>
-                            <Badge 
-                              variant="outline" 
+                            <Badge
+                              variant="outline"
                               className={`text-xs ${
-                                log.level === 'success' ? 'text-green-600 border-green-200' :
-                                log.level === 'error' ? 'text-red-600 border-red-200' :
-                                log.level === 'warning' ? 'text-yellow-600 border-yellow-200' :
-                                'text-blue-600 border-blue-200'
+                                log.level === "success"
+                                  ? "text-green-600 border-green-200"
+                                  : log.level === "error"
+                                    ? "text-red-600 border-red-200"
+                                    : log.level === "warning"
+                                      ? "text-yellow-600 border-yellow-200"
+                                      : "text-blue-600 border-blue-200"
                               }`}
                             >
                               {log.level.toUpperCase()}
@@ -499,19 +567,27 @@ export function BackupProgress({
             <div className="text-center p-2 bg-background rounded">
               <p className="text-muted-foreground">Status</p>
               <p className="font-medium">
-                {progress === 100 ? 'Concluído' : 'Processando'}
+                {progress === 100 ? "Concluído" : "Processando"}
               </p>
             </div>
             <div className="text-center p-2 bg-background rounded">
               <p className="text-muted-foreground">Conexão</p>
-              <p className={`font-medium ${
-                connectionStatus === 'connected' ? 'text-green-600' :
-                connectionStatus === 'error' ? 'text-red-600' :
-                'text-gray-600'
-              }`}>
-                {connectionStatus === 'connected' && !isPaused ? 'Online' :
-                 connectionStatus === 'error' ? 'Erro' :
-                 isPaused ? 'Pausado' : 'Offline'}
+              <p
+                className={`font-medium ${
+                  connectionStatus === "connected"
+                    ? "text-green-600"
+                    : connectionStatus === "error"
+                      ? "text-red-600"
+                      : "text-gray-600"
+                }`}
+              >
+                {connectionStatus === "connected" && !isPaused
+                  ? "Online"
+                  : connectionStatus === "error"
+                    ? "Erro"
+                    : isPaused
+                      ? "Pausado"
+                      : "Offline"}
               </p>
             </div>
           </div>
@@ -523,10 +599,20 @@ export function BackupProgress({
             <Info className="h-4 w-4" />
             <AlertDescription>
               <div className="space-y-1">
-                <p><strong>Status do servidor:</strong> {currentStatus.message}</p>
-                <p><strong>Tempo no servidor:</strong> {currentStatus.elapsedTime.formatted}</p>
+                <p>
+                  <strong>Status do servidor:</strong> {currentStatus.message}
+                </p>
+                <p>
+                  <strong>Tempo no servidor:</strong>{" "}
+                  {currentStatus.elapsedTime.formatted}
+                </p>
                 {currentStatus.lastUpdate && (
-                  <p><strong>Última atualização:</strong> {new Date(currentStatus.lastUpdate).toLocaleTimeString('pt-BR')}</p>
+                  <p>
+                    <strong>Última atualização:</strong>{" "}
+                    {new Date(currentStatus.lastUpdate).toLocaleTimeString(
+                      "pt-BR",
+                    )}
+                  </p>
                 )}
               </div>
             </AlertDescription>
@@ -538,7 +624,8 @@ export function BackupProgress({
           <Alert>
             <CheckCircle className="h-4 w-4" />
             <AlertDescription>
-              Backup criado com sucesso! O arquivo está disponível para download na lista de backups.
+              Backup criado com sucesso! O arquivo está disponível para download
+              na lista de backups.
             </AlertDescription>
           </Alert>
         )}

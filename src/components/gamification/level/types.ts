@@ -1,7 +1,7 @@
 export interface LevelBadgeProps {
   level: number;
-  size?: 'sm' | 'md' | 'lg';
-  variant?: 'default' | 'outlined' | 'filled';
+  size?: "sm" | "md" | "lg";
+  variant?: "default" | "outlined" | "filled";
   showIcon?: boolean;
   className?: string;
 }
@@ -11,7 +11,7 @@ export interface LevelProgressProps {
   currentXp: number;
   xpForNextLevel: number;
   showDetails?: boolean;
-  variant?: 'bar' | 'circle' | 'compact';
+  variant?: "bar" | "circle" | "compact";
   className?: string;
 }
 

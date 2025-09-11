@@ -6,19 +6,32 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { DataTable } from "@/components/ui/data-table";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { 
-  History, 
-  Download, 
-  Eye, 
-  User, 
-  Star, 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  History,
+  Download,
+  Eye,
+  User,
+  Star,
   Filter,
   Clock,
   Award,
-  TrendingUp
+  TrendingUp,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -115,17 +128,20 @@ interface XpGrantHistoryProps {
   showStatistics?: boolean;
 }
 
-export function XpGrantHistory({ 
-  attendantId, 
-  showFilters = true, 
-  showStatistics = true 
+export function XpGrantHistory({
+  attendantId,
+  showFilters = true,
+  showStatistics = true,
 }: XpGrantHistoryProps) {
   const [grants, setGrants] = useState<XpGrantWithRelations[]>([]);
-  const [statistics, setStatistics] = useState<GrantStatistics['data'] | null>(null);
+  const [statistics, setStatistics] = useState<GrantStatistics["data"] | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
-  const [selectedGrant, setSelectedGrant] = useState<XpGrantWithRelations | null>(null);
-  
+  const [selectedGrant, setSelectedGrant] =
+    useState<XpGrantWithRelations | null>(null);
+
   // Estados dos filtros
   const [filters, setFilters] = useState({
     attendantId: attendantId || "",
@@ -138,14 +154,14 @@ export function XpGrantHistory({
     page: 1,
     limit: 20,
     sortBy: "grantedAt" as const,
-    sortOrder: "desc" as const
+    sortOrder: "desc" as const,
   });
 
   // Paginação
   const [pagination, setPagination] = useState({
     total: 0,
     page: 1,
-    totalPages: 0
+    totalPages: 0,
   });
 
   useEffect(() => {
@@ -158,18 +174,20 @@ export function XpGrantHistory({
   const fetchGrants = async () => {
     try {
       setIsLoading(true);
-      
+
       // Construir query params
       const params = new URLSearchParams();
-      
+
       Object.entries(filters).forEach(([key, value]) => {
         if (value !== "" && value !== null && value !== undefined) {
           params.append(key, value.toString());
         }
       });
 
-      const response = await fetch(`/api/gamification/xp-grants?${params.toString()}`);
-      
+      const response = await fetch(
+        `/api/gamification/xp-grants?${params.toString()}`,
+      );
+
       if (response.ok) {
         const result: GrantHistoryResponse = await response.json();
         if (result.success) {
@@ -177,25 +195,26 @@ export function XpGrantHistory({
           setPagination({
             total: result.data.pagination.total,
             page: result.data.pagination.page,
-            totalPages: result.data.pagination.totalPages
+            totalPages: result.data.pagination.totalPages,
           });
         } else {
-          throw new Error('Resposta da API indica falha');
+          throw new Error("Resposta da API indica falha");
         }
       } else {
         const errorData = await response.json().catch(() => ({}));
         toast({
           title: "Erro",
-          description: errorData.error || "Erro ao carregar histórico de concessões",
-          variant: "destructive"
+          description:
+            errorData.error || "Erro ao carregar histórico de concessões",
+          variant: "destructive",
         });
       }
     } catch (error) {
-      console.error('Erro ao buscar concessões:', error);
+      console.error("Erro ao buscar concessões:", error);
       toast({
         title: "Erro",
         description: "Erro ao carregar histórico de concessões",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -204,8 +223,10 @@ export function XpGrantHistory({
 
   const fetchStatistics = async () => {
     try {
-      const response = await fetch('/api/gamification/xp-grants/statistics?period=30d');
-      
+      const response = await fetch(
+        "/api/gamification/xp-grants/statistics?period=30d",
+      );
+
       if (response.ok) {
         const result: GrantStatistics = await response.json();
         if (result.success) {
@@ -213,57 +234,65 @@ export function XpGrantHistory({
         }
       }
     } catch (error) {
-      console.error('Erro ao buscar estatísticas:', error);
+      console.error("Erro ao buscar estatísticas:", error);
     }
   };
 
   const handleFilterChange = (key: string, value: string) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
       [key]: value,
-      page: 1 // Reset page when filtering
+      page: 1, // Reset page when filtering
     }));
   };
 
   const handlePageChange = (newPage: number) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
-      page: newPage
+      page: newPage,
     }));
   };
 
   const handleExportCSV = async () => {
     try {
       setIsExporting(true);
-      
+
       // Buscar todos os dados para exportação (sem paginação)
       const params = new URLSearchParams();
       Object.entries(filters).forEach(([key, value]) => {
-        if (value !== "" && value !== null && value !== undefined && key !== 'page' && key !== 'limit') {
+        if (
+          value !== "" &&
+          value !== null &&
+          value !== undefined &&
+          key !== "page" &&
+          key !== "limit"
+        ) {
           params.append(key, value.toString());
         }
       });
-      params.append('limit', '10000'); // Limite alto para exportação
+      params.append("limit", "10000"); // Limite alto para exportação
 
-      const response = await fetch(`/api/gamification/xp-grants?${params.toString()}`);
-      
+      const response = await fetch(
+        `/api/gamification/xp-grants?${params.toString()}`,
+      );
+
       if (response.ok) {
         const result: GrantHistoryResponse = await response.json();
-        
+
         if (!result.success) {
-          throw new Error('Falha ao obter dados para exportação');
+          throw new Error("Falha ao obter dados para exportação");
         }
-        
+
         // Converter para CSV
         const csvContent = convertToCSV(result.data.grants);
-        
+
         // Gerar nome do arquivo baseado nos filtros
-        let fileName = 'historico-xp-avulso';
-        
+        let fileName = "historico-xp-avulso";
+
         if (attendantId) {
-          fileName += '-atendente';
+          fileName += "-atendente";
         }
-        
+
         if (filters.startDate && filters.endDate) {
           fileName += `-${filters.startDate}-a-${filters.endDate}`;
         } else if (filters.startDate) {
@@ -271,38 +300,40 @@ export function XpGrantHistory({
         } else if (filters.endDate) {
           fileName += `-ate-${filters.endDate}`;
         }
-        
-        fileName += `-${format(new Date(), 'yyyy-MM-dd-HHmm')}.csv`;
+
+        fileName += `-${format(new Date(), "yyyy-MM-dd-HHmm")}.csv`;
 
         // Download do arquivo
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
+        const blob = new Blob([csvContent], {
+          type: "text/csv;charset=utf-8;",
+        });
+        const link = document.createElement("a");
         const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', fileName);
-        link.style.visibility = 'hidden';
+        link.setAttribute("href", url);
+        link.setAttribute("download", fileName);
+        link.style.visibility = "hidden";
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
-        
+
         toast({
           title: "Sucesso",
-          description: "Relatório exportado com sucesso"
+          description: "Relatório exportado com sucesso",
         });
       } else {
         toast({
           title: "Erro",
           description: "Erro ao exportar relatório",
-          variant: "destructive"
+          variant: "destructive",
         });
       }
     } catch (error) {
-      console.error('Erro ao exportar:', error);
+      console.error("Erro ao exportar:", error);
       toast({
         title: "Erro",
         description: "Erro ao exportar relatório",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setIsExporting(false);
@@ -311,27 +342,27 @@ export function XpGrantHistory({
 
   const convertToCSV = (data: XpGrantWithRelations[]): string => {
     const headers = [
-      'ID da Concessão',
-      'Data',
-      'Hora',
-      'Atendente',
-      'Email do Atendente',
-      'ID do Atendente',
-      'Tipo de XP',
-      'Descrição do Tipo',
-      'Pontos',
-      'Categoria',
-      'Justificativa',
-      'Concedido por',
-      'Email do Responsável',
-      'Role do Responsável',
-      'ID do Evento XP'
+      "ID da Concessão",
+      "Data",
+      "Hora",
+      "Atendente",
+      "Email do Atendente",
+      "ID do Atendente",
+      "Tipo de XP",
+      "Descrição do Tipo",
+      "Pontos",
+      "Categoria",
+      "Justificativa",
+      "Concedido por",
+      "Email do Responsável",
+      "Role do Responsável",
+      "ID do Evento XP",
     ];
 
-    const rows = data.map(grant => [
+    const rows = data.map((grant) => [
       grant.id,
-      format(new Date(grant.grantedAt), 'dd/MM/yyyy', { locale: ptBR }),
-      format(new Date(grant.grantedAt), 'HH:mm', { locale: ptBR }),
+      format(new Date(grant.grantedAt), "dd/MM/yyyy", { locale: ptBR }),
+      format(new Date(grant.grantedAt), "HH:mm", { locale: ptBR }),
       grant.attendant.name,
       grant.attendant.email,
       grant.attendant.id,
@@ -339,18 +370,22 @@ export function XpGrantHistory({
       grant.type.description,
       grant.points.toString(),
       grant.type.category,
-      grant.justification || 'Sem justificativa',
+      grant.justification || "Sem justificativa",
       grant.granter.name,
       grant.granter.email,
       grant.granter.role,
-      grant.xpEventId
+      grant.xpEventId,
     ]);
 
     // Adicionar BOM para UTF-8 para melhor compatibilidade com Excel
-    const BOM = '\uFEFF';
+    const BOM = "\uFEFF";
     const csvContent = [headers, ...rows]
-      .map(row => row.map(field => `"${field.toString().replace(/"/g, '""')}"`).join(','))
-      .join('\n');
+      .map((row) =>
+        row
+          .map((field) => `"${field.toString().replace(/"/g, '""')}"`)
+          .join(","),
+      )
+      .join("\n");
 
     return BOM + csvContent;
   };
@@ -362,7 +397,7 @@ export function XpGrantHistory({
       target: TrendingUp,
       zap: Star,
       heart: Star,
-      trophy: Award
+      trophy: Award,
     };
     return iconMap[iconName] || Star;
   };
@@ -385,10 +420,14 @@ export function XpGrantHistory({
           <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
           <div>
             <p className="font-medium text-sm">
-              {format(new Date(row.original.grantedAt), "dd/MM/yyyy", { locale: ptBR })}
+              {format(new Date(row.original.grantedAt), "dd/MM/yyyy", {
+                locale: ptBR,
+              })}
             </p>
             <p className="text-xs text-muted-foreground">
-              {format(new Date(row.original.grantedAt), "HH:mm", { locale: ptBR })}
+              {format(new Date(row.original.grantedAt), "HH:mm", {
+                locale: ptBR,
+              })}
             </p>
           </div>
         </div>
@@ -397,7 +436,7 @@ export function XpGrantHistory({
         const dateA = new Date(rowA.original.grantedAt);
         const dateB = new Date(rowB.original.grantedAt);
         return dateA.getTime() - dateB.getTime();
-      }
+      },
     },
     {
       accessorKey: "attendant.name",
@@ -414,11 +453,15 @@ export function XpGrantHistory({
         <div className="flex items-center gap-2 min-w-[180px]">
           <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
           <div className="min-w-0 flex-1">
-            <p className="font-medium text-sm truncate">{row.original.attendant.name}</p>
-            <p className="text-xs text-muted-foreground truncate">{row.original.attendant.email}</p>
+            <p className="font-medium text-sm truncate">
+              {row.original.attendant.name}
+            </p>
+            <p className="text-xs text-muted-foreground truncate">
+              {row.original.attendant.email}
+            </p>
           </div>
         </div>
-      )
+      ),
     },
     {
       accessorKey: "type.name",
@@ -436,11 +479,11 @@ export function XpGrantHistory({
         const IconComponent = getIconComponent(grant.type.icon);
         return (
           <div className="flex items-center gap-3 min-w-[200px]">
-            <div 
+            <div
               className="p-2 rounded-lg flex-shrink-0"
-              style={{ 
+              style={{
                 backgroundColor: `${grant.type.color}20`,
-                color: grant.type.color
+                color: grant.type.color,
               }}
             >
               <IconComponent size={16} />
@@ -453,7 +496,7 @@ export function XpGrantHistory({
             </div>
           </div>
         );
-      }
+      },
     },
     {
       accessorKey: "points",
@@ -473,7 +516,7 @@ export function XpGrantHistory({
           </Badge>
         </div>
       ),
-      sortingFn: (rowA, rowB) => rowA.original.points - rowB.original.points
+      sortingFn: (rowA, rowB) => rowA.original.points - rowB.original.points,
     },
     {
       accessorKey: "granter.name",
@@ -488,12 +531,14 @@ export function XpGrantHistory({
       ),
       cell: ({ row }) => (
         <div className="min-w-[150px]">
-          <p className="font-medium text-sm truncate">{row.original.granter.name}</p>
+          <p className="font-medium text-sm truncate">
+            {row.original.granter.name}
+          </p>
           <Badge variant="outline" className="text-xs mt-1">
             {row.original.granter.role}
           </Badge>
         </div>
-      )
+      ),
     },
     {
       id: "justification",
@@ -501,7 +546,10 @@ export function XpGrantHistory({
       cell: ({ row }) => (
         <div className="max-w-[200px]">
           {row.original.justification ? (
-            <p className="text-sm text-muted-foreground truncate" title={row.original.justification}>
+            <p
+              className="text-sm text-muted-foreground truncate"
+              title={row.original.justification}
+            >
               {row.original.justification}
             </p>
           ) : (
@@ -510,7 +558,7 @@ export function XpGrantHistory({
             </span>
           )}
         </div>
-      )
+      ),
     },
     {
       id: "actions",
@@ -534,13 +582,11 @@ export function XpGrantHistory({
                 Informações completas sobre esta concessão de XP avulso
               </DialogDescription>
             </DialogHeader>
-            {selectedGrant && (
-              <GrantDetailView grant={selectedGrant} />
-            )}
+            {selectedGrant && <GrantDetailView grant={selectedGrant} />}
           </DialogContent>
         </Dialog>
-      )
-    }
+      ),
+    },
   ];
 
   return (
@@ -549,9 +595,11 @@ export function XpGrantHistory({
       {showStatistics && statistics && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Estatísticas - {statistics.period.label}</h3>
+            <h3 className="text-lg font-semibold">
+              Estatísticas - {statistics.period.label}
+            </h3>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card>
               <CardContent className="p-4">
@@ -560,8 +608,12 @@ export function XpGrantHistory({
                     <History size={20} />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Total de Concessões</p>
-                    <p className="text-2xl font-bold">{statistics.overview.totalGrants}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Total de Concessões
+                    </p>
+                    <p className="text-2xl font-bold">
+                      {statistics.overview.totalGrants}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       {statistics.overview.dailyAverageGrants.toFixed(1)}/dia
                     </p>
@@ -569,7 +621,7 @@ export function XpGrantHistory({
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
@@ -577,8 +629,12 @@ export function XpGrantHistory({
                     <Star size={20} />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Total de Pontos</p>
-                    <p className="text-2xl font-bold">{statistics.overview.totalPoints.toLocaleString()}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Total de Pontos
+                    </p>
+                    <p className="text-2xl font-bold">
+                      {statistics.overview.totalPoints.toLocaleString()}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       {statistics.overview.dailyAveragePoints}/dia
                     </p>
@@ -586,7 +642,7 @@ export function XpGrantHistory({
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
@@ -594,14 +650,20 @@ export function XpGrantHistory({
                     <TrendingUp size={20} />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Média de Pontos</p>
-                    <p className="text-2xl font-bold">{statistics.overview.averagePoints}</p>
-                    <p className="text-xs text-muted-foreground">por concessão</p>
+                    <p className="text-sm text-muted-foreground">
+                      Média de Pontos
+                    </p>
+                    <p className="text-2xl font-bold">
+                      {statistics.overview.averagePoints}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      por concessão
+                    </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
@@ -609,17 +671,22 @@ export function XpGrantHistory({
                     <Award size={20} />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Tipos Utilizados</p>
-                    <p className="text-2xl font-bold">{statistics.grantsByType.length}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Tipos Utilizados
+                    </p>
+                    <p className="text-2xl font-bold">
+                      {statistics.grantsByType.length}
+                    </p>
                     <p className="text-xs text-muted-foreground">
-                      {statistics.trends.mostUsedType && `Mais usado: ${statistics.trends.mostUsedType}`}
+                      {statistics.trends.mostUsedType &&
+                        `Mais usado: ${statistics.trends.mostUsedType}`}
                     </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
-          
+
           {/* Estatísticas detalhadas */}
           {statistics.grantsByType.length > 0 && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -630,14 +697,20 @@ export function XpGrantHistory({
                 <CardContent>
                   <div className="space-y-3">
                     {statistics.grantsByType.slice(0, 5).map((type) => (
-                      <div key={type.typeId} className="flex items-center justify-between">
+                      <div
+                        key={type.typeId}
+                        className="flex items-center justify-between"
+                      >
                         <div className="flex-1">
                           <p className="font-medium text-sm">{type.typeName}</p>
                           <p className="text-xs text-muted-foreground">
                             {type.count} concessões • {type.percentage}%
                           </p>
                         </div>
-                        <Badge variant="secondary" className="font-mono text-xs">
+                        <Badge
+                          variant="secondary"
+                          className="font-mono text-xs"
+                        >
                           {type.totalPoints} XP
                         </Badge>
                       </div>
@@ -645,22 +718,32 @@ export function XpGrantHistory({
                   </div>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Top Administradores</CardTitle>
+                  <CardTitle className="text-base">
+                    Top Administradores
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
                     {statistics.grantsByGranter.slice(0, 5).map((granter) => (
-                      <div key={granter.granterId} className="flex items-center justify-between">
+                      <div
+                        key={granter.granterId}
+                        className="flex items-center justify-between"
+                      >
                         <div className="flex-1">
-                          <p className="font-medium text-sm">{granter.granterName}</p>
+                          <p className="font-medium text-sm">
+                            {granter.granterName}
+                          </p>
                           <p className="text-xs text-muted-foreground">
                             {granter.count} concessões • {granter.percentage}%
                           </p>
                         </div>
-                        <Badge variant="secondary" className="font-mono text-xs">
+                        <Badge
+                          variant="secondary"
+                          className="font-mono text-xs"
+                        >
                           {granter.totalPoints} XP
                         </Badge>
                       </div>
@@ -690,20 +773,24 @@ export function XpGrantHistory({
                   id="startDate"
                   type="date"
                   value={filters.startDate}
-                  onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                  onChange={(e) =>
+                    handleFilterChange("startDate", e.target.value)
+                  }
                 />
               </div>
-              
+
               <div>
                 <Label htmlFor="endDate">Data Final</Label>
                 <Input
                   id="endDate"
                   type="date"
                   value={filters.endDate}
-                  onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                  onChange={(e) =>
+                    handleFilterChange("endDate", e.target.value)
+                  }
                 />
               </div>
-              
+
               <div>
                 <Label htmlFor="minPoints">Pontos Mínimos</Label>
                 <Input
@@ -712,10 +799,12 @@ export function XpGrantHistory({
                   placeholder="Ex: 10"
                   min="0"
                   value={filters.minPoints}
-                  onChange={(e) => handleFilterChange('minPoints', e.target.value)}
+                  onChange={(e) =>
+                    handleFilterChange("minPoints", e.target.value)
+                  }
                 />
               </div>
-              
+
               <div>
                 <Label htmlFor="maxPoints">Pontos Máximos</Label>
                 <Input
@@ -724,15 +813,17 @@ export function XpGrantHistory({
                   placeholder="Ex: 100"
                   min="0"
                   value={filters.maxPoints}
-                  onChange={(e) => handleFilterChange('maxPoints', e.target.value)}
+                  onChange={(e) =>
+                    handleFilterChange("maxPoints", e.target.value)
+                  }
                 />
               </div>
-              
+
               <div>
                 <Label htmlFor="sortBy">Ordenar por</Label>
                 <Select
                   value={filters.sortBy}
-                  onValueChange={(value) => handleFilterChange('sortBy', value)}
+                  onValueChange={(value) => handleFilterChange("sortBy", value)}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -746,12 +837,14 @@ export function XpGrantHistory({
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div>
                 <Label htmlFor="sortOrder">Ordem</Label>
                 <Select
                   value={filters.sortOrder}
-                  onValueChange={(value) => handleFilterChange('sortOrder', value)}
+                  onValueChange={(value) =>
+                    handleFilterChange("sortOrder", value)
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -762,12 +855,12 @@ export function XpGrantHistory({
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div>
                 <Label htmlFor="limit">Itens por página</Label>
                 <Select
                   value={filters.limit.toString()}
-                  onValueChange={(value) => handleFilterChange('limit', value)}
+                  onValueChange={(value) => handleFilterChange("limit", value)}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -780,7 +873,7 @@ export function XpGrantHistory({
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="flex items-end">
                 <Button
                   variant="outline"
@@ -796,7 +889,7 @@ export function XpGrantHistory({
                       page: 1,
                       limit: 20,
                       sortBy: "grantedAt",
-                      sortOrder: "desc"
+                      sortOrder: "desc",
                     });
                   }}
                   className="w-full"
@@ -814,26 +907,26 @@ export function XpGrantHistory({
         <div>
           <h2 className="text-2xl font-bold">Histórico de XP Avulso</h2>
           <p className="text-muted-foreground">
-            {attendantId 
+            {attendantId
               ? "Concessões de XP avulso para este atendente"
-              : "Todas as concessões de XP avulso realizadas no sistema"
-            }
+              : "Todas as concessões de XP avulso realizadas no sistema"}
           </p>
           {pagination.total > 0 && (
             <p className="text-sm text-muted-foreground mt-1">
-              {pagination.total} concessão{pagination.total !== 1 ? 'ões' : ''} encontrada{pagination.total !== 1 ? 's' : ''}
+              {pagination.total} concessão{pagination.total !== 1 ? "ões" : ""}{" "}
+              encontrada{pagination.total !== 1 ? "s" : ""}
             </p>
           )}
         </div>
         <div className="flex items-center gap-2">
-          <Button 
-            onClick={handleExportCSV} 
+          <Button
+            onClick={handleExportCSV}
             disabled={isExporting || grants.length === 0}
             variant="outline"
             className="flex items-center gap-2"
           >
             <Download className="h-4 w-4" />
-            {isExporting ? 'Exportando...' : 'Exportar CSV'}
+            {isExporting ? "Exportando..." : "Exportar CSV"}
           </Button>
         </div>
       </div>
@@ -845,7 +938,9 @@ export function XpGrantHistory({
             <div className="flex items-center justify-center py-12">
               <div className="text-center space-y-3">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                <p className="text-muted-foreground">Carregando histórico de concessões...</p>
+                <p className="text-muted-foreground">
+                  Carregando histórico de concessões...
+                </p>
               </div>
             </div>
           ) : grants.length === 0 ? (
@@ -853,12 +948,13 @@ export function XpGrantHistory({
               <div className="text-center space-y-3">
                 <History className="h-12 w-12 text-muted-foreground mx-auto" />
                 <div>
-                  <p className="text-lg font-medium">Nenhuma concessão encontrada</p>
+                  <p className="text-lg font-medium">
+                    Nenhuma concessão encontrada
+                  </p>
                   <p className="text-muted-foreground">
-                    {attendantId 
+                    {attendantId
                       ? "Este atendente ainda não recebeu XP avulso"
-                      : "Nenhuma concessão de XP avulso foi realizada com os filtros aplicados"
-                    }
+                      : "Nenhuma concessão de XP avulso foi realizada com os filtros aplicados"}
                   </p>
                 </div>
               </div>
@@ -872,13 +968,13 @@ export function XpGrantHistory({
               isLoading={isLoading}
             />
           )}
-          
+
           {/* Paginação customizada */}
           {pagination.totalPages > 1 && (
             <div className="flex items-center justify-between mt-4 pt-4 border-t">
               <p className="text-sm text-muted-foreground">
-                Mostrando {((pagination.page - 1) * filters.limit) + 1} a{' '}
-                {Math.min(pagination.page * filters.limit, pagination.total)} de{' '}
+                Mostrando {(pagination.page - 1) * filters.limit + 1} a{" "}
+                {Math.min(pagination.page * filters.limit, pagination.total)} de{" "}
                 {pagination.total} concessões
               </p>
               <div className="flex items-center gap-2">
@@ -897,7 +993,9 @@ export function XpGrantHistory({
                   variant="outline"
                   size="sm"
                   onClick={() => handlePageChange(pagination.page + 1)}
-                  disabled={pagination.page >= pagination.totalPages || isLoading}
+                  disabled={
+                    pagination.page >= pagination.totalPages || isLoading
+                  }
                 >
                   Próximo
                 </Button>
@@ -913,16 +1011,16 @@ export function XpGrantHistory({
 // Componente para exibir detalhes de uma concessão
 function GrantDetailView({ grant }: { grant: XpGrantWithRelations }) {
   const IconComponent = getIconComponent(grant.type.icon);
-  
+
   return (
     <div className="space-y-6">
       {/* Cabeçalho */}
       <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
-        <div 
+        <div
           className="p-3 rounded-lg"
-          style={{ 
+          style={{
             backgroundColor: `${grant.type.color}20`,
-            color: grant.type.color
+            color: grant.type.color,
           }}
         >
           <IconComponent size={24} />
@@ -973,7 +1071,7 @@ function GrantDetailView({ grant }: { grant: XpGrantWithRelations }) {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
@@ -1011,7 +1109,9 @@ function GrantDetailView({ grant }: { grant: XpGrantWithRelations }) {
             <div>
               <p className="text-sm text-muted-foreground">Data e Hora</p>
               <p className="font-medium">
-                {format(new Date(grant.grantedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                {format(new Date(grant.grantedAt), "dd/MM/yyyy 'às' HH:mm", {
+                  locale: ptBR,
+                })}
               </p>
             </div>
             <div>
@@ -1019,16 +1119,18 @@ function GrantDetailView({ grant }: { grant: XpGrantWithRelations }) {
               <p className="font-mono text-sm">{grant.xpEventId}</p>
             </div>
           </div>
-          
+
           {grant.justification && (
             <div>
-              <p className="text-sm text-muted-foreground mb-2">Justificativa</p>
+              <p className="text-sm text-muted-foreground mb-2">
+                Justificativa
+              </p>
               <div className="p-3 bg-muted/50 rounded-lg">
                 <p className="text-sm leading-relaxed">{grant.justification}</p>
               </div>
             </div>
           )}
-          
+
           {!grant.justification && (
             <div className="p-3 bg-muted/30 rounded-lg border-l-4 border-muted">
               <p className="text-sm text-muted-foreground italic">
@@ -1049,7 +1151,7 @@ function getIconComponent(iconName: string) {
     target: TrendingUp,
     zap: Star,
     heart: Star,
-    trophy: Award
+    trophy: Award,
   };
   return iconMap[iconName] || Star;
 }

@@ -7,14 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { XpGrantHistory } from "@/components/gamification/xp/XpGrantHistory";
-import { 
-  History, 
-  TrendingUp, 
-  Users, 
-  Star, 
+import {
+  History,
+  TrendingUp,
+  Users,
+  Star,
   Award,
   BarChart3,
-  Calendar
+  Calendar,
 } from "lucide-react";
 import { ROLES } from "@/lib/types";
 import Link from "next/link";
@@ -62,9 +62,11 @@ interface GrantStatistics {
 export default function HistoricoXpPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [statistics, setStatistics] = useState<GrantStatistics['data'] | null>(null);
+  const [statistics, setStatistics] = useState<GrantStatistics["data"] | null>(
+    null,
+  );
   const [isLoadingStats, setIsLoadingStats] = useState(true);
-  const [selectedPeriod, setSelectedPeriod] = useState('30d');
+  const [selectedPeriod, setSelectedPeriod] = useState("30d");
 
   const user = session?.user;
   const isAuthenticated = !!session;
@@ -85,28 +87,30 @@ export default function HistoricoXpPage() {
   const fetchStatistics = async () => {
     try {
       setIsLoadingStats(true);
-      const response = await fetch(`/api/gamification/xp-grants/statistics?period=${selectedPeriod}`);
-      
+      const response = await fetch(
+        `/api/gamification/xp-grants/statistics?period=${selectedPeriod}`,
+      );
+
       if (response.ok) {
         const result: GrantStatistics = await response.json();
         if (result.success) {
           setStatistics(result.data);
         } else {
-          throw new Error('Falha ao obter estatísticas');
+          throw new Error("Falha ao obter estatísticas");
         }
       } else {
         toast({
           title: "Erro",
           description: "Erro ao carregar estatísticas",
-          variant: "destructive"
+          variant: "destructive",
         });
       }
     } catch (error) {
-      console.error('Erro ao buscar estatísticas:', error);
+      console.error("Erro ao buscar estatísticas:", error);
       toast({
         title: "Erro",
         description: "Erro ao carregar estatísticas",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setIsLoadingStats(false);
@@ -122,21 +126,22 @@ export default function HistoricoXpPage() {
   }
 
   // Verificar permissões
-  const canViewHistory = user.role === ROLES.ADMIN || user.role === ROLES.SUPERADMIN;
-  
+  const canViewHistory =
+    user.role === ROLES.ADMIN || user.role === ROLES.SUPERADMIN;
+
   if (!canViewHistory) {
     return (
       <div className="flex flex-col items-center justify-center h-full space-y-4">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-muted-foreground">Acesso Restrito</h1>
+          <h1 className="text-2xl font-bold text-muted-foreground">
+            Acesso Restrito
+          </h1>
           <p className="text-muted-foreground">
             Você não tem permissão para visualizar o histórico de XP avulso.
           </p>
         </div>
         <Button asChild>
-          <Link href="/dashboard/gamificacao">
-            Voltar para Gamificação
-          </Link>
+          <Link href="/dashboard/gamificacao">Voltar para Gamificação</Link>
         </Button>
       </div>
     );
@@ -149,7 +154,8 @@ export default function HistoricoXpPage() {
         <div>
           <h1 className="text-3xl font-bold">Histórico de XP Avulso</h1>
           <p className="text-muted-foreground">
-            Visualize e audite todas as concessões de XP avulso realizadas no sistema
+            Visualize e audite todas as concessões de XP avulso realizadas no
+            sistema
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -177,17 +183,21 @@ export default function HistoricoXpPage() {
                 <History size={20} />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total de Concessões</p>
+                <p className="text-sm text-muted-foreground">
+                  Total de Concessões
+                </p>
                 {isLoadingStats ? (
                   <div className="h-8 w-16 bg-muted animate-pulse rounded" />
                 ) : (
-                  <p className="text-2xl font-bold">{statistics?.overview.totalGrants || 0}</p>
+                  <p className="text-2xl font-bold">
+                    {statistics?.overview.totalGrants || 0}
+                  </p>
                 )}
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -199,13 +209,15 @@ export default function HistoricoXpPage() {
                 {isLoadingStats ? (
                   <div className="h-8 w-20 bg-muted animate-pulse rounded" />
                 ) : (
-                  <p className="text-2xl font-bold">{statistics?.overview.totalPoints.toLocaleString() || 0}</p>
+                  <p className="text-2xl font-bold">
+                    {statistics?.overview.totalPoints.toLocaleString() || 0}
+                  </p>
                 )}
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -217,13 +229,15 @@ export default function HistoricoXpPage() {
                 {isLoadingStats ? (
                   <div className="h-8 w-12 bg-muted animate-pulse rounded" />
                 ) : (
-                  <p className="text-2xl font-bold">{statistics?.overview.averagePoints || 0}</p>
+                  <p className="text-2xl font-bold">
+                    {statistics?.overview.averagePoints || 0}
+                  </p>
                 )}
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -231,11 +245,15 @@ export default function HistoricoXpPage() {
                 <Users size={20} />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Administradores Ativos</p>
+                <p className="text-sm text-muted-foreground">
+                  Administradores Ativos
+                </p>
                 {isLoadingStats ? (
                   <div className="h-8 w-8 bg-muted animate-pulse rounded" />
                 ) : (
-                  <p className="text-2xl font-bold">{statistics?.grantsByGranter.length || 0}</p>
+                  <p className="text-2xl font-bold">
+                    {statistics?.grantsByGranter.length || 0}
+                  </p>
                 )}
               </div>
             </div>
@@ -258,7 +276,10 @@ export default function HistoricoXpPage() {
               {isLoadingStats ? (
                 // Skeleton loading
                 Array.from({ length: 3 }).map((_, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                  >
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 bg-muted animate-pulse rounded-full" />
                       <div className="space-y-2">
@@ -274,7 +295,10 @@ export default function HistoricoXpPage() {
                   .sort((a, b) => b.count - a.count)
                   .slice(0, 5)
                   .map((type, index) => (
-                    <div key={type.typeId} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div
+                      key={type.typeId}
+                      className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                    >
                       <div className="flex items-center gap-3">
                         <div className="flex items-center justify-center w-8 h-8 bg-primary/10 text-primary rounded-full text-sm font-bold">
                           {index + 1}
@@ -313,7 +337,10 @@ export default function HistoricoXpPage() {
               {isLoadingStats ? (
                 // Skeleton loading
                 Array.from({ length: 3 }).map((_, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                  >
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 bg-muted animate-pulse rounded-full" />
                       <div className="space-y-2">
@@ -329,7 +356,10 @@ export default function HistoricoXpPage() {
                   .sort((a, b) => b.count - a.count)
                   .slice(0, 5)
                   .map((granter, index) => (
-                    <div key={granter.granterId} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div
+                      key={granter.granterId}
+                      className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                    >
                       <div className="flex items-center gap-3">
                         <div className="flex items-center justify-center w-8 h-8 bg-primary/10 text-primary rounded-full text-sm font-bold">
                           {index + 1}
@@ -368,19 +398,25 @@ export default function HistoricoXpPage() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-4 bg-blue-50 rounded-lg">
-                <p className="text-sm font-medium text-blue-700">Tipo Mais Popular</p>
+                <p className="text-sm font-medium text-blue-700">
+                  Tipo Mais Popular
+                </p>
                 <p className="text-lg font-bold text-blue-900">
-                  {statistics.trends.mostUsedType || 'Nenhum'}
+                  {statistics.trends.mostUsedType || "Nenhum"}
                 </p>
               </div>
               <div className="p-4 bg-green-50 rounded-lg">
-                <p className="text-sm font-medium text-green-700">Admin Mais Ativo</p>
+                <p className="text-sm font-medium text-green-700">
+                  Admin Mais Ativo
+                </p>
                 <p className="text-lg font-bold text-green-900">
-                  {statistics.trends.mostActiveGranter || 'Nenhum'}
+                  {statistics.trends.mostActiveGranter || "Nenhum"}
                 </p>
               </div>
               <div className="p-4 bg-purple-50 rounded-lg">
-                <p className="text-sm font-medium text-purple-700">Média por Admin</p>
+                <p className="text-sm font-medium text-purple-700">
+                  Média por Admin
+                </p>
                 <p className="text-lg font-bold text-purple-900">
                   {statistics.trends.averageGrantsPerGranter} concessões
                 </p>
@@ -388,7 +424,9 @@ export default function HistoricoXpPage() {
             </div>
             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-4 bg-yellow-50 rounded-lg">
-                <p className="text-sm font-medium text-yellow-700">Média Diária</p>
+                <p className="text-sm font-medium text-yellow-700">
+                  Média Diária
+                </p>
                 <p className="text-lg font-bold text-yellow-900">
                   {statistics.overview.dailyAverageGrants} concessões/dia
                 </p>
@@ -396,7 +434,8 @@ export default function HistoricoXpPage() {
               <div className="p-4 bg-orange-50 rounded-lg">
                 <p className="text-sm font-medium text-orange-700">XP Diário</p>
                 <p className="text-lg font-bold text-orange-900">
-                  {statistics.overview.dailyAveragePoints.toLocaleString()} XP/dia
+                  {statistics.overview.dailyAveragePoints.toLocaleString()}{" "}
+                  XP/dia
                 </p>
               </div>
             </div>
@@ -416,25 +455,25 @@ export default function HistoricoXpPage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="flex items-center gap-2">
               <Button
-                variant={selectedPeriod === '7d' ? 'default' : 'outline'}
+                variant={selectedPeriod === "7d" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setSelectedPeriod('7d')}
+                onClick={() => setSelectedPeriod("7d")}
                 disabled={isLoadingStats}
               >
                 Últimos 7 dias
               </Button>
               <Button
-                variant={selectedPeriod === '30d' ? 'default' : 'outline'}
+                variant={selectedPeriod === "30d" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setSelectedPeriod('30d')}
+                onClick={() => setSelectedPeriod("30d")}
                 disabled={isLoadingStats}
               >
                 Últimos 30 dias
               </Button>
               <Button
-                variant={selectedPeriod === '90d' ? 'default' : 'outline'}
+                variant={selectedPeriod === "90d" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setSelectedPeriod('90d')}
+                onClick={() => setSelectedPeriod("90d")}
                 disabled={isLoadingStats}
               >
                 Últimos 90 dias
@@ -451,7 +490,7 @@ export default function HistoricoXpPage() {
       </Card>
 
       {/* Componente de histórico */}
-      <XpGrantHistory 
+      <XpGrantHistory
         showFilters={true}
         showStatistics={false} // Já mostramos as estatísticas acima
       />

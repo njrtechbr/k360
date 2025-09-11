@@ -1,12 +1,25 @@
 "use client";
 
-import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { getXpForLevel, MAX_LEVEL } from '@/lib/xp';
-import { Shield, TrendingUp, Target } from 'lucide-react';
+import React from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { getXpForLevel, MAX_LEVEL } from "@/lib/xp";
+import { Shield, TrendingUp, Target } from "lucide-react";
 
 interface LevelScaleProps {
   currentLevel?: number;
@@ -14,10 +27,10 @@ interface LevelScaleProps {
   className?: string;
 }
 
-const LevelScale: React.FC<LevelScaleProps> = ({ 
-  currentLevel = 1, 
-  currentXp = 0, 
-  className 
+const LevelScale: React.FC<LevelScaleProps> = ({
+  currentLevel = 1,
+  currentXp = 0,
+  className,
 }) => {
   // Gerar dados para todos os níveis
   const levelData = Array.from({ length: MAX_LEVEL }, (_, index) => {
@@ -25,21 +38,22 @@ const LevelScale: React.FC<LevelScaleProps> = ({
     const xpRequired = getXpForLevel(level);
     const xpForNext = level < MAX_LEVEL ? getXpForLevel(level + 1) : xpRequired;
     const xpDifference = xpForNext - xpRequired;
-    
+
     return {
       level,
       xpRequired,
       xpForNext,
       xpDifference,
       isCurrentLevel: level === currentLevel,
-      isUnlocked: level <= currentLevel
+      isUnlocked: level <= currentLevel,
     };
   });
 
   // Estatísticas gerais
   const totalXpForMaxLevel = getXpForLevel(MAX_LEVEL);
   const averageXpPerLevel = totalXpForMaxLevel / MAX_LEVEL;
-  const progressToMax = currentXp > 0 ? (currentXp / totalXpForMaxLevel) * 100 : 0;
+  const progressToMax =
+    currentXp > 0 ? (currentXp / totalXpForMaxLevel) * 100 : 0;
 
   return (
     <div className={`space-y-6 ${className}`}>
@@ -56,26 +70,32 @@ const LevelScale: React.FC<LevelScaleProps> = ({
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-green-500" />
               <div>
-                <p className="text-sm text-muted-foreground">XP Total para Nível Máximo</p>
-                <p className="text-2xl font-bold">{totalXpForMaxLevel.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">
+                  XP Total para Nível Máximo
+                </p>
+                <p className="text-2xl font-bold">
+                  {totalXpForMaxLevel.toLocaleString()}
+                </p>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
               <Shield className="h-5 w-5 text-purple-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Progresso Total</p>
-                <p className="text-2xl font-bold">{progressToMax.toFixed(1)}%</p>
+                <p className="text-2xl font-bold">
+                  {progressToMax.toFixed(1)}%
+                </p>
                 <Progress value={progressToMax} className="h-1 mt-1" />
               </div>
             </div>
@@ -105,16 +125,22 @@ const LevelScale: React.FC<LevelScaleProps> = ({
               </TableHeader>
               <TableBody>
                 {levelData.map((data) => (
-                  <TableRow 
+                  <TableRow
                     key={data.level}
-                    className={data.isCurrentLevel ? 'bg-blue-50 dark:bg-blue-950/20' : ''}
+                    className={
+                      data.isCurrentLevel
+                        ? "bg-blue-50 dark:bg-blue-950/20"
+                        : ""
+                    }
                   >
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
-                        <Shield 
+                        <Shield
                           className={`h-4 w-4 ${
-                            data.isUnlocked ? 'text-blue-500' : 'text-muted-foreground'
-                          }`} 
+                            data.isUnlocked
+                              ? "text-blue-500"
+                              : "text-muted-foreground"
+                          }`}
                         />
                         {data.level}
                       </div>
@@ -123,16 +149,14 @@ const LevelScale: React.FC<LevelScaleProps> = ({
                       {data.xpRequired.toLocaleString()} XP
                     </TableCell>
                     <TableCell className="font-mono">
-                      {data.level < MAX_LEVEL 
+                      {data.level < MAX_LEVEL
                         ? `${data.xpForNext.toLocaleString()} XP`
-                        : 'Nível Máximo'
-                      }
+                        : "Nível Máximo"}
                     </TableCell>
                     <TableCell className="font-mono text-muted-foreground">
-                      {data.level < MAX_LEVEL 
+                      {data.level < MAX_LEVEL
                         ? `+${data.xpDifference.toLocaleString()}`
-                        : '-'
-                      }
+                        : "-"}
                     </TableCell>
                     <TableCell>
                       {data.isCurrentLevel && (

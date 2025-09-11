@@ -1,23 +1,29 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { 
-  Gift, 
-  Trophy, 
-  Zap, 
-  CheckCircle, 
-  X, 
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Gift,
+  Trophy,
+  Zap,
+  CheckCircle,
+  X,
   Bell,
   Star,
-  Award
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { useXpAvulsoNotifications } from '@/hooks/useXpAvulsoNotifications';
+  Award,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { useXpAvulsoNotifications } from "@/hooks/useXpAvulsoNotifications";
 
 interface XpAvulsoNotificationData {
   xpAmount: number;
@@ -41,19 +47,19 @@ interface XpAvulsoNotificationProps {
   className?: string;
 }
 
-export default function XpAvulsoNotification({ 
-  attendantId, 
+export default function XpAvulsoNotification({
+  attendantId,
   onNotificationReceived,
-  className 
+  className,
 }: XpAvulsoNotificationProps) {
   const [showNotifications, setShowNotifications] = useState(false);
-  
+
   const {
     notifications,
     unreadCount,
     markAsRead,
     markAllAsRead,
-    removeNotification
+    removeNotification,
   } = useXpAvulsoNotifications(attendantId);
 
   // Callback quando nova notificação é recebida
@@ -81,11 +87,11 @@ export default function XpAvulsoNotification({
       >
         <Bell className="h-4 w-4" />
         {unreadCount > 0 && (
-          <Badge 
-            variant="destructive" 
+          <Badge
+            variant="destructive"
             className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs"
           >
-            {unreadCount > 99 ? '99+' : unreadCount}
+            {unreadCount > 99 ? "99+" : unreadCount}
           </Badge>
         )}
       </Button>
@@ -101,7 +107,7 @@ export default function XpAvulsoNotification({
                   Notificações de XP
                 </CardTitle>
                 <CardDescription>
-                  {unreadCount > 0 ? `${unreadCount} não lidas` : 'Todas lidas'}
+                  {unreadCount > 0 ? `${unreadCount} não lidas` : "Todas lidas"}
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
@@ -158,14 +164,20 @@ interface NotificationItemProps {
   isLast: boolean;
 }
 
-function NotificationItem({ notification, onMarkAsRead, onRemove, isLast }: NotificationItemProps) {
+function NotificationItem({
+  notification,
+  onMarkAsRead,
+  onRemove,
+  isLast,
+}: NotificationItemProps) {
   const { data, timestamp, read } = notification;
 
   return (
     <div
       className={cn(
         "p-3 hover:bg-muted/50 cursor-pointer transition-colors group",
-        !read && "bg-blue-50/50 dark:bg-blue-950/20 border-l-2 border-l-blue-500"
+        !read &&
+          "bg-blue-50/50 dark:bg-blue-950/20 border-l-2 border-l-blue-500",
       )}
       onClick={onMarkAsRead}
     >
@@ -175,13 +187,12 @@ function NotificationItem({ notification, onMarkAsRead, onRemove, isLast }: Noti
           <div className="flex-shrink-0 mt-0.5">
             <Gift className="h-5 w-5 text-blue-500" />
           </div>
-          
+
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
-              <h4 className={cn(
-                "text-sm font-medium",
-                !read && "font-semibold"
-              )}>
+              <h4
+                className={cn("text-sm font-medium", !read && "font-semibold")}
+              >
                 XP Recebido!
               </h4>
               <Button
@@ -196,25 +207,28 @@ function NotificationItem({ notification, onMarkAsRead, onRemove, isLast }: Noti
                 <X className="h-3 w-3" />
               </Button>
             </div>
-            
+
             <p className="text-sm text-muted-foreground mt-1">
-              Você recebeu <span className="font-semibold text-blue-600">{data.xpAmount} XP</span> por "{data.typeName}"
+              Você recebeu{" "}
+              <span className="font-semibold text-blue-600">
+                {data.xpAmount} XP
+              </span>{" "}
+              por "{data.typeName}"
               {data.justification && (
                 <span className="block text-xs mt-1 italic">
                   "{data.justification}"
                 </span>
               )}
             </p>
-            
+
             <div className="flex items-center gap-2 mt-2">
               <Badge variant="secondary" className="text-xs">
-                <Zap className="h-3 w-3 mr-1" />
-                +{data.xpAmount} XP
+                <Zap className="h-3 w-3 mr-1" />+{data.xpAmount} XP
               </Badge>
             </div>
-            
+
             <div className="text-xs text-muted-foreground mt-2">
-              {format(timestamp, 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+              {format(timestamp, "dd/MM/yyyy HH:mm", { locale: ptBR })}
             </div>
           </div>
         </div>
@@ -228,7 +242,9 @@ function NotificationItem({ notification, onMarkAsRead, onRemove, isLast }: Noti
                 🎉 Subiu de Nível!
               </h5>
               <p className="text-sm text-yellow-600 dark:text-yellow-400">
-                Parabéns! Você alcançou o <strong>nível {data.levelUp.newLevel}</strong> com {data.levelUp.totalXp.toLocaleString()} XP!
+                Parabéns! Você alcançou o{" "}
+                <strong>nível {data.levelUp.newLevel}</strong> com{" "}
+                {data.levelUp.totalXp.toLocaleString()} XP!
               </p>
             </div>
           </div>
@@ -238,8 +254,8 @@ function NotificationItem({ notification, onMarkAsRead, onRemove, isLast }: Noti
         {data.achievementsUnlocked && data.achievementsUnlocked.length > 0 && (
           <div className="space-y-2">
             {data.achievementsUnlocked.map((achievement, index) => (
-              <div 
-                key={achievement.id} 
+              <div
+                key={achievement.id}
                 className="flex items-start gap-3 p-2 bg-green-50 dark:bg-green-950/20 rounded-md"
               >
                 <Award className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
@@ -267,6 +283,6 @@ function NotificationItem({ notification, onMarkAsRead, onRemove, isLast }: Noti
 
 // Função utilitária para disparar evento de notificação
 export const triggerXpAvulsoNotification = (data: XpAvulsoNotificationData) => {
-  const event = new CustomEvent('xp-avulso-granted', { detail: data });
+  const event = new CustomEvent("xp-avulso-granted", { detail: data });
   window.dispatchEvent(event);
 };

@@ -1,28 +1,28 @@
 "use client";
 
-import React, { useState, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { 
+import React, { useState, useCallback } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { 
+} from "@/components/ui/select";
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Slider } from '@/components/ui/slider';
-import { 
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Slider } from "@/components/ui/slider";
+import {
   Filter,
   X,
   Calendar as CalendarIcon,
@@ -32,16 +32,16 @@ import {
   Star,
   Brain,
   MessageSquare,
-  AlertTriangle
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import SentimentBadge from './SentimentBadge';
+  AlertTriangle,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import SentimentBadge from "./SentimentBadge";
 
 export interface SentimentFilterOptions {
   searchTerm?: string;
-  sentiments?: Array<'Positivo' | 'Negativo' | 'Neutro'>;
+  sentiments?: Array<"Positivo" | "Negativo" | "Neutro">;
   confidenceRange?: [number, number];
   ratingRange?: [number, number];
   dateRange?: {
@@ -51,8 +51,8 @@ export interface SentimentFilterOptions {
   attendants?: string[];
   hasConflicts?: boolean;
   minAnalysisLength?: number;
-  sortBy?: 'date' | 'confidence' | 'rating' | 'sentiment';
-  sortOrder?: 'asc' | 'desc';
+  sortBy?: "date" | "confidence" | "rating" | "sentiment";
+  sortOrder?: "asc" | "desc";
 }
 
 export interface AttendantOption {
@@ -74,48 +74,65 @@ const SentimentFilters: React.FC<SentimentFiltersProps> = ({
   onFiltersChange,
   attendants = [],
   totalResults = 0,
-  className
+  className,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [dateFrom, setDateFrom] = useState<Date | undefined>(filters.dateRange?.from);
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(
+    filters.dateRange?.from,
+  );
   const [dateTo, setDateTo] = useState<Date | undefined>(filters.dateRange?.to);
 
-  const updateFilter = useCallback(<K extends keyof SentimentFilterOptions>(
-    key: K,
-    value: SentimentFilterOptions[K]
-  ) => {
-    onFiltersChange({
-      ...filters,
-      [key]: value
-    });
-  }, [filters, onFiltersChange]);
+  const updateFilter = useCallback(
+    <K extends keyof SentimentFilterOptions>(
+      key: K,
+      value: SentimentFilterOptions[K],
+    ) => {
+      onFiltersChange({
+        ...filters,
+        [key]: value,
+      });
+    },
+    [filters, onFiltersChange],
+  );
 
-  const toggleSentiment = useCallback((sentiment: 'Positivo' | 'Negativo' | 'Neutro') => {
-    const currentSentiments = filters.sentiments || [];
-    const newSentiments = currentSentiments.includes(sentiment)
-      ? currentSentiments.filter(s => s !== sentiment)
-      : [...currentSentiments, sentiment];
-    
-    updateFilter('sentiments', newSentiments.length > 0 ? newSentiments : undefined);
-  }, [filters.sentiments, updateFilter]);
+  const toggleSentiment = useCallback(
+    (sentiment: "Positivo" | "Negativo" | "Neutro") => {
+      const currentSentiments = filters.sentiments || [];
+      const newSentiments = currentSentiments.includes(sentiment)
+        ? currentSentiments.filter((s) => s !== sentiment)
+        : [...currentSentiments, sentiment];
 
-  const toggleAttendant = useCallback((attendantId: string) => {
-    const currentAttendants = filters.attendants || [];
-    const newAttendants = currentAttendants.includes(attendantId)
-      ? currentAttendants.filter(id => id !== attendantId)
-      : [...currentAttendants, attendantId];
-    
-    updateFilter('attendants', newAttendants.length > 0 ? newAttendants : undefined);
-  }, [filters.attendants, updateFilter]);
+      updateFilter(
+        "sentiments",
+        newSentiments.length > 0 ? newSentiments : undefined,
+      );
+    },
+    [filters.sentiments, updateFilter],
+  );
+
+  const toggleAttendant = useCallback(
+    (attendantId: string) => {
+      const currentAttendants = filters.attendants || [];
+      const newAttendants = currentAttendants.includes(attendantId)
+        ? currentAttendants.filter((id) => id !== attendantId)
+        : [...currentAttendants, attendantId];
+
+      updateFilter(
+        "attendants",
+        newAttendants.length > 0 ? newAttendants : undefined,
+      );
+    },
+    [filters.attendants, updateFilter],
+  );
 
   const handleDateRangeChange = useCallback(() => {
     if (dateFrom || dateTo) {
-      updateFilter('dateRange', {
+      updateFilter("dateRange", {
         from: dateFrom,
-        to: dateTo
+        to: dateTo,
       });
     } else {
-      updateFilter('dateRange', undefined);
+      updateFilter("dateRange", undefined);
     }
   }, [dateFrom, dateTo, updateFilter]);
 
@@ -141,7 +158,7 @@ const SentimentFilters: React.FC<SentimentFiltersProps> = ({
   const activeFiltersCount = getActiveFiltersCount();
 
   return (
-    <Card className={cn('w-full', className)}>
+    <Card className={cn("w-full", className)}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
@@ -155,14 +172,14 @@ const SentimentFilters: React.FC<SentimentFiltersProps> = ({
           </CardTitle>
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">
-              {totalResults} resultado{totalResults !== 1 ? 's' : ''}
+              {totalResults} resultado{totalResults !== 1 ? "s" : ""}
             </span>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setIsExpanded(!isExpanded)}
             >
-              {isExpanded ? 'Menos' : 'Mais'} filtros
+              {isExpanded ? "Menos" : "Mais"} filtros
             </Button>
             {activeFiltersCount > 0 && (
               <Button
@@ -178,7 +195,7 @@ const SentimentFilters: React.FC<SentimentFiltersProps> = ({
           </div>
         </div>
       </CardHeader>
-      
+
       <CardContent className="space-y-4">
         {/* Busca por texto */}
         <div className="space-y-2">
@@ -189,8 +206,10 @@ const SentimentFilters: React.FC<SentimentFiltersProps> = ({
           <Input
             id="search"
             placeholder="Digite palavras-chave..."
-            value={filters.searchTerm || ''}
-            onChange={(e) => updateFilter('searchTerm', e.target.value || undefined)}
+            value={filters.searchTerm || ""}
+            onChange={(e) =>
+              updateFilter("searchTerm", e.target.value || undefined)
+            }
           />
         </div>
 
@@ -201,7 +220,7 @@ const SentimentFilters: React.FC<SentimentFiltersProps> = ({
             Sentimentos
           </Label>
           <div className="flex flex-wrap gap-2">
-            {(['Positivo', 'Negativo', 'Neutro'] as const).map((sentiment) => {
+            {(["Positivo", "Negativo", "Neutro"] as const).map((sentiment) => {
               const isSelected = filters.sentiments?.includes(sentiment);
               return (
                 <Button
@@ -211,9 +230,9 @@ const SentimentFilters: React.FC<SentimentFiltersProps> = ({
                   onClick={() => toggleSentiment(sentiment)}
                   className="h-8"
                 >
-                  <SentimentBadge 
-                    sentiment={sentiment} 
-                    size="sm" 
+                  <SentimentBadge
+                    sentiment={sentiment}
+                    size="sm"
                     showIcon={false}
                     className="mr-2"
                   />
@@ -228,16 +247,20 @@ const SentimentFilters: React.FC<SentimentFiltersProps> = ({
         {isExpanded && (
           <>
             <Separator />
-            
+
             {/* Faixa de confiança */}
             <div className="space-y-3">
               <Label className="flex items-center gap-2">
                 <Brain className="h-4 w-4" />
-                Confiança da IA ({((filters.confidenceRange?.[0] || 0) * 100).toFixed(0)}% - {((filters.confidenceRange?.[1] || 1) * 100).toFixed(0)}%)
+                Confiança da IA (
+                {((filters.confidenceRange?.[0] || 0) * 100).toFixed(0)}% -{" "}
+                {((filters.confidenceRange?.[1] || 1) * 100).toFixed(0)}%)
               </Label>
               <Slider
                 value={filters.confidenceRange || [0, 1]}
-                onValueChange={(value) => updateFilter('confidenceRange', value as [number, number])}
+                onValueChange={(value) =>
+                  updateFilter("confidenceRange", value as [number, number])
+                }
                 max={1}
                 min={0}
                 step={0.1}
@@ -249,11 +272,14 @@ const SentimentFilters: React.FC<SentimentFiltersProps> = ({
             <div className="space-y-3">
               <Label className="flex items-center gap-2">
                 <Star className="h-4 w-4" />
-                Nota da Avaliação ({filters.ratingRange?.[0] || 1} - {filters.ratingRange?.[1] || 5} estrelas)
+                Nota da Avaliação ({filters.ratingRange?.[0] || 1} -{" "}
+                {filters.ratingRange?.[1] || 5} estrelas)
               </Label>
               <Slider
                 value={filters.ratingRange || [1, 5]}
-                onValueChange={(value) => updateFilter('ratingRange', value as [number, number])}
+                onValueChange={(value) =>
+                  updateFilter("ratingRange", value as [number, number])
+                }
                 max={5}
                 min={1}
                 step={1}
@@ -274,11 +300,13 @@ const SentimentFilters: React.FC<SentimentFiltersProps> = ({
                       variant="outline"
                       className={cn(
                         "justify-start text-left font-normal",
-                        !dateFrom && "text-muted-foreground"
+                        !dateFrom && "text-muted-foreground",
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateFrom ? format(dateFrom, "dd/MM/yyyy", { locale: ptBR }) : "Data inicial"}
+                      {dateFrom
+                        ? format(dateFrom, "dd/MM/yyyy", { locale: ptBR })
+                        : "Data inicial"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -290,18 +318,20 @@ const SentimentFilters: React.FC<SentimentFiltersProps> = ({
                     />
                   </PopoverContent>
                 </Popover>
-                
+
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       className={cn(
                         "justify-start text-left font-normal",
-                        !dateTo && "text-muted-foreground"
+                        !dateTo && "text-muted-foreground",
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateTo ? format(dateTo, "dd/MM/yyyy", { locale: ptBR }) : "Data final"}
+                      {dateTo
+                        ? format(dateTo, "dd/MM/yyyy", { locale: ptBR })
+                        : "Data final"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -313,7 +343,7 @@ const SentimentFilters: React.FC<SentimentFiltersProps> = ({
                     />
                   </PopoverContent>
                 </Popover>
-                
+
                 <Button
                   variant="outline"
                   size="sm"
@@ -334,15 +364,20 @@ const SentimentFilters: React.FC<SentimentFiltersProps> = ({
                 </Label>
                 <div className="max-h-40 overflow-y-auto space-y-2 border rounded-md p-2">
                   {attendants.map((attendant) => {
-                    const isSelected = filters.attendants?.includes(attendant.id);
+                    const isSelected = filters.attendants?.includes(
+                      attendant.id,
+                    );
                     return (
-                      <div key={attendant.id} className="flex items-center space-x-2">
+                      <div
+                        key={attendant.id}
+                        className="flex items-center space-x-2"
+                      >
                         <Checkbox
                           id={`attendant-${attendant.id}`}
                           checked={isSelected}
                           onCheckedChange={() => toggleAttendant(attendant.id)}
                         />
-                        <Label 
+                        <Label
                           htmlFor={`attendant-${attendant.id}`}
                           className="flex-1 cursor-pointer"
                         >
@@ -366,14 +401,19 @@ const SentimentFilters: React.FC<SentimentFiltersProps> = ({
                 <Checkbox
                   id="conflicts"
                   checked={filters.hasConflicts || false}
-                  onCheckedChange={(checked) => updateFilter('hasConflicts', checked || undefined)}
+                  onCheckedChange={(checked) =>
+                    updateFilter("hasConflicts", checked || undefined)
+                  }
                 />
-                <Label htmlFor="conflicts" className="flex items-center gap-2 cursor-pointer">
+                <Label
+                  htmlFor="conflicts"
+                  className="flex items-center gap-2 cursor-pointer"
+                >
                   <AlertTriangle className="h-4 w-4" />
                   Apenas análises conflitantes
                 </Label>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="minLength">
                   Tamanho mínimo do comentário (caracteres)
@@ -383,10 +423,13 @@ const SentimentFilters: React.FC<SentimentFiltersProps> = ({
                   type="number"
                   min="0"
                   placeholder="Ex: 50"
-                  value={filters.minAnalysisLength || ''}
-                  onChange={(e) => updateFilter('minAnalysisLength', 
-                    e.target.value ? parseInt(e.target.value) : undefined
-                  )}
+                  value={filters.minAnalysisLength || ""}
+                  onChange={(e) =>
+                    updateFilter(
+                      "minAnalysisLength",
+                      e.target.value ? parseInt(e.target.value) : undefined,
+                    )
+                  }
                 />
               </div>
             </div>
@@ -396,8 +439,10 @@ const SentimentFilters: React.FC<SentimentFiltersProps> = ({
               <div className="space-y-2">
                 <Label>Ordenar por</Label>
                 <Select
-                  value={filters.sortBy || 'date'}
-                  onValueChange={(value) => updateFilter('sortBy', value as any)}
+                  value={filters.sortBy || "date"}
+                  onValueChange={(value) =>
+                    updateFilter("sortBy", value as any)
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -410,12 +455,14 @@ const SentimentFilters: React.FC<SentimentFiltersProps> = ({
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="space-y-2">
                 <Label>Ordem</Label>
                 <Select
-                  value={filters.sortOrder || 'desc'}
-                  onValueChange={(value) => updateFilter('sortOrder', value as any)}
+                  value={filters.sortOrder || "desc"}
+                  onValueChange={(value) =>
+                    updateFilter("sortOrder", value as any)
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />

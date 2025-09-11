@@ -1,13 +1,19 @@
-import type { Attendant, Evaluation } from '@/lib/types';
-import { 
-  AttendantSchema, 
-  CreateAttendantSchema, 
+import type { Attendant, Evaluation } from "@/lib/types";
+import {
+  AttendantSchema,
+  CreateAttendantSchema,
   UpdateAttendantSchema,
   type AttendantInput,
   type CreateAttendantInput,
-  type UpdateAttendantInput
-} from '@/lib/validation';
-import { validateFormData, isValidCPF, formatCPF, formatPhone, sanitizeString } from '@/lib/validation-utils';
+  type UpdateAttendantInput,
+} from "@/lib/validation";
+import {
+  validateFormData,
+  isValidCPF,
+  formatCPF,
+  formatPhone,
+  sanitizeString,
+} from "@/lib/validation-utils";
 
 export interface AttendantStats {
   totalEvaluations: number;
@@ -16,7 +22,7 @@ export interface AttendantStats {
   ratingDistribution: Record<number, number>;
   commentsCount: number;
   lastEvaluation?: string;
-  trend: 'up' | 'down' | 'stable';
+  trend: "up" | "down" | "stable";
 }
 
 export interface AttendantPerformance {
@@ -31,9 +37,11 @@ export class AttendantsService {
    */
   static calculateAttendantStats(
     attendantId: string,
-    evaluations: Evaluation[]
+    evaluations: Evaluation[],
   ): AttendantStats {
-    const attendantEvaluations = evaluations.filter(evaluation => evaluation.attendantId === attendantId);
+    const attendantEvaluations = evaluations.filter(
+      (evaluation) => evaluation.attendantId === attendantId,
+    );
 
     if (attendantEvaluations.length === 0) {
       return {
@@ -42,32 +50,39 @@ export class AttendantsService {
         satisfactionRate: 0,
         ratingDistribution: {},
         commentsCount: 0,
-        trend: 'stable'
+        trend: "stable",
       };
     }
 
     const totalEvaluations = attendantEvaluations.length;
-    const totalRating = attendantEvaluations.reduce((sum, evaluation) => sum + evaluation.nota, 0);
+    const totalRating = attendantEvaluations.reduce(
+      (sum, evaluation) => sum + evaluation.nota,
+      0,
+    );
     const averageRating = totalRating / totalEvaluations;
 
     // Distribuição de notas
     const ratingDistribution: Record<number, number> = {};
-    attendantEvaluations.forEach(evaluation => {
-      ratingDistribution[evaluation.nota] = (ratingDistribution[evaluation.nota] || 0) + 1;
+    attendantEvaluations.forEach((evaluation) => {
+      ratingDistribution[evaluation.nota] =
+        (ratingDistribution[evaluation.nota] || 0) + 1;
     });
 
     // Taxa de satisfação (notas 4 e 5)
-    const satisfiedCount = attendantEvaluations.filter(evaluation => evaluation.nota >= 4).length;
+    const satisfiedCount = attendantEvaluations.filter(
+      (evaluation) => evaluation.nota >= 4,
+    ).length;
     const satisfactionRate = (satisfiedCount / totalEvaluations) * 100;
 
     // Contagem de comentários
     const commentsCount = attendantEvaluations.filter(
-      evaluation => evaluation.comentario && evaluation.comentario.trim() !== ''
+      (evaluation) =>
+        evaluation.comentario && evaluation.comentario.trim() !== "",
     ).length;
 
     // Última avaliação
     const sortedByDate = [...attendantEvaluations].sort(
-      (a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()
+      (a, b) => new Date(b.data).getTime() - new Date(a.data).getTime(),
     );
     const lastEvaluation = sortedByDate[0]?.data;
 
@@ -76,19 +91,25 @@ export class AttendantsService {
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
 
-    const recentEvals = attendantEvaluations.filter(evaluation => new Date(evaluation.data) >= thirtyDaysAgo);
-    const previousEvals = attendantEvaluations.filter(evaluation => {
+    const recentEvals = attendantEvaluations.filter(
+      (evaluation) => new Date(evaluation.data) >= thirtyDaysAgo,
+    );
+    const previousEvals = attendantEvaluations.filter((evaluation) => {
       const date = new Date(evaluation.data);
       return date >= sixtyDaysAgo && date < thirtyDaysAgo;
     });
 
-    let trend: 'up' | 'down' | 'stable' = 'stable';
+    let trend: "up" | "down" | "stable" = "stable";
     if (recentEvals.length > 0 && previousEvals.length > 0) {
-      const recentAvg = recentEvals.reduce((sum, evaluation) => sum + evaluation.nota, 0) / recentEvals.length;
-      const previousAvg = previousEvals.reduce((sum, evaluation) => sum + evaluation.nota, 0) / previousEvals.length;
-      
-      if (recentAvg > previousAvg + 0.1) trend = 'up';
-      else if (recentAvg < previousAvg - 0.1) trend = 'down';
+      const recentAvg =
+        recentEvals.reduce((sum, evaluation) => sum + evaluation.nota, 0) /
+        recentEvals.length;
+      const previousAvg =
+        previousEvals.reduce((sum, evaluation) => sum + evaluation.nota, 0) /
+        previousEvals.length;
+
+      if (recentAvg > previousAvg + 0.1) trend = "up";
+      else if (recentAvg < previousAvg - 0.1) trend = "down";
     }
 
     return {
@@ -98,7 +119,7 @@ export class AttendantsService {
       ratingDistribution,
       commentsCount,
       lastEvaluation,
-      trend
+      trend,
     };
   }
 
@@ -107,11 +128,11 @@ export class AttendantsService {
    */
   static getAttendantsPerformance(
     attendants: Attendant[],
-    evaluations: Evaluation[]
+    evaluations: Evaluation[],
   ): AttendantPerformance[] {
-    return attendants.map(attendant => ({
+    return attendants.map((attendant) => ({
       attendant,
-      stats: this.calculateAttendantStats(attendant.id, evaluations)
+      stats: this.calculateAttendantStats(attendant.id, evaluations),
     }));
   }
 
@@ -121,16 +142,16 @@ export class AttendantsService {
   static getTopRatedAttendants(
     attendants: Attendant[],
     evaluations: Evaluation[],
-    limit: number = 5
+    limit: number = 5,
   ): AttendantPerformance[] {
     const performances = this.getAttendantsPerformance(attendants, evaluations)
-      .filter(perf => perf.stats.totalEvaluations > 0)
+      .filter((perf) => perf.stats.totalEvaluations > 0)
       .sort((a, b) => b.stats.averageRating - a.stats.averageRating)
       .slice(0, limit);
 
     return performances.map((perf, index) => ({
       ...perf,
-      rank: index + 1
+      rank: index + 1,
     }));
   }
 
@@ -140,16 +161,16 @@ export class AttendantsService {
   static getMostEvaluatedAttendants(
     attendants: Attendant[],
     evaluations: Evaluation[],
-    limit: number = 5
+    limit: number = 5,
   ): AttendantPerformance[] {
     const performances = this.getAttendantsPerformance(attendants, evaluations)
-      .filter(perf => perf.stats.totalEvaluations > 0)
+      .filter((perf) => perf.stats.totalEvaluations > 0)
       .sort((a, b) => b.stats.totalEvaluations - a.stats.totalEvaluations)
       .slice(0, limit);
 
     return performances.map((perf, index) => ({
       ...perf,
-      rank: index + 1
+      rank: index + 1,
     }));
   }
 
@@ -162,12 +183,14 @@ export class AttendantsService {
       status?: string;
       setor?: string;
       searchTerm?: string;
-    }
+    },
   ): Attendant[] {
     // Sanitiza o termo de busca
-    const sanitizedSearchTerm = filters.searchTerm ? sanitizeString(filters.searchTerm.toLowerCase()) : '';
-    
-    return attendants.filter(attendant => {
+    const sanitizedSearchTerm = filters.searchTerm
+      ? sanitizeString(filters.searchTerm.toLowerCase())
+      : "";
+
+    return attendants.filter((attendant) => {
       // Filtro por status
       if (filters.status && attendant.status !== filters.status) {
         return false;
@@ -180,10 +203,16 @@ export class AttendantsService {
 
       // Filtro por termo de busca
       if (sanitizedSearchTerm) {
-        const nameMatch = sanitizeString(attendant.name.toLowerCase()).includes(sanitizedSearchTerm);
-        const emailMatch = attendant.email.toLowerCase().includes(sanitizedSearchTerm);
-        const funcaoMatch = attendant.funcao.toLowerCase().includes(sanitizedSearchTerm);
-        
+        const nameMatch = sanitizeString(attendant.name.toLowerCase()).includes(
+          sanitizedSearchTerm,
+        );
+        const emailMatch = attendant.email
+          .toLowerCase()
+          .includes(sanitizedSearchTerm);
+        const funcaoMatch = attendant.funcao
+          .toLowerCase()
+          .includes(sanitizedSearchTerm);
+
         if (!nameMatch && !emailMatch && !funcaoMatch) {
           return false;
         }
@@ -199,17 +228,18 @@ export class AttendantsService {
   static getLowPerformanceAttendants(
     attendants: Attendant[],
     evaluations: Evaluation[],
-    threshold: number = 3.0
+    threshold: number = 3.0,
   ): AttendantPerformance[] {
     // Valida o threshold
     if (threshold < 1 || threshold > 5) {
-      throw new Error('Threshold deve estar entre 1 e 5');
+      throw new Error("Threshold deve estar entre 1 e 5");
     }
-    
+
     return this.getAttendantsPerformance(attendants, evaluations)
-      .filter(perf => 
-        perf.stats.totalEvaluations >= 3 && 
-        perf.stats.averageRating < threshold
+      .filter(
+        (perf) =>
+          perf.stats.totalEvaluations >= 3 &&
+          perf.stats.averageRating < threshold,
       )
       .sort((a, b) => a.stats.averageRating - b.stats.averageRating);
   }
@@ -217,23 +247,25 @@ export class AttendantsService {
   /**
    * Obtém estatísticas gerais dos atendentes
    */
-  static getGeneralStats(
-    attendants: Attendant[],
-    evaluations: Evaluation[]
-  ) {
-    const activeAttendants = attendants.filter(att => att.status === 'Ativo');
-    const evaluatedAttendants = attendants.filter(att => 
-      evaluations.some(evaluation => evaluation.attendantId === att.id)
+  static getGeneralStats(attendants: Attendant[], evaluations: Evaluation[]) {
+    const activeAttendants = attendants.filter((att) => att.status === "Ativo");
+    const evaluatedAttendants = attendants.filter((att) =>
+      evaluations.some((evaluation) => evaluation.attendantId === att.id),
     );
 
-    const performances = this.getAttendantsPerformance(attendants, evaluations)
-      .filter(perf => perf.stats.totalEvaluations > 0);
+    const performances = this.getAttendantsPerformance(
+      attendants,
+      evaluations,
+    ).filter((perf) => perf.stats.totalEvaluations > 0);
 
-    const totalRating = performances.reduce((sum, perf) => 
-      sum + (perf.stats.averageRating * perf.stats.totalEvaluations), 0
+    const totalRating = performances.reduce(
+      (sum, perf) =>
+        sum + perf.stats.averageRating * perf.stats.totalEvaluations,
+      0,
     );
-    const totalEvaluations = performances.reduce((sum, perf) => 
-      sum + perf.stats.totalEvaluations, 0
+    const totalEvaluations = performances.reduce(
+      (sum, perf) => sum + perf.stats.totalEvaluations,
+      0,
     );
 
     return {
@@ -241,10 +273,14 @@ export class AttendantsService {
       activeAttendants: activeAttendants.length,
       evaluatedAttendants: evaluatedAttendants.length,
       averageRating: totalEvaluations > 0 ? totalRating / totalEvaluations : 0,
-      bestAttendant: performances.length > 0 ? 
-        performances.reduce((best, current) => 
-          current.stats.averageRating > best.stats.averageRating ? current : best
-        ) : null
+      bestAttendant:
+        performances.length > 0
+          ? performances.reduce((best, current) =>
+              current.stats.averageRating > best.stats.averageRating
+                ? current
+                : best,
+            )
+          : null,
     };
   }
 
@@ -257,16 +293,16 @@ export class AttendantsService {
     errors: Record<string, string> | null;
   } {
     const result = validateFormData(CreateAttendantSchema, attendant);
-    
+
     // Validação adicional de CPF se fornecido
     if (result.isValid && result.data?.cpf && !isValidCPF(result.data.cpf)) {
       return {
         isValid: false,
         data: null,
-        errors: { cpf: 'CPF inválido' }
+        errors: { cpf: "CPF inválido" },
       };
     }
-    
+
     return result;
   }
 
@@ -279,16 +315,16 @@ export class AttendantsService {
     errors: Record<string, string> | null;
   } {
     const result = validateFormData(UpdateAttendantSchema, attendant);
-    
+
     // Validação adicional de CPF se fornecido
     if (result.isValid && result.data?.cpf && !isValidCPF(result.data.cpf)) {
       return {
         isValid: false,
         data: null,
-        errors: { cpf: 'CPF inválido' }
+        errors: { cpf: "CPF inválido" },
       };
     }
-    
+
     return result;
   }
 
@@ -301,16 +337,16 @@ export class AttendantsService {
     errors: Record<string, string> | null;
   } {
     const result = validateFormData(AttendantSchema, attendant);
-    
+
     // Validação adicional de CPF
     if (result.isValid && result.data?.cpf && !isValidCPF(result.data.cpf)) {
       return {
         isValid: false,
         data: null,
-        errors: { cpf: 'CPF inválido' }
+        errors: { cpf: "CPF inválido" },
       };
     }
-    
+
     return result;
   }
 
@@ -322,7 +358,9 @@ export class AttendantsService {
       ...attendant,
       name: sanitizeString(attendant.name),
       cpf: formatCPF(attendant.cpf),
-      telefone: attendant.telefone ? formatPhone(attendant.telefone) : attendant.telefone
+      telefone: attendant.telefone
+        ? formatPhone(attendant.telefone)
+        : attendant.telefone,
     };
   }
 
@@ -336,7 +374,7 @@ export class AttendantsService {
       funcao: data.funcao ? sanitizeString(data.funcao) : data.funcao,
       setor: data.setor ? sanitizeString(data.setor) : data.setor,
       portaria: data.portaria ? sanitizeString(data.portaria) : data.portaria,
-      situacao: data.situacao ? sanitizeString(data.situacao) : data.situacao
+      situacao: data.situacao ? sanitizeString(data.situacao) : data.situacao,
     };
   }
 }

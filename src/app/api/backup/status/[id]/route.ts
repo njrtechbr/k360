@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { BackupService } from '@/services/backupService';
-import { Role } from '@prisma/client';
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { BackupService } from "@/services/backupService";
+import { Role } from "@prisma/client";
 
 interface RouteParams {
   params: {
@@ -11,20 +11,23 @@ interface RouteParams {
 }
 
 // Mapa para rastrear progresso de operações em andamento
-const operationProgress = new Map<string, {
-  status: 'in_progress' | 'completed' | 'failed';
-  progress: number;
-  message: string;
-  startTime: number;
-  lastUpdate: number;
-}>();
+const operationProgress = new Map<
+  string,
+  {
+    status: "in_progress" | "completed" | "failed";
+    progress: number;
+    message: string;
+    startTime: number;
+    lastUpdate: number;
+  }
+>();
 
 // Função para atualizar progresso (chamada pelo BackupService)
 export function updateBackupProgress(
-  backupId: string, 
-  progress: number, 
-  message: string, 
-  status: 'in_progress' | 'completed' | 'failed' = 'in_progress'
+  backupId: string,
+  progress: number,
+  message: string,
+  status: "in_progress" | "completed" | "failed" = "in_progress",
 ) {
   const existing = operationProgress.get(backupId);
   operationProgress.set(backupId, {
@@ -32,14 +35,16 @@ export function updateBackupProgress(
     progress: Math.min(100, Math.max(0, progress)),
     message,
     startTime: existing?.startTime || Date.now(),
-    lastUpdate: Date.now()
+    lastUpdate: Date.now(),
   });
 
   // Log de auditoria para rastreamento de progresso
-  console.log(`[BACKUP_PROGRESS] ${backupId}: ${progress}% - ${message} (${status})`);
+  console.log(
+    `[BACKUP_PROGRESS] ${backupId}: ${progress}% - ${message} (${status})`,
+  );
 
   // Limpar progresso após completar ou falhar
-  if (status === 'completed' || status === 'failed') {
+  if (status === "completed" || status === "failed") {
     setTimeout(() => {
       operationProgress.delete(backupId);
       console.log(`[BACKUP_PROGRESS] Progresso limpo para backup ${backupId}`);
@@ -64,36 +69,33 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     // Verificar autenticação
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Não autenticado' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
     }
 
     // Verificar permissões - ADMIN, SUPERADMIN e SUPERVISOR podem ver status
     const userRole = session.user.role as Role;
-    const allowedRoles = ['ADMIN', 'SUPERADMIN', 'SUPERVISOR'];
-    
+    const allowedRoles = ["ADMIN", "SUPERADMIN", "SUPERVISOR"];
+
     if (!allowedRoles.includes(userRole)) {
       return NextResponse.json(
-        { error: 'Permissões insuficientes para acessar status do backup' },
-        { status: 403 }
+        { error: "Permissões insuficientes para acessar status do backup" },
+        { status: 403 },
       );
     }
 
     const backupId = params.id;
 
     // Validar formato do ID
-    if (!backupId || typeof backupId !== 'string') {
+    if (!backupId || typeof backupId !== "string") {
       return NextResponse.json(
-        { error: 'ID do backup inválido' },
-        { status: 400 }
+        { error: "ID do backup inválido" },
+        { status: 400 },
       );
     }
 
     // Verificar se há progresso em andamento
     const progressInfo = operationProgress.get(backupId);
-    
+
     if (progressInfo) {
       // Calcular tempo decorrido
       const elapsedTime = Date.now() - progressInfo.startTime;
@@ -107,61 +109,61 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
         message: progressInfo.message,
         elapsedTime: {
           total: elapsedTime,
-          formatted: `${elapsedMinutes}:${elapsedSeconds.toString().padStart(2, '0')}`
+          formatted: `${elapsedMinutes}:${elapsedSeconds.toString().padStart(2, "0")}`,
         },
-        lastUpdate: new Date(progressInfo.lastUpdate).toISOString()
+        lastUpdate: new Date(progressInfo.lastUpdate).toISOString(),
       });
     }
 
     // Se é um ID temporário e não há progresso, retornar status padrão
-    if (backupId.startsWith('temp_')) {
+    if (backupId.startsWith("temp_")) {
       return NextResponse.json({
         success: true,
-        status: 'in_progress' as const,
+        status: "in_progress" as const,
         progress: 0,
-        message: 'Aguardando início do backup...',
+        message: "Aguardando início do backup...",
         elapsedTime: {
           total: 0,
-          formatted: '0:00'
+          formatted: "0:00",
         },
-        lastUpdate: new Date().toISOString()
+        lastUpdate: new Date().toISOString(),
       });
     }
 
     // Se não há progresso em andamento, verificar se o backup existe
     const backupInfo = await BackupService.getBackupInfo(backupId);
-    
+
     if (!backupInfo) {
       return NextResponse.json(
-        { error: 'Backup não encontrado' },
-        { status: 404 }
+        { error: "Backup não encontrado" },
+        { status: 404 },
       );
     }
 
     // Determinar status baseado nas informações do backup
-    let status: 'in_progress' | 'completed' | 'failed';
+    let status: "in_progress" | "completed" | "failed";
     let message: string;
     let progressValue: number;
 
     switch (backupInfo.status) {
-      case 'success':
-        status = 'completed';
-        message = 'Backup concluído com sucesso';
+      case "success":
+        status = "completed";
+        message = "Backup concluído com sucesso";
         progressValue = 100;
         break;
-      case 'failed':
-        status = 'failed';
-        message = 'Backup falhou durante a execução';
+      case "failed":
+        status = "failed";
+        message = "Backup falhou durante a execução";
         progressValue = 0;
         break;
-      case 'in_progress':
-        status = 'in_progress';
-        message = 'Backup em progresso...';
+      case "in_progress":
+        status = "in_progress";
+        message = "Backup em progresso...";
         progressValue = 50; // Progresso estimado se não temos dados específicos
         break;
       default:
-        status = 'failed';
-        message = 'Status desconhecido';
+        status = "failed";
+        message = "Status desconhecido";
         progressValue = 0;
     }
 
@@ -175,19 +177,21 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
         filename: backupInfo.filename,
         size: backupInfo.size,
         createdAt: backupInfo.createdAt,
-        duration: backupInfo.duration
-      }
-    });
-
-  } catch (error) {
-    console.error('[BACKUP_STATUS_ERROR]', error);
-    
-    return NextResponse.json(
-      { 
-        error: 'Erro interno do servidor',
-        message: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
+        duration: backupInfo.duration,
       },
-      { status: 500 }
+    });
+  } catch (error) {
+    console.error("[BACKUP_STATUS_ERROR]", error);
+
+    return NextResponse.json(
+      {
+        error: "Erro interno do servidor",
+        message:
+          process.env.NODE_ENV === "development"
+            ? (error as Error).message
+            : undefined,
+      },
+      { status: 500 },
     );
   }
 }

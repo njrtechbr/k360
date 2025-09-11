@@ -1,51 +1,88 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { GamificationSeason } from "@prisma/client";
+import { useApiQuery } from "@/hooks/api";
+import type { GamificationSeason } from "@/lib/types";
 
-export function useActiveSeason() {
-  const [activeSeason, setActiveSeason] = useState<GamificationSeason | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchActiveSeason = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      const response = await fetch('/api/gamification/seasons?status=active');
-      
-      if (!response.ok) {
-        throw new Error('Erro ao carregar temporada ativa');
-      }
-      
-      const data = await response.json();
-      
-      // A API retorna um objeto com seasons filtradas e activeSeason
-      if (data.activeSeason) {
-        setActiveSeason(data.activeSeason);
-      } else if (data.seasons && data.seasons.length > 0) {
-        setActiveSeason(data.seasons[0]);
-      } else {
-        setActiveSeason(null);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro desconhecido');
-      setActiveSeason(null);
-    } finally {
-      setIsLoading(false);
-    }
+export interface ActiveSeasonData extends GamificationSeason {
+  status: {
+    label: "active";
+    isActive: true;
+    hasStarted: true;
+    hasEnded: false;
+    progress: number;
+    remainingDays: number;
   };
+  duration: {
+    totalDays: number;
+    elapsedDays: number;
+    remainingDays: number;
+  };
+  stats?: {
+    totalParticipants: number;
+    totalXpDistributed: number;
+    averageXpPerParticipant: number;
+    topPerformer: {
+      name: string;
+      xp: number;
+    } | null;
+  };
+}
 
-  useEffect(() => {
-    fetchActiveSeason();
-  }, []);
+export interface UseActiveSeasonOptions {
+  includeStats?: boolean;
+  enabled?: boolean;
+  refetchOnWindowFocus?: boolean;
+  staleTime?: number;
+}
+
+export function useActiveSeason(options: UseActiveSeasonOptions = {}) {
+  const {
+    includeStats = false,
+    enabled = true,
+    refetchOnWindowFocus = false,
+    staleTime = 2 * 60 * 1000, // 2 minutos - dados de temporada mudam com menos frequência
+  } = options;
+
+  const queryParams = includeStats ? { includeStats: "true" } : undefined;
+
+  const {
+    data: activeSeason,
+    loading: isLoading,
+    error,
+    refetch,
+    isStale,
+    isFetching,
+  } = useApiQuery<ActiveSeasonData>(
+    [
+      "gamification",
+      "seasons",
+      "active",
+      includeStats ? "with-stats" : "basic",
+    ],
+    "/api/gamification/seasons/active",
+    queryParams,
+    {
+      enabled,
+      refetchOnWindowFocus,
+      staleTime,
+      onError: (error) => {
+        console.error("Erro ao carregar temporada ativa:", error);
+      },
+    },
+  );
 
   return {
     activeSeason,
     isLoading,
     error,
-    refetch: fetchActiveSeason,
-    hasActiveSeason: activeSeason !== null
+    refetch,
+    isStale,
+    isFetching,
+    hasActiveSeason: activeSeason !== null && activeSeason !== undefined,
+    // Propriedades de conveniência para acesso rápido
+    seasonProgress: activeSeason?.status?.progress ?? 0,
+    remainingDays: activeSeason?.status?.remainingDays ?? 0,
+    totalParticipants: activeSeason?.stats?.totalParticipants ?? 0,
+    totalXpDistributed: activeSeason?.stats?.totalXpDistributed ?? 0,
   };
 }

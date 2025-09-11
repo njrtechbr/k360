@@ -1,4 +1,4 @@
-import type { LevelReward } from '@/lib/types';
+import type { LevelReward } from "@/lib/types";
 
 export interface LevelInfo {
   level: number;
@@ -24,7 +24,7 @@ export class LevelsService {
    */
   static getLevelFromXp(totalXp: number): number {
     if (totalXp < 0) return 1;
-    
+
     // Fórmula: level = floor(sqrt(xp / 100)) + 1
     // Isso significa que cada nível requer progressivamente mais XP
     return Math.floor(Math.sqrt(totalXp / 100)) + 1;
@@ -35,7 +35,7 @@ export class LevelsService {
    */
   static getXpRequiredForLevel(level: number): number {
     if (level <= 1) return 0;
-    
+
     // Fórmula inversa: xp = (level - 1)² * 100
     return Math.pow(level - 1, 2) * 100;
   }
@@ -50,25 +50,23 @@ export class LevelsService {
   /**
    * Calcula informações detalhadas do nível atual
    */
-  static getLevelInfo(
-    totalXp: number,
-    levelRewards: LevelReward[]
-  ): LevelInfo {
+  static getLevelInfo(totalXp: number, levelRewards: LevelReward[]): LevelInfo {
     const currentLevel = this.getLevelFromXp(totalXp);
     const xpRequired = this.getXpRequiredForLevel(currentLevel);
     const xpForNext = this.getXpForNextLevel(currentLevel);
     const xpInCurrentLevel = totalXp - xpRequired;
     const xpNeededForNext = xpForNext - xpRequired;
-    const progress = xpNeededForNext > 0 ? (xpInCurrentLevel / xpNeededForNext) * 100 : 100;
-    
-    const reward = levelRewards.find(r => r.level === currentLevel);
+    const progress =
+      xpNeededForNext > 0 ? (xpInCurrentLevel / xpNeededForNext) * 100 : 100;
+
+    const reward = levelRewards.find((r) => r.level === currentLevel);
 
     return {
       level: currentLevel,
       xpRequired,
       xpForNext,
       progress: Math.min(100, Math.max(0, progress)),
-      reward
+      reward,
     };
   }
 
@@ -77,17 +75,21 @@ export class LevelsService {
    */
   static getLevelProgress(
     totalXp: number,
-    levelRewards: LevelReward[]
+    levelRewards: LevelReward[],
   ): LevelProgress {
     const currentLevel = this.getLevelFromXp(totalXp);
     const xpForCurrentLevel = this.getXpRequiredForLevel(currentLevel);
     const xpForNextLevel = this.getXpForNextLevel(currentLevel);
     const xpInCurrentLevel = totalXp - xpForCurrentLevel;
     const xpNeededForNext = xpForNextLevel - xpForCurrentLevel;
-    const progressToNext = xpNeededForNext > 0 ? (xpInCurrentLevel / xpNeededForNext) * 100 : 100;
-    
-    const nextReward = levelRewards.find(r => r.level === currentLevel + 1);
-    const recentlyUnlocked = this.getRecentlyUnlockedRewards(totalXp, levelRewards);
+    const progressToNext =
+      xpNeededForNext > 0 ? (xpInCurrentLevel / xpNeededForNext) * 100 : 100;
+
+    const nextReward = levelRewards.find((r) => r.level === currentLevel + 1);
+    const recentlyUnlocked = this.getRecentlyUnlockedRewards(
+      totalXp,
+      levelRewards,
+    );
 
     return {
       currentLevel,
@@ -96,7 +98,7 @@ export class LevelsService {
       xpForNextLevel,
       progressToNext: Math.min(100, Math.max(0, progressToNext)),
       nextReward,
-      recentlyUnlocked
+      recentlyUnlocked,
     };
   }
 
@@ -106,25 +108,25 @@ export class LevelsService {
   static getRecentlyUnlockedRewards(
     totalXp: number,
     levelRewards: LevelReward[],
-    xpGained: number = 0
+    xpGained: number = 0,
   ): LevelReward[] {
     if (xpGained <= 0) return [];
-    
+
     const previousXp = totalXp - xpGained;
     const previousLevel = this.getLevelFromXp(previousXp);
     const currentLevel = this.getLevelFromXp(totalXp);
-    
+
     if (currentLevel <= previousLevel) return [];
-    
+
     const unlockedRewards: LevelReward[] = [];
-    
+
     for (let level = previousLevel + 1; level <= currentLevel; level++) {
-      const reward = levelRewards.find(r => r.level === level);
+      const reward = levelRewards.find((r) => r.level === level);
       if (reward) {
         unlockedRewards.push(reward);
       }
     }
-    
+
     return unlockedRewards;
   }
 
@@ -134,7 +136,7 @@ export class LevelsService {
   static generateRewardTrack(
     levelRewards: LevelReward[],
     currentXp: number,
-    maxLevels: number = 50
+    maxLevels: number = 50,
   ): Array<{
     level: number;
     xpRequired: number;
@@ -153,7 +155,7 @@ export class LevelsService {
 
     for (let level = 1; level <= maxLevels; level++) {
       const xpRequired = this.getXpRequiredForLevel(level);
-      const reward = levelRewards.find(r => r.level === level);
+      const reward = levelRewards.find((r) => r.level === level);
       const isUnlocked = currentXp >= xpRequired;
       const isCurrent = level === currentLevel;
 
@@ -162,7 +164,7 @@ export class LevelsService {
         xpRequired,
         reward,
         isUnlocked,
-        isCurrent
+        isCurrent,
       });
     }
 
@@ -173,7 +175,7 @@ export class LevelsService {
    * Calcula estatísticas de níveis para um grupo de atendentes
    */
   static calculateLevelStats(
-    attendantsXp: Array<{ id: string; totalXp: number }>
+    attendantsXp: Array<{ id: string; totalXp: number }>,
   ): {
     averageLevel: number;
     levelDistribution: Record<number, number>;
@@ -187,18 +189,19 @@ export class LevelsService {
         levelDistribution: {},
         highestLevel: 1,
         lowestLevel: 1,
-        totalLevels: 0
+        totalLevels: 0,
       };
     }
 
-    const levels = attendantsXp.map(a => this.getLevelFromXp(a.totalXp));
+    const levels = attendantsXp.map((a) => this.getLevelFromXp(a.totalXp));
     const levelDistribution: Record<number, number> = {};
-    
-    levels.forEach(level => {
+
+    levels.forEach((level) => {
       levelDistribution[level] = (levelDistribution[level] || 0) + 1;
     });
 
-    const averageLevel = levels.reduce((sum, level) => sum + level, 0) / levels.length;
+    const averageLevel =
+      levels.reduce((sum, level) => sum + level, 0) / levels.length;
     const highestLevel = Math.max(...levels);
     const lowestLevel = Math.min(...levels);
     const totalLevels = Object.keys(levelDistribution).length;
@@ -208,7 +211,7 @@ export class LevelsService {
       levelDistribution,
       highestLevel,
       lowestLevel,
-      totalLevels
+      totalLevels,
     };
   }
 
@@ -218,7 +221,7 @@ export class LevelsService {
   static getUpcomingRewards(
     currentXp: number,
     levelRewards: LevelReward[],
-    count: number = 3
+    count: number = 3,
   ): Array<{
     level: number;
     xpRequired: number;
@@ -226,20 +229,20 @@ export class LevelsService {
     reward: LevelReward;
   }> {
     const currentLevel = this.getLevelFromXp(currentXp);
-    
+
     const upcomingRewards = levelRewards
-      .filter(reward => reward.level > currentLevel)
+      .filter((reward) => reward.level > currentLevel)
       .sort((a, b) => a.level - b.level)
       .slice(0, count)
-      .map(reward => {
+      .map((reward) => {
         const xpRequired = this.getXpRequiredForLevel(reward.level);
         const xpRemaining = Math.max(0, xpRequired - currentXp);
-        
+
         return {
           level: reward.level,
           xpRequired,
           xpRemaining,
-          reward
+          reward,
         };
       });
 
@@ -258,52 +261,58 @@ export class LevelsService {
     const warnings: string[] = [];
 
     // Verificar se há níveis duplicados
-    const levels = levelRewards.map(r => r.level);
-    const duplicateLevels = levels.filter((level, index) => levels.indexOf(level) !== index);
-    
+    const levels = levelRewards.map((r) => r.level);
+    const duplicateLevels = levels.filter(
+      (level, index) => levels.indexOf(level) !== index,
+    );
+
     if (duplicateLevels.length > 0) {
-      errors.push(`Níveis duplicados encontrados: ${duplicateLevels.join(', ')}`);
+      errors.push(
+        `Níveis duplicados encontrados: ${duplicateLevels.join(", ")}`,
+      );
     }
 
     // Verificar se há níveis inválidos
-    const invalidLevels = levelRewards.filter(r => r.level < 1);
+    const invalidLevels = levelRewards.filter((r) => r.level < 1);
     if (invalidLevels.length > 0) {
-      errors.push('Níveis devem ser maiores que 0');
+      errors.push("Níveis devem ser maiores que 0");
     }
 
     // Verificar se há recompensas vazias
-    const emptyRewards = levelRewards.filter(r => 
-      !r.title || r.title.trim().length === 0
+    const emptyRewards = levelRewards.filter(
+      (r) => !r.title || r.title.trim().length === 0,
     );
     if (emptyRewards.length > 0) {
-      warnings.push('Algumas recompensas não têm título');
+      warnings.push("Algumas recompensas não têm título");
     }
 
     // Verificar distribuição de níveis
     const sortedLevels = levels.sort((a, b) => a - b);
     const gaps: number[] = [];
-    
+
     for (let i = 1; i < sortedLevels.length; i++) {
       const gap = sortedLevels[i] - sortedLevels[i - 1];
       if (gap > 5) {
         gaps.push(sortedLevels[i - 1]);
       }
     }
-    
+
     if (gaps.length > 0) {
-      warnings.push(`Grandes lacunas entre níveis após: ${gaps.join(', ')}`);
+      warnings.push(`Grandes lacunas entre níveis após: ${gaps.join(", ")}`);
     }
 
     // Verificar se há recompensas nos primeiros níveis
-    const hasEarlyRewards = levelRewards.some(r => r.level <= 5);
+    const hasEarlyRewards = levelRewards.some((r) => r.level <= 5);
     if (!hasEarlyRewards) {
-      warnings.push('Considere adicionar recompensas nos primeiros níveis para motivar novos usuários');
+      warnings.push(
+        "Considere adicionar recompensas nos primeiros níveis para motivar novos usuários",
+      );
     }
 
     return {
       isValid: errors.length === 0,
       errors,
-      warnings
+      warnings,
     };
   }
 
@@ -312,53 +321,53 @@ export class LevelsService {
    */
   static generateRewardSuggestions(
     existingRewards: LevelReward[],
-    maxLevel: number = 50
+    maxLevel: number = 50,
   ): Array<{
     level: number;
     suggestedTitle: string;
     suggestedDescription: string;
-    suggestedType: 'badge' | 'title' | 'privilege' | 'bonus';
+    suggestedType: "badge" | "title" | "privilege" | "bonus";
   }> {
-    const existingLevels = new Set(existingRewards.map(r => r.level));
+    const existingLevels = new Set(existingRewards.map((r) => r.level));
     const suggestions: Array<{
       level: number;
       suggestedTitle: string;
       suggestedDescription: string;
-      suggestedType: 'badge' | 'title' | 'privilege' | 'bonus';
+      suggestedType: "badge" | "title" | "privilege" | "bonus";
     }> = [];
 
     // Sugestões para marcos importantes
     const milestones = [5, 10, 15, 20, 25, 30, 40, 50];
-    
-    milestones.forEach(level => {
+
+    milestones.forEach((level) => {
       if (level <= maxLevel && !existingLevels.has(level)) {
         let title: string;
         let description: string;
-        let type: 'badge' | 'title' | 'privilege' | 'bonus';
+        let type: "badge" | "title" | "privilege" | "bonus";
 
         if (level <= 10) {
           title = `Iniciante Nível ${level}`;
           description = `Parabéns por alcançar o nível ${level}!`;
-          type = 'badge';
+          type = "badge";
         } else if (level <= 25) {
           title = `Experiente Nível ${level}`;
           description = `Você está se tornando um expert! Nível ${level} alcançado.`;
-          type = 'title';
+          type = "title";
         } else if (level <= 40) {
           title = `Veterano Nível ${level}`;
           description = `Impressionante! Você é um veterano de nível ${level}.`;
-          type = 'privilege';
+          type = "privilege";
         } else {
           title = `Mestre Nível ${level}`;
           description = `Você é um verdadeiro mestre! Nível ${level} conquistado.`;
-          type = 'bonus';
+          type = "bonus";
         }
 
         suggestions.push({
           level,
           suggestedTitle: title,
           suggestedDescription: description,
-          suggestedType: type
+          suggestedType: type,
         });
       }
     });
@@ -372,48 +381,55 @@ export class LevelsService {
   static estimateTimeToNextLevel(
     currentXp: number,
     recentXpGains: number[],
-    daysToAnalyze: number = 7
+    daysToAnalyze: number = 7,
   ): {
     daysEstimated: number;
     xpNeeded: number;
     averageDailyXp: number;
-    confidence: 'high' | 'medium' | 'low';
+    confidence: "high" | "medium" | "low";
   } {
     const currentLevel = this.getLevelFromXp(currentXp);
     const xpForNextLevel = this.getXpForNextLevel(currentLevel);
     const xpNeeded = xpForNextLevel - currentXp;
-    
+
     if (recentXpGains.length === 0) {
       return {
         daysEstimated: Infinity,
         xpNeeded,
         averageDailyXp: 0,
-        confidence: 'low'
+        confidence: "low",
       };
     }
 
-    const averageDailyXp = recentXpGains.reduce((sum, xp) => sum + xp, 0) / recentXpGains.length;
-    const daysEstimated = averageDailyXp > 0 ? Math.ceil(xpNeeded / averageDailyXp) : Infinity;
-    
+    const averageDailyXp =
+      recentXpGains.reduce((sum, xp) => sum + xp, 0) / recentXpGains.length;
+    const daysEstimated =
+      averageDailyXp > 0 ? Math.ceil(xpNeeded / averageDailyXp) : Infinity;
+
     // Calcular confiança baseada na consistência dos ganhos
-    const variance = recentXpGains.reduce((sum, xp) => sum + Math.pow(xp - averageDailyXp, 2), 0) / recentXpGains.length;
+    const variance =
+      recentXpGains.reduce(
+        (sum, xp) => sum + Math.pow(xp - averageDailyXp, 2),
+        0,
+      ) / recentXpGains.length;
     const standardDeviation = Math.sqrt(variance);
-    const coefficientOfVariation = averageDailyXp > 0 ? standardDeviation / averageDailyXp : 1;
-    
-    let confidence: 'high' | 'medium' | 'low';
+    const coefficientOfVariation =
+      averageDailyXp > 0 ? standardDeviation / averageDailyXp : 1;
+
+    let confidence: "high" | "medium" | "low";
     if (coefficientOfVariation < 0.3) {
-      confidence = 'high';
+      confidence = "high";
     } else if (coefficientOfVariation < 0.7) {
-      confidence = 'medium';
+      confidence = "medium";
     } else {
-      confidence = 'low';
+      confidence = "low";
     }
 
     return {
       daysEstimated,
       xpNeeded,
       averageDailyXp,
-      confidence
+      confidence,
     };
   }
 }

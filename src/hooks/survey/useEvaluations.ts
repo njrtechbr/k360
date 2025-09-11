@@ -1,40 +1,52 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import { EvaluationsService } from '@/services/survey';
-import type { Evaluation, EvaluationAnalysis, EvaluationImport } from '@/lib/types';
+import { useState, useEffect, useCallback } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { EvaluationsService } from "@/services/survey";
+import type {
+  Evaluation,
+  EvaluationAnalysis,
+  EvaluationImport,
+} from "@/lib/types";
 
 interface UseEvaluationsProps {
   autoFetch?: boolean;
   refreshInterval?: number;
 }
 
-export function useEvaluations({ autoFetch = true, refreshInterval }: UseEvaluationsProps = {}) {
+export function useEvaluations({
+  autoFetch = true,
+  refreshInterval,
+}: UseEvaluationsProps = {}) {
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
-  const [evaluationImports, setEvaluationImports] = useState<EvaluationImport[]>([]);
-  const [aiAnalysisResults, setAiAnalysisResults] = useState<EvaluationAnalysis[]>([]);
+  const [evaluationImports, setEvaluationImports] = useState<
+    EvaluationImport[]
+  >([]);
+  const [aiAnalysisResults, setAiAnalysisResults] = useState<
+    EvaluationAnalysis[]
+  >([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const { toast } = useToast();
 
   // Buscar avaliações
   const fetchEvaluations = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
-      const response = await fetch('/api/evaluations');
+      const response = await fetch("/api/evaluations");
       if (!response.ok) {
-        throw new Error('Erro ao buscar avaliações');
+        throw new Error("Erro ao buscar avaliações");
       }
       const data = await response.json();
-      setEvaluations(data);
+      setEvaluations(data.success ? data.data : data);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
+      const errorMessage =
+        err instanceof Error ? err.message : "Erro desconhecido";
       setError(errorMessage);
-      console.error('Erro ao buscar avaliações:', err);
+      console.error("Erro ao buscar avaliações:", err);
     } finally {
       setLoading(false);
     }
@@ -43,165 +55,203 @@ export function useEvaluations({ autoFetch = true, refreshInterval }: UseEvaluat
   // Buscar importações
   const fetchEvaluationImports = useCallback(async () => {
     try {
-      const response = await fetch('/api/evaluations/imports');
+      const response = await fetch("/api/evaluations/imports");
       if (!response.ok) {
-        throw new Error('Erro ao buscar importações');
+        throw new Error("Erro ao buscar importações");
       }
       const data = await response.json();
-      setEvaluationImports(data);
+      setEvaluationImports(data.success ? data.data : data);
     } catch (err) {
-      console.error('Erro ao buscar importações:', err);
+      console.error("Erro ao buscar importações:", err);
     }
   }, []);
 
   // Buscar análises de IA
   const fetchAiAnalysisResults = useCallback(async () => {
     try {
-      const response = await fetch('/api/evaluations/analysis');
+      const response = await fetch("/api/evaluations/analysis");
       if (!response.ok) {
-        throw new Error('Erro ao buscar análises');
+        throw new Error("Erro ao buscar análises");
       }
       const data = await response.json();
-      setAiAnalysisResults(data);
+      setAiAnalysisResults(data.success ? data.data : data);
     } catch (err) {
-      console.error('Erro ao buscar análises:', err);
+      console.error("Erro ao buscar análises:", err);
     }
   }, []);
 
   // Criar nova avaliação
-  const createEvaluation = useCallback(async (evaluationData: {
-    attendantId: string;
-    nota: number;
-    comentario: string;
-  }) => {
-    try {
-      const response = await fetch('/api/evaluations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(evaluationData),
-      });
+  const createEvaluation = useCallback(
+    async (evaluationData: {
+      attendantId: string;
+      nota: number;
+      comentario: string;
+    }) => {
+      try {
+        const response = await fetch("/api/evaluations", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(evaluationData),
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Erro ao criar avaliação');
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || "Erro ao criar avaliação");
+        }
+
+        const result = await response.json();
+        const newEvaluation = result.success ? result.data : result;
+        setEvaluations((prev) => [newEvaluation, ...prev]);
+
+        toast({
+          title: "Avaliação criada",
+          description: "A avaliação foi criada com sucesso.",
+        });
+
+        return newEvaluation;
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Erro desconhecido";
+        toast({
+          title: "Erro ao criar avaliação",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        throw err;
       }
-
-      const newEvaluation = await response.json();
-      setEvaluations(prev => [newEvaluation, ...prev]);
-      
-      toast({
-        title: 'Avaliação criada',
-        description: 'A avaliação foi criada com sucesso.',
-      });
-
-      return newEvaluation;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
-      toast({
-        title: 'Erro ao criar avaliação',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-      throw err;
-    }
-  }, [toast]);
+    },
+    [toast],
+  );
 
   // Atualizar avaliação
-  const updateEvaluation = useCallback(async (id: string, updates: Partial<Evaluation>) => {
-    try {
-      const response = await fetch(`/api/evaluations/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updates),
-      });
+  const updateEvaluation = useCallback(
+    async (id: string, updates: Partial<Evaluation>) => {
+      try {
+        const response = await fetch(`/api/evaluations/${id}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updates),
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Erro ao atualizar avaliação');
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || "Erro ao atualizar avaliação");
+        }
+
+        const result = await response.json();
+        const updatedEvaluation = result.success ? result.data : result;
+        setEvaluations((prev) =>
+          prev.map((evaluation) =>
+            evaluation.id === id ? updatedEvaluation : evaluation,
+          ),
+        );
+
+        toast({
+          title: "Avaliação atualizada",
+          description: "A avaliação foi atualizada com sucesso.",
+        });
+
+        return updatedEvaluation;
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Erro desconhecido";
+        toast({
+          title: "Erro ao atualizar avaliação",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        throw err;
       }
-
-      const updatedEvaluation = await response.json();
-      setEvaluations(prev => 
-        prev.map(evaluation => evaluation.id === id ? updatedEvaluation : evaluation)
-      );
-      
-      toast({
-        title: 'Avaliação atualizada',
-        description: 'A avaliação foi atualizada com sucesso.',
-      });
-
-      return updatedEvaluation;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
-      toast({
-        title: 'Erro ao atualizar avaliação',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-      throw err;
-    }
-  }, [toast]);
+    },
+    [toast],
+  );
 
   // Deletar avaliação
-  const deleteEvaluation = useCallback(async (id: string) => {
-    try {
-      const response = await fetch(`/api/evaluations/${id}`, {
-        method: 'DELETE',
-      });
+  const deleteEvaluation = useCallback(
+    async (id: string) => {
+      try {
+        const response = await fetch(`/api/evaluations/${id}`, {
+          method: "DELETE",
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Erro ao deletar avaliação');
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || "Erro ao deletar avaliação");
+        }
+
+        setEvaluations((prev) =>
+          prev.filter((evaluation) => evaluation.id !== id),
+        );
+
+        toast({
+          title: "Avaliação removida",
+          description: "A avaliação foi removida com sucesso.",
+        });
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Erro desconhecido";
+        toast({
+          title: "Erro ao remover avaliação",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        throw err;
       }
-
-      setEvaluations(prev => prev.filter(evaluation => evaluation.id !== id));
-      
-      toast({
-        title: 'Avaliação removida',
-        description: 'A avaliação foi removida com sucesso.',
-      });
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
-      toast({
-        title: 'Erro ao remover avaliação',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-      throw err;
-    }
-  }, [toast]);
+    },
+    [toast],
+  );
 
   // Buscar avaliação por ID
-  const getEvaluationById = useCallback((id: string) => {
-    return EvaluationsService.getById(evaluations, id);
-  }, [evaluations]);
+  const getEvaluationById = useCallback(
+    (id: string) => {
+      return EvaluationsService.getById(evaluations, id);
+    },
+    [evaluations],
+  );
 
   // Buscar avaliações por atendente
-  const getEvaluationsByAttendant = useCallback((attendantId: string) => {
-    return EvaluationsService.filterByAttendant(evaluations, attendantId);
-  }, [evaluations]);
+  const getEvaluationsByAttendant = useCallback(
+    (attendantId: string) => {
+      return EvaluationsService.filterByAttendant(evaluations, attendantId);
+    },
+    [evaluations],
+  );
 
   // Buscar análise por avaliação
-  const getAnalysisByEvaluation = useCallback((evaluationId: string) => {
-    return aiAnalysisResults.find(analysis => analysis.evaluationId === evaluationId);
-  }, [aiAnalysisResults]);
+  const getAnalysisByEvaluation = useCallback(
+    (evaluationId: string) => {
+      return aiAnalysisResults.find(
+        (analysis) => analysis.evaluationId === evaluationId,
+      );
+    },
+    [aiAnalysisResults],
+  );
 
   // Métodos de filtro e busca usando serviços
-  const filterEvaluations = useCallback((filters: Parameters<typeof EvaluationsService.filter>[1]) => {
-    return EvaluationsService.filter(evaluations, filters);
-  }, [evaluations]);
+  const filterEvaluations = useCallback(
+    (filters: Parameters<typeof EvaluationsService.filter>[1]) => {
+      return EvaluationsService.filter(evaluations, filters);
+    },
+    [evaluations],
+  );
 
-  const searchEvaluations = useCallback((searchTerm: string) => {
-    return EvaluationsService.search(evaluations, searchTerm);
-  }, [evaluations]);
+  const searchEvaluations = useCallback(
+    (searchTerm: string) => {
+      return EvaluationsService.search(evaluations, searchTerm);
+    },
+    [evaluations],
+  );
 
-  const getRecentEvaluations = useCallback((limit: number = 10) => {
-    return EvaluationsService.getRecent(evaluations, limit);
-  }, [evaluations]);
+  const getRecentEvaluations = useCallback(
+    (limit: number = 10) => {
+      return EvaluationsService.getRecent(evaluations, limit);
+    },
+    [evaluations],
+  );
 
   const calculateStats = useCallback(() => {
     return EvaluationsService.calculateStats(evaluations);
@@ -212,7 +262,7 @@ export function useEvaluations({ autoFetch = true, refreshInterval }: UseEvaluat
     await Promise.all([
       fetchEvaluations(),
       fetchEvaluationImports(),
-      fetchAiAnalysisResults()
+      fetchAiAnalysisResults(),
     ]);
   }, [fetchEvaluations, fetchEvaluationImports, fetchAiAnalysisResults]);
 
@@ -238,7 +288,7 @@ export function useEvaluations({ autoFetch = true, refreshInterval }: UseEvaluat
     aiAnalysisResults,
     loading,
     error,
-    
+
     // Actions
     fetchEvaluations,
     fetchEvaluationImports,
@@ -247,12 +297,12 @@ export function useEvaluations({ autoFetch = true, refreshInterval }: UseEvaluat
     updateEvaluation,
     deleteEvaluation,
     refreshAll,
-    
+
     // Getters
     getEvaluationById,
     getEvaluationsByAttendant,
     getAnalysisByEvaluation,
-    
+
     // Service methods
     filterEvaluations,
     searchEvaluations,

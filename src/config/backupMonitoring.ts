@@ -34,30 +34,30 @@ export interface BackupMonitoringConfig {
 export const DEFAULT_MONITORING_CONFIG: BackupMonitoringConfig = {
   cleanup: {
     enabled: true,
-    schedule: '0 2 * * *', // Diariamente às 2:00 AM
+    schedule: "0 2 * * *", // Diariamente às 2:00 AM
     retentionDays: 30,
-    maxBackups: 50
+    maxBackups: 50,
   },
 
   healthCheck: {
     enabled: true,
-    schedule: '*/30 * * * *', // A cada 30 minutos
+    schedule: "*/30 * * * *", // A cada 30 minutos
     diskSpaceThreshold: 90, // Alerta quando uso > 90%
-    alertOnFailure: true
+    alertOnFailure: true,
   },
 
   alerts: {
     maxAlerts: 100,
     retentionDays: 7,
     emailNotifications: false,
-    webhookUrl: undefined
+    webhookUrl: undefined,
   },
 
   metrics: {
     collectInterval: 5, // A cada 5 minutos
     retentionDays: 30,
-    enableDetailedMetrics: true
-  }
+    enableDetailedMetrics: true,
+  },
 };
 
 /**
@@ -68,13 +68,16 @@ export function loadMonitoringConfig(): BackupMonitoringConfig {
 
   // Configurações de limpeza
   if (process.env.BACKUP_CLEANUP_ENABLED !== undefined) {
-    config.cleanup.enabled = process.env.BACKUP_CLEANUP_ENABLED === 'true';
+    config.cleanup.enabled = process.env.BACKUP_CLEANUP_ENABLED === "true";
   }
   if (process.env.BACKUP_CLEANUP_SCHEDULE) {
     config.cleanup.schedule = process.env.BACKUP_CLEANUP_SCHEDULE;
   }
   if (process.env.BACKUP_RETENTION_DAYS) {
-    config.cleanup.retentionDays = parseInt(process.env.BACKUP_RETENTION_DAYS, 10);
+    config.cleanup.retentionDays = parseInt(
+      process.env.BACKUP_RETENTION_DAYS,
+      10,
+    );
   }
   if (process.env.BACKUP_MAX_BACKUPS) {
     config.cleanup.maxBackups = parseInt(process.env.BACKUP_MAX_BACKUPS, 10);
@@ -82,13 +85,17 @@ export function loadMonitoringConfig(): BackupMonitoringConfig {
 
   // Configurações de health check
   if (process.env.BACKUP_HEALTH_CHECK_ENABLED !== undefined) {
-    config.healthCheck.enabled = process.env.BACKUP_HEALTH_CHECK_ENABLED === 'true';
+    config.healthCheck.enabled =
+      process.env.BACKUP_HEALTH_CHECK_ENABLED === "true";
   }
   if (process.env.BACKUP_HEALTH_CHECK_SCHEDULE) {
     config.healthCheck.schedule = process.env.BACKUP_HEALTH_CHECK_SCHEDULE;
   }
   if (process.env.BACKUP_DISK_SPACE_THRESHOLD) {
-    config.healthCheck.diskSpaceThreshold = parseInt(process.env.BACKUP_DISK_SPACE_THRESHOLD, 10);
+    config.healthCheck.diskSpaceThreshold = parseInt(
+      process.env.BACKUP_DISK_SPACE_THRESHOLD,
+      10,
+    );
   }
 
   // Configurações de alertas
@@ -96,10 +103,14 @@ export function loadMonitoringConfig(): BackupMonitoringConfig {
     config.alerts.maxAlerts = parseInt(process.env.BACKUP_MAX_ALERTS, 10);
   }
   if (process.env.BACKUP_ALERT_RETENTION_DAYS) {
-    config.alerts.retentionDays = parseInt(process.env.BACKUP_ALERT_RETENTION_DAYS, 10);
+    config.alerts.retentionDays = parseInt(
+      process.env.BACKUP_ALERT_RETENTION_DAYS,
+      10,
+    );
   }
   if (process.env.BACKUP_EMAIL_NOTIFICATIONS !== undefined) {
-    config.alerts.emailNotifications = process.env.BACKUP_EMAIL_NOTIFICATIONS === 'true';
+    config.alerts.emailNotifications =
+      process.env.BACKUP_EMAIL_NOTIFICATIONS === "true";
   }
   if (process.env.BACKUP_WEBHOOK_URL) {
     config.alerts.webhookUrl = process.env.BACKUP_WEBHOOK_URL;
@@ -107,13 +118,20 @@ export function loadMonitoringConfig(): BackupMonitoringConfig {
 
   // Configurações de métricas
   if (process.env.BACKUP_METRICS_INTERVAL) {
-    config.metrics.collectInterval = parseInt(process.env.BACKUP_METRICS_INTERVAL, 10);
+    config.metrics.collectInterval = parseInt(
+      process.env.BACKUP_METRICS_INTERVAL,
+      10,
+    );
   }
   if (process.env.BACKUP_METRICS_RETENTION_DAYS) {
-    config.metrics.retentionDays = parseInt(process.env.BACKUP_METRICS_RETENTION_DAYS, 10);
+    config.metrics.retentionDays = parseInt(
+      process.env.BACKUP_METRICS_RETENTION_DAYS,
+      10,
+    );
   }
   if (process.env.BACKUP_DETAILED_METRICS !== undefined) {
-    config.metrics.enableDetailedMetrics = process.env.BACKUP_DETAILED_METRICS === 'true';
+    config.metrics.enableDetailedMetrics =
+      process.env.BACKUP_DETAILED_METRICS === "true";
   }
 
   return config;

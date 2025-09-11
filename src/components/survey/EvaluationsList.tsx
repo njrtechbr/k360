@@ -1,19 +1,40 @@
 "use client";
 
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { Search, Filter, Calendar, Star, MessageSquare, Eye, Edit, Trash2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import type { Evaluation, Attendant } from '@/lib/types';
-
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import {
+  Search,
+  Filter,
+  Calendar,
+  Star,
+  MessageSquare,
+  Eye,
+  Edit,
+  Trash2,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import type { Evaluation, Attendant } from "@/lib/types";
 
 export interface EvaluationsListProps {
   evaluations: Evaluation[];
@@ -38,11 +59,11 @@ export default function EvaluationsList({
   showActions = true,
   showFilters = true,
   pageSize = 10,
-  className
+  className,
 }: EvaluationsListProps) {
-  const [searchTerm, setSearchTerm] = React.useState('');
-  const [ratingFilter, setRatingFilter] = React.useState<string>('all');
-  const [attendantFilter, setAttendantFilter] = React.useState<string>('all');
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const [ratingFilter, setRatingFilter] = React.useState<string>("all");
+  const [attendantFilter, setAttendantFilter] = React.useState<string>("all");
   const [currentPage, setCurrentPage] = React.useState(1);
 
   // Criar mapa de atendentes para lookup rápido
@@ -50,31 +71,36 @@ export default function EvaluationsList({
     if (!attendants || !Array.isArray(attendants)) {
       return {} as Record<string, Attendant>;
     }
-    return attendants.reduce((acc, attendant) => {
-      acc[attendant.id] = attendant;
-      return acc;
-    }, {} as Record<string, Attendant>);
+    return attendants.reduce(
+      (acc, attendant) => {
+        acc[attendant.id] = attendant;
+        return acc;
+      },
+      {} as Record<string, Attendant>,
+    );
   }, [attendants]);
 
   // Filtrar avaliações
   const filteredEvaluations = React.useMemo(() => {
-    return evaluations.filter(evaluation => {
+    return evaluations.filter((evaluation) => {
       const attendant = attendantMap[evaluation.attendantId];
-      const attendantName = attendant?.name || 'Atendente não encontrado';
-      
+      const attendantName = attendant?.name || "Atendente não encontrado";
+
       // Filtro de busca
-      const matchesSearch = searchTerm === '' || 
+      const matchesSearch =
+        searchTerm === "" ||
         attendantName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         evaluation.comentario?.toLowerCase().includes(searchTerm.toLowerCase());
-      
+
       // Filtro de nota
-      const matchesRating = ratingFilter === 'all' || 
+      const matchesRating =
+        ratingFilter === "all" ||
         (evaluation.nota || evaluation.rating).toString() === ratingFilter;
-      
+
       // Filtro de atendente
-      const matchesAttendant = attendantFilter === 'all' || 
-        evaluation.attendantId === attendantFilter;
-      
+      const matchesAttendant =
+        attendantFilter === "all" || evaluation.attendantId === attendantFilter;
+
       return matchesSearch && matchesRating && matchesAttendant;
     });
   }, [evaluations, attendantMap, searchTerm, ratingFilter, attendantFilter]);
@@ -82,7 +108,10 @@ export default function EvaluationsList({
   // Paginação
   const totalPages = Math.ceil(filteredEvaluations.length / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
-  const paginatedEvaluations = filteredEvaluations.slice(startIndex, startIndex + pageSize);
+  const paginatedEvaluations = filteredEvaluations.slice(
+    startIndex,
+    startIndex + pageSize,
+  );
 
   // Reset página quando filtros mudam
   React.useEffect(() => {
@@ -146,11 +175,12 @@ export default function EvaluationsList({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os atendentes</SelectItem>
-                {attendants && attendants.map(attendant => (
-                  <SelectItem key={attendant.id} value={attendant.id}>
-                    {attendant.name}
-                  </SelectItem>
-                ))}
+                {attendants &&
+                  attendants.map((attendant) => (
+                    <SelectItem key={attendant.id} value={attendant.id}>
+                      {attendant.name}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>
@@ -165,14 +195,16 @@ export default function EvaluationsList({
                 <TableHead>Avaliação</TableHead>
                 <TableHead>Comentário</TableHead>
                 <TableHead>Data</TableHead>
-                {showActions && <TableHead className="w-[100px]">Ações</TableHead>}
+                {showActions && (
+                  <TableHead className="w-[100px]">Ações</TableHead>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginatedEvaluations.length === 0 ? (
                 <TableRow>
-                  <TableCell 
-                    colSpan={showActions ? 5 : 4} 
+                  <TableCell
+                    colSpan={showActions ? 5 : 4}
                     className="text-center py-8 text-muted-foreground"
                   >
                     Nenhuma avaliação encontrada
@@ -188,12 +220,12 @@ export default function EvaluationsList({
                           <Avatar className="h-8 w-8">
                             <AvatarImage src={attendant?.avatarUrl} />
                             <AvatarFallback>
-                              {attendant?.name?.charAt(0) || '?'}
+                              {attendant?.name?.charAt(0) || "?"}
                             </AvatarFallback>
                           </Avatar>
                           <div>
                             <div className="font-medium">
-                              {attendant?.name || 'Atendente não encontrado'}
+                              {attendant?.name || "Atendente não encontrado"}
                             </div>
                             <div className="text-sm text-muted-foreground">
                               {attendant?.funcao}
@@ -209,9 +241,10 @@ export default function EvaluationsList({
                                 key={i}
                                 className={cn(
                                   "h-4 w-4",
-                                  i < (evaluation.nota || evaluation.rating || 0)
+                                  i <
+                                    (evaluation.nota || evaluation.rating || 0)
                                     ? "fill-yellow-400 text-yellow-400"
-                                    : "text-gray-300"
+                                    : "text-gray-300",
                                 )}
                               />
                             ))}
@@ -229,11 +262,15 @@ export default function EvaluationsList({
                                 {evaluation.comentario}
                               </p>
                               {evaluation.sentimentAnalysis && (
-                                <Badge 
+                                <Badge
                                   variant={
-                                    evaluation.sentimentAnalysis.sentiment === 'Positivo' ? 'default' :
-                                    evaluation.sentimentAnalysis.sentiment === 'Negativo' ? 'destructive' :
-                                    'secondary'
+                                    evaluation.sentimentAnalysis.sentiment ===
+                                    "Positivo"
+                                      ? "default"
+                                      : evaluation.sentimentAnalysis
+                                            .sentiment === "Negativo"
+                                        ? "destructive"
+                                        : "secondary"
                                   }
                                   className="text-xs"
                                 >
@@ -250,9 +287,17 @@ export default function EvaluationsList({
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">
-                          {format(new Date(evaluation.createdAt || evaluation.data), 'dd/MM/yyyy', { locale: ptBR })}
+                          {format(
+                            new Date(evaluation.createdAt || evaluation.data),
+                            "dd/MM/yyyy",
+                            { locale: ptBR },
+                          )}
                           <div className="text-xs text-muted-foreground">
-                            {format(new Date(evaluation.createdAt || evaluation.data), 'HH:mm', { locale: ptBR })}
+                            {format(
+                              new Date(evaluation.createdAt || evaluation.data),
+                              "HH:mm",
+                              { locale: ptBR },
+                            )}
                           </div>
                         </div>
                       </TableCell>
@@ -301,13 +346,15 @@ export default function EvaluationsList({
         {totalPages > 1 && (
           <div className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">
-              Mostrando {startIndex + 1} a {Math.min(startIndex + pageSize, filteredEvaluations.length)} de {filteredEvaluations.length} avaliações
+              Mostrando {startIndex + 1} a{" "}
+              {Math.min(startIndex + pageSize, filteredEvaluations.length)} de{" "}
+              {filteredEvaluations.length} avaliações
             </div>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
               >
                 Anterior
@@ -318,7 +365,9 @@ export default function EvaluationsList({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                }
                 disabled={currentPage === totalPages}
               >
                 Próxima

@@ -1,16 +1,22 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Star, User, MessageSquare, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { DataValidator } from '@/components/ui/data-validator';
-import type { Attendant } from '@/lib/types';
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Star, User, MessageSquare, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { DataValidator } from "@/components/ui/data-validator";
+import type { Attendant } from "@/lib/types";
 
 export interface EvaluationFormProps {
   attendants: Attendant[];
@@ -33,12 +39,12 @@ export function EvaluationForm({
   onSubmit,
   onCancel,
   isSubmitting = false,
-  initialData
+  initialData,
 }: EvaluationFormProps) {
   const [formData, setFormData] = useState({
-    attendantId: initialData?.attendantId || '',
+    attendantId: initialData?.attendantId || "",
     nota: initialData?.nota || 0,
-    comentario: initialData?.comentario || ''
+    comentario: initialData?.comentario || "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -47,15 +53,15 @@ export function EvaluationForm({
     const newErrors: Record<string, string> = {};
 
     if (!formData.attendantId) {
-      newErrors.attendantId = 'Selecione um atendente';
+      newErrors.attendantId = "Selecione um atendente";
     }
 
     if (formData.nota < 1 || formData.nota > 5) {
-      newErrors.nota = 'A nota deve ser entre 1 e 5 estrelas';
+      newErrors.nota = "A nota deve ser entre 1 e 5 estrelas";
     }
 
     if (formData.comentario.trim().length < 3) {
-      newErrors.comentario = 'O comentário deve ter pelo menos 3 caracteres';
+      newErrors.comentario = "O comentário deve ter pelo menos 3 caracteres";
     }
 
     setErrors(newErrors);
@@ -64,7 +70,7 @@ export function EvaluationForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -73,28 +79,26 @@ export function EvaluationForm({
       await onSubmit({
         attendantId: formData.attendantId,
         nota: formData.nota,
-        comentario: formData.comentario.trim()
+        comentario: formData.comentario.trim(),
       });
     } catch (error) {
-      console.error('Erro ao submeter formulário:', error);
+      console.error("Erro ao submeter formulário:", error);
     }
   };
 
   const handleRatingClick = (rating: number) => {
-    setFormData(prev => ({ ...prev, nota: rating }));
+    setFormData((prev) => ({ ...prev, nota: rating }));
     if (errors.nota) {
-      setErrors(prev => ({ ...prev, nota: '' }));
+      setErrors((prev) => ({ ...prev, nota: "" }));
     }
   };
 
-  const selectedAttendant = attendants.find(a => a.id === formData.attendantId);
+  const selectedAttendant = attendants.find(
+    (a) => a.id === formData.attendantId,
+  );
 
   return (
-    <DataValidator
-      data={attendants}
-      fallback={[]}
-      loading={false}
-    >
+    <DataValidator data={attendants} fallback={[]} loading={false}>
       {(validAttendants) => (
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Seleção de Atendente */}
@@ -106,13 +110,15 @@ export function EvaluationForm({
             <Select
               value={formData.attendantId}
               onValueChange={(value) => {
-                setFormData(prev => ({ ...prev, attendantId: value }));
+                setFormData((prev) => ({ ...prev, attendantId: value }));
                 if (errors.attendantId) {
-                  setErrors(prev => ({ ...prev, attendantId: '' }));
+                  setErrors((prev) => ({ ...prev, attendantId: "" }));
                 }
               }}
             >
-              <SelectTrigger className={cn(errors.attendantId && "border-red-500")}>
+              <SelectTrigger
+                className={cn(errors.attendantId && "border-red-500")}
+              >
                 <SelectValue placeholder="Selecione um atendente" />
               </SelectTrigger>
               <SelectContent>
@@ -127,7 +133,7 @@ export function EvaluationForm({
                         <Avatar className="h-6 w-6">
                           <AvatarImage src={attendant.avatarUrl} />
                           <AvatarFallback className="text-xs">
-                            {attendant.name?.charAt(0) || '?'}
+                            {attendant.name?.charAt(0) || "?"}
                           </AvatarFallback>
                         </Avatar>
                         <div>
@@ -155,7 +161,7 @@ export function EvaluationForm({
                   <Avatar className="h-12 w-12">
                     <AvatarImage src={selectedAttendant.avatarUrl} />
                     <AvatarFallback>
-                      {selectedAttendant.name?.charAt(0) || '?'}
+                      {selectedAttendant.name?.charAt(0) || "?"}
                     </AvatarFallback>
                   </Avatar>
                   <div>
@@ -189,7 +195,7 @@ export function EvaluationForm({
                       onClick={() => handleRatingClick(rating)}
                       className={cn(
                         "p-1 rounded transition-colors hover:bg-muted",
-                        "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                        "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
                       )}
                     >
                       <Star
@@ -197,7 +203,7 @@ export function EvaluationForm({
                           "h-8 w-8 transition-colors",
                           rating <= formData.nota
                             ? "fill-yellow-400 text-yellow-400"
-                            : "text-gray-300 hover:text-yellow-200"
+                            : "text-gray-300 hover:text-yellow-200",
                         )}
                       />
                     </button>
@@ -205,7 +211,7 @@ export function EvaluationForm({
                 })}
               </div>
               <span className="text-sm font-medium ml-2">
-                {formData.nota > 0 ? `${formData.nota}/5` : 'Não avaliado'}
+                {formData.nota > 0 ? `${formData.nota}/5` : "Não avaliado"}
               </span>
             </div>
             {errors.nota && (
@@ -224,14 +230,17 @@ export function EvaluationForm({
               placeholder="Descreva sua experiência com o atendimento..."
               value={formData.comentario}
               onChange={(e) => {
-                setFormData(prev => ({ ...prev, comentario: e.target.value }));
+                setFormData((prev) => ({
+                  ...prev,
+                  comentario: e.target.value,
+                }));
                 if (errors.comentario) {
-                  setErrors(prev => ({ ...prev, comentario: '' }));
+                  setErrors((prev) => ({ ...prev, comentario: "" }));
                 }
               }}
               className={cn(
                 "min-h-[100px] resize-none",
-                errors.comentario && "border-red-500"
+                errors.comentario && "border-red-500",
               )}
               maxLength={500}
             />
@@ -256,7 +265,8 @@ export function EvaluationForm({
                   </span>
                 </div>
                 <p className="text-xs text-blue-600 mt-1">
-                  O XP será calculado automaticamente com base na nota e multiplicadores ativos.
+                  O XP será calculado automaticamente com base na nota e
+                  multiplicadores ativos.
                 </p>
               </CardContent>
             </Card>
@@ -264,18 +274,14 @@ export function EvaluationForm({
 
           {/* Botões de Ação */}
           <div className="flex gap-3 pt-4">
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="flex-1"
-            >
+            <Button type="submit" disabled={isSubmitting} className="flex-1">
               {isSubmitting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   Salvando...
                 </>
               ) : (
-                'Salvar Avaliação'
+                "Salvar Avaliação"
               )}
             </Button>
             <Button

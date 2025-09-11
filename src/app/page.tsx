@@ -1,8 +1,13 @@
-
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { KeyRound, UserPlus } from 'lucide-react';
-import Link from 'next/link';
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { KeyRound, UserPlus } from "lucide-react";
+import Link from "next/link";
 
 export default function Home() {
   return (
@@ -12,16 +17,26 @@ export default function Home() {
           Koerner 360
         </h1>
         <p className="mt-4 text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
-          Uma plataforma robusta e moderna para gerenciar equipes, permissões, módulos e avaliações com total segurança e eficiência.
+          Uma plataforma robusta e moderna para gerenciar equipes, permissões,
+          módulos e avaliações com total segurança e eficiência.
         </p>
         <div className="mt-10 flex flex-col sm:flex-row justify-center items-center gap-4">
-          <Button asChild size="lg" className="font-bold text-lg w-full sm:w-auto">
+          <Button
+            asChild
+            size="lg"
+            className="font-bold text-lg w-full sm:w-auto"
+          >
             <Link href="/login">
               <KeyRound className="mr-2 h-5 w-5" />
               Entrar
             </Link>
           </Button>
-          <Button asChild size="lg" variant="outline" className="font-bold text-lg w-full sm:w-auto">
+          <Button
+            asChild
+            size="lg"
+            variant="outline"
+            className="font-bold text-lg w-full sm:w-auto"
+          >
             <Link href="/registrar">
               <UserPlus className="mr-2 h-5 w-5" />
               Registrar Nova Conta
@@ -29,9 +44,12 @@ export default function Home() {
           </Button>
         </div>
         <div className="mt-12">
-            <Link href="/criar-superadmin" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                É o primeiro acesso? Configure o Super Admin para iniciar.
-            </Link>
+          <Link
+            href="/criar-superadmin"
+            className="text-sm text-muted-foreground hover:text-primary transition-colors"
+          >
+            É o primeiro acesso? Configure o Super Admin para iniciar.
+          </Link>
         </div>
       </div>
     </div>

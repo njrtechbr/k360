@@ -1,4 +1,4 @@
-import { LeaderboardEntry } from '../types';
+import { LeaderboardEntry } from "../types";
 
 export interface LeaderboardProps {
   entries: LeaderboardEntry[];
@@ -6,7 +6,7 @@ export interface LeaderboardProps {
   showDepartment?: boolean;
   showAchievements?: boolean;
   limit?: number;
-  variant?: 'full' | 'compact' | 'mini';
+  variant?: "full" | "compact" | "mini";
   className?: string;
 }
 
@@ -24,13 +24,13 @@ export interface LeaderboardEntryProps {
   isCurrentUser?: boolean;
   showDepartment?: boolean;
   showAchievements?: boolean;
-  variant?: 'full' | 'compact';
+  variant?: "full" | "compact";
   className?: string;
 }
 
 export interface LeaderboardFilters {
   seasonId?: string;
   department?: string;
-  period?: 'current' | 'previous' | 'all';
+  period?: "current" | "previous" | "all";
   limit?: number;
 }

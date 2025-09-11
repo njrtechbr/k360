@@ -1,27 +1,29 @@
-import { BackupCLI } from '../../scripts/backup-cli';
-import { BackupService } from '@/services/backupService';
-import { BackupValidator } from '@/services/backupValidator';
-import { BackupStorage } from '@/services/backupStorage';
+import { BackupCLI } from "../../scripts/backup-cli";
+import { BackupService } from "@/services/backupService";
+import { BackupValidator } from "@/services/backupValidator";
+import { BackupStorage } from "@/services/backupStorage";
 
 // Mock dos serviços
-jest.mock('@/services/backupService');
-jest.mock('@/services/backupValidator');
-jest.mock('@/services/backupStorage');
+jest.mock("@/services/backupService");
+jest.mock("@/services/backupValidator");
+jest.mock("@/services/backupStorage");
 
 const mockBackupService = BackupService as jest.Mocked<typeof BackupService>;
-const mockBackupValidator = BackupValidator as jest.Mocked<typeof BackupValidator>;
+const mockBackupValidator = BackupValidator as jest.Mocked<
+  typeof BackupValidator
+>;
 const mockBackupStorage = BackupStorage as jest.Mocked<typeof BackupStorage>;
 
-describe('BackupCLI', () => {
+describe("BackupCLI", () => {
   let cli: BackupCLI;
   let consoleSpy: jest.SpyInstance;
   let processExitSpy: jest.SpyInstance;
 
   beforeEach(() => {
     cli = new BackupCLI();
-    consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-    processExitSpy = jest.spyOn(process, 'exit').mockImplementation();
-    
+    consoleSpy = jest.spyOn(console, "log").mockImplementation();
+    processExitSpy = jest.spyOn(process, "exit").mockImplementation();
+
     // Reset mocks
     jest.clearAllMocks();
   });
@@ -31,21 +33,21 @@ describe('BackupCLI', () => {
     processExitSpy.mockRestore();
   });
 
-  describe('Validação de parâmetros', () => {
-    it('deve validar opções de criação de backup', async () => {
+  describe("Validação de parâmetros", () => {
+    it("deve validar opções de criação de backup", async () => {
       // Mock para simular sucesso
       mockBackupService.createBackup.mockResolvedValue({
         success: true,
-        filename: 'test-backup.sql',
-        filepath: '/path/to/test-backup.sql',
+        filename: "test-backup.sql",
+        filepath: "/path/to/test-backup.sql",
         size: 1024,
-        checksum: 'abc123',
+        checksum: "abc123",
         duration: 1000,
-        id: 'test-id'
+        id: "test-id",
       });
 
       // Simular argumentos de linha de comando
-      process.argv = ['node', 'backup-cli.ts', 'create', '--verbose'];
+      process.argv = ["node", "backup-cli.ts", "create", "--verbose"];
 
       await cli.run();
 
@@ -53,9 +55,15 @@ describe('BackupCLI', () => {
       expect(processExitSpy).toHaveBeenCalledWith(0);
     });
 
-    it('deve rejeitar opções mutuamente exclusivas', async () => {
+    it("deve rejeitar opções mutuamente exclusivas", async () => {
       // Simular argumentos inválidos
-      process.argv = ['node', 'backup-cli.ts', 'create', '--schema-only', '--data-only'];
+      process.argv = [
+        "node",
+        "backup-cli.ts",
+        "create",
+        "--schema-only",
+        "--data-only",
+      ];
 
       await cli.run();
 
@@ -63,27 +71,27 @@ describe('BackupCLI', () => {
     });
   });
 
-  describe('Comando list', () => {
-    it('deve listar backups existentes', async () => {
+  describe("Comando list", () => {
+    it("deve listar backups existentes", async () => {
       const mockBackups = [
         {
-          id: 'backup-1',
-          filename: 'backup_2025-01-09_14-30-00.sql',
-          filepath: '/path/to/backup_2025-01-09_14-30-00.sql',
+          id: "backup-1",
+          filename: "backup_2025-01-09_14-30-00.sql",
+          filepath: "/path/to/backup_2025-01-09_14-30-00.sql",
           size: 2048,
-          status: 'success' as const,
-          createdAt: new Date('2025-01-09T14:30:00Z'),
+          status: "success" as const,
+          createdAt: new Date("2025-01-09T14:30:00Z"),
           duration: 1500,
-          checksum: 'def456',
-          databaseVersion: '15.0',
-          schemaVersion: '1.0',
-          createdBy: 'admin'
-        }
+          checksum: "def456",
+          databaseVersion: "15.0",
+          schemaVersion: "1.0",
+          createdBy: "admin",
+        },
       ];
 
       mockBackupService.listBackups.mockResolvedValue(mockBackups);
 
-      process.argv = ['node', 'backup-cli.ts', 'list'];
+      process.argv = ["node", "backup-cli.ts", "list"];
 
       await cli.run();
 
@@ -91,65 +99,81 @@ describe('BackupCLI', () => {
       expect(processExitSpy).toHaveBeenCalledWith(0);
     });
 
-    it('deve listar backups em formato JSON', async () => {
+    it("deve listar backups em formato JSON", async () => {
       const mockBackups = [
         {
-          id: 'backup-1',
-          filename: 'backup.sql',
-          filepath: '/path/to/backup.sql',
+          id: "backup-1",
+          filename: "backup.sql",
+          filepath: "/path/to/backup.sql",
           size: 1024,
-          status: 'success' as const,
+          status: "success" as const,
           createdAt: new Date(),
           duration: 1000,
-          checksum: 'abc123',
-          databaseVersion: '15.0',
-          schemaVersion: '1.0',
-          createdBy: 'admin'
-        }
+          checksum: "abc123",
+          databaseVersion: "15.0",
+          schemaVersion: "1.0",
+          createdBy: "admin",
+        },
       ];
 
       mockBackupService.listBackups.mockResolvedValue(mockBackups);
 
-      process.argv = ['node', 'backup-cli.ts', 'list', '--format', 'json'];
+      process.argv = ["node", "backup-cli.ts", "list", "--format", "json"];
 
       await cli.run();
 
       expect(mockBackupService.listBackups).toHaveBeenCalled();
-      expect(consoleSpy).toHaveBeenCalledWith(JSON.stringify(mockBackups, null, 2));
+      expect(consoleSpy).toHaveBeenCalledWith(
+        JSON.stringify(mockBackups, null, 2),
+      );
     });
   });
 
-  describe('Comando validate', () => {
-    it('deve validar backup com sucesso', async () => {
+  describe("Comando validate", () => {
+    it("deve validar backup com sucesso", async () => {
       const mockValidationResult = {
         isValid: true,
         size: 1024,
         validationTime: 500,
-        checksum: 'abc123',
+        checksum: "abc123",
         warnings: [],
-        errors: []
+        errors: [],
       };
 
-      mockBackupValidator.validateBackup.mockResolvedValue(mockValidationResult);
+      mockBackupValidator.validateBackup.mockResolvedValue(
+        mockValidationResult,
+      );
 
       // Mock fs.existsSync
-      const fs = require('fs');
-      jest.spyOn(fs, 'existsSync').mockReturnValue(true);
+      const fs = require("fs");
+      jest.spyOn(fs, "existsSync").mockReturnValue(true);
 
-      process.argv = ['node', 'backup-cli.ts', 'validate', '/path/to/backup.sql'];
+      process.argv = [
+        "node",
+        "backup-cli.ts",
+        "validate",
+        "/path/to/backup.sql",
+      ];
 
       await cli.run();
 
-      expect(mockBackupValidator.validateBackup).toHaveBeenCalledWith('/path/to/backup.sql');
+      expect(mockBackupValidator.validateBackup).toHaveBeenCalledWith(
+        "/path/to/backup.sql",
+      );
       expect(processExitSpy).toHaveBeenCalledWith(0);
     });
 
-    it('deve falhar para arquivo inexistente', async () => {
+    it("deve falhar para arquivo inexistente", async () => {
       // Mock fs.existsSync para retornar false
-      const fs = require('fs');
-      jest.spyOn(fs, 'existsSync').mockReturnValue(false);
+      const fs = require("fs");
+      jest.spyOn(fs, "existsSync").mockReturnValue(false);
 
-      process.argv = ['node', 'backup-cli.ts', 'validate', '/path/to/nonexistent.sql'];
+      process.argv = [
+        "node",
+        "backup-cli.ts",
+        "validate",
+        "/path/to/nonexistent.sql",
+      ];
 
       await cli.run();
 
@@ -157,44 +181,46 @@ describe('BackupCLI', () => {
     });
   });
 
-  describe('Comando cleanup', () => {
-    it('deve executar limpeza em modo dry-run', async () => {
+  describe("Comando cleanup", () => {
+    it("deve executar limpeza em modo dry-run", async () => {
       const mockSimulation = {
         wouldRemove: 2,
         backupsToRemove: [
           {
-            id: 'old-backup-1',
-            filename: 'old-backup-1.sql',
-            filepath: '/path/to/old-backup-1.sql',
+            id: "old-backup-1",
+            filename: "old-backup-1.sql",
+            filepath: "/path/to/old-backup-1.sql",
             size: 1024,
-            status: 'success' as const,
-            createdAt: new Date('2025-01-01T10:00:00Z'),
+            status: "success" as const,
+            createdAt: new Date("2025-01-01T10:00:00Z"),
             duration: 1000,
-            checksum: 'old123',
-            databaseVersion: '15.0',
-            schemaVersion: '1.0',
-            createdBy: 'admin'
+            checksum: "old123",
+            databaseVersion: "15.0",
+            schemaVersion: "1.0",
+            createdBy: "admin",
           },
           {
-            id: 'old-backup-2',
-            filename: 'old-backup-2.sql',
-            filepath: '/path/to/old-backup-2.sql',
+            id: "old-backup-2",
+            filename: "old-backup-2.sql",
+            filepath: "/path/to/old-backup-2.sql",
             size: 2048,
-            status: 'success' as const,
-            createdAt: new Date('2025-01-02T10:00:00Z'),
+            status: "success" as const,
+            createdAt: new Date("2025-01-02T10:00:00Z"),
             duration: 1500,
-            checksum: 'old456',
-            databaseVersion: '15.0',
-            schemaVersion: '1.0',
-            createdBy: 'admin'
-          }
+            checksum: "old456",
+            databaseVersion: "15.0",
+            schemaVersion: "1.0",
+            createdBy: "admin",
+          },
         ],
-        wouldFreeSpace: 3072
+        wouldFreeSpace: 3072,
       };
 
-      mockBackupStorage.simulateCleanupOldBackups.mockResolvedValue(mockSimulation);
+      mockBackupStorage.simulateCleanupOldBackups.mockResolvedValue(
+        mockSimulation,
+      );
 
-      process.argv = ['node', 'backup-cli.ts', 'cleanup', '--dry-run'];
+      process.argv = ["node", "backup-cli.ts", "cleanup", "--dry-run"];
 
       await cli.run();
 
@@ -202,16 +228,16 @@ describe('BackupCLI', () => {
       expect(processExitSpy).toHaveBeenCalledWith(0);
     });
 
-    it('deve executar limpeza real', async () => {
+    it("deve executar limpeza real", async () => {
       const mockResult = {
         removed: 2,
         freedSpace: 3072,
-        errors: []
+        errors: [],
       };
 
       mockBackupStorage.cleanupOldBackups.mockResolvedValue(mockResult);
 
-      process.argv = ['node', 'backup-cli.ts', 'cleanup'];
+      process.argv = ["node", "backup-cli.ts", "cleanup"];
 
       await cli.run();
 
@@ -220,36 +246,38 @@ describe('BackupCLI', () => {
     });
   });
 
-  describe('Comando info', () => {
-    it('deve mostrar informações do backup', async () => {
+  describe("Comando info", () => {
+    it("deve mostrar informações do backup", async () => {
       const mockBackup = {
-        id: 'backup-123',
-        filename: 'backup.sql',
-        filepath: '/path/to/backup.sql',
+        id: "backup-123",
+        filename: "backup.sql",
+        filepath: "/path/to/backup.sql",
         size: 1024,
-        status: 'success' as const,
-        createdAt: new Date('2025-01-09T14:30:00Z'),
+        status: "success" as const,
+        createdAt: new Date("2025-01-09T14:30:00Z"),
         duration: 1000,
-        checksum: 'abc123',
-        databaseVersion: '15.0',
-        schemaVersion: '1.0',
-        createdBy: 'admin'
+        checksum: "abc123",
+        databaseVersion: "15.0",
+        schemaVersion: "1.0",
+        createdBy: "admin",
       };
 
       mockBackupService.getBackupInfo.mockResolvedValue(mockBackup);
 
-      process.argv = ['node', 'backup-cli.ts', 'info', 'backup-123'];
+      process.argv = ["node", "backup-cli.ts", "info", "backup-123"];
 
       await cli.run();
 
-      expect(mockBackupService.getBackupInfo).toHaveBeenCalledWith('backup-123');
+      expect(mockBackupService.getBackupInfo).toHaveBeenCalledWith(
+        "backup-123",
+      );
       expect(processExitSpy).toHaveBeenCalledWith(0);
     });
 
-    it('deve falhar para backup inexistente', async () => {
+    it("deve falhar para backup inexistente", async () => {
       mockBackupService.getBackupInfo.mockResolvedValue(null);
 
-      process.argv = ['node', 'backup-cli.ts', 'info', 'nonexistent-backup'];
+      process.argv = ["node", "backup-cli.ts", "info", "nonexistent-backup"];
 
       await cli.run();
 
@@ -257,29 +285,31 @@ describe('BackupCLI', () => {
     });
   });
 
-  describe('Tratamento de erros', () => {
-    it('deve tratar erros durante criação de backup', async () => {
+  describe("Tratamento de erros", () => {
+    it("deve tratar erros durante criação de backup", async () => {
       mockBackupService.createBackup.mockResolvedValue({
         success: false,
-        filename: '',
-        filepath: '',
+        filename: "",
+        filepath: "",
         size: 0,
-        checksum: '',
+        checksum: "",
         duration: 0,
-        error: 'Falha na conexão com o banco'
+        error: "Falha na conexão com o banco",
       });
 
-      process.argv = ['node', 'backup-cli.ts', 'create'];
+      process.argv = ["node", "backup-cli.ts", "create"];
 
       await cli.run();
 
       expect(processExitSpy).toHaveBeenCalledWith(1);
     });
 
-    it('deve tratar exceções não capturadas', async () => {
-      mockBackupService.createBackup.mockRejectedValue(new Error('Erro inesperado'));
+    it("deve tratar exceções não capturadas", async () => {
+      mockBackupService.createBackup.mockRejectedValue(
+        new Error("Erro inesperado"),
+      );
 
-      process.argv = ['node', 'backup-cli.ts', 'create'];
+      process.argv = ["node", "backup-cli.ts", "create"];
 
       await cli.run();
 

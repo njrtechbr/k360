@@ -1,4 +1,4 @@
-import type { Evaluation, Attendant } from '@/lib/types';
+import type { Evaluation, Attendant } from "@/lib/types";
 
 // Props para useEvaluations
 export interface UseEvaluationsProps {

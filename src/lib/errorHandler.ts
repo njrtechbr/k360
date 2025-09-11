@@ -2,7 +2,12 @@
  * Sistema centralizado de tratamento de erros para APIs
  */
 
-import { ApiErrorType, getErrorType, getErrorMessage, isValidationError } from './api-types';
+import {
+  ApiErrorType,
+  getErrorType,
+  getErrorMessage,
+  isValidationError,
+} from "./api-types";
 
 // Interface para sistema de toast (pode ser implementado com qualquer biblioteca)
 interface ToastSystem {
@@ -54,7 +59,7 @@ export class ApiErrorHandler {
 
     // Log do erro
     if (this.config.logToConsole) {
-      console.error(`[API Error${context ? ` - ${context}` : ''}]:`, {
+      console.error(`[API Error${context ? ` - ${context}` : ""}]:`, {
         type: errorType,
         message: errorMessage,
         error,
@@ -99,8 +104,8 @@ export class ApiErrorHandler {
 
   private handleNetworkError(message: string): void {
     if (this.config.showToast) {
-      toastSystem.error('Erro de Conexão', {
-        description: 'Verifique sua conexão com a internet e tente novamente.',
+      toastSystem.error("Erro de Conexão", {
+        description: "Verifique sua conexão com a internet e tente novamente.",
       });
     }
   }
@@ -111,13 +116,13 @@ export class ApiErrorHandler {
         // Mostra erros de validação específicos
         const firstField = Object.keys(error.details)[0];
         const firstError = error.details[firstField]?.[0];
-        
-        toastSystem.error('Dados Inválidos', {
-          description: firstError || 'Verifique os dados informados.',
+
+        toastSystem.error("Dados Inválidos", {
+          description: firstError || "Verifique os dados informados.",
         });
       } else {
-        toastSystem.error('Dados Inválidos', {
-          description: 'Verifique os dados informados e tente novamente.',
+        toastSystem.error("Dados Inválidos", {
+          description: "Verifique os dados informados e tente novamente.",
         });
       }
     }
@@ -125,55 +130,56 @@ export class ApiErrorHandler {
 
   private handleAuthError(): void {
     if (this.config.showToast) {
-      toastSystem.error('Sessão Expirada', {
-        description: 'Faça login novamente para continuar.',
+      toastSystem.error("Sessão Expirada", {
+        description: "Faça login novamente para continuar.",
       });
     }
 
     if (this.config.redirectOnAuth) {
       // Redireciona para login após um delay
       setTimeout(() => {
-        window.location.href = '/auth/signin';
+        window.location.href = "/auth/signin";
       }, 2000);
     }
   }
 
   private handleAuthorizationError(): void {
     if (this.config.showToast) {
-      toastSystem.error('Acesso Negado', {
-        description: 'Você não tem permissão para realizar esta ação.',
+      toastSystem.error("Acesso Negado", {
+        description: "Você não tem permissão para realizar esta ação.",
       });
     }
   }
 
   private handleNotFoundError(message: string): void {
     if (this.config.showToast) {
-      toastSystem.error('Não Encontrado', {
-        description: 'O recurso solicitado não foi encontrado.',
+      toastSystem.error("Não Encontrado", {
+        description: "O recurso solicitado não foi encontrado.",
       });
     }
   }
 
   private handleRateLimitError(): void {
     if (this.config.showToast) {
-      toastSystem.error('Muitas Tentativas', {
-        description: 'Aguarde um momento antes de tentar novamente.',
+      toastSystem.error("Muitas Tentativas", {
+        description: "Aguarde um momento antes de tentar novamente.",
       });
     }
   }
 
   private handleServerError(message: string): void {
     if (this.config.showToast) {
-      toastSystem.error('Erro do Servidor', {
-        description: 'Ocorreu um erro interno. Tente novamente em alguns instantes.',
+      toastSystem.error("Erro do Servidor", {
+        description:
+          "Ocorreu um erro interno. Tente novamente em alguns instantes.",
       });
     }
   }
 
   private handleGenericError(message: string): void {
     if (this.config.showToast) {
-      toastSystem.error('Erro', {
-        description: message || 'Ocorreu um erro inesperado.',
+      toastSystem.error("Erro", {
+        description: message || "Ocorreu um erro inesperado.",
       });
     }
   }

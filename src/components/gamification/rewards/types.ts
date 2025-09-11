@@ -1,4 +1,4 @@
-import { LevelReward } from '../types';
+import { LevelReward } from "../types";
 
 export interface RewardTrackProps {
   currentXp?: number;

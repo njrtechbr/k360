@@ -1,5 +1,4 @@
-
-import type { GamificationConfig } from './types';
+import type { GamificationConfig } from "./types";
 
 /**
  * Gets the base XP score for a given rating from the configuration.
@@ -7,9 +6,10 @@ import type { GamificationConfig } from './types';
  * @param scores The ratingScores object from GamificationConfig.
  * @returns The base XP score.
  */
-export const getScoreFromRating = (rating: number, scores: GamificationConfig['ratingScores']): number => {
-    const key = String(rating) as keyof typeof scores;
-    return scores[key] ?? 0;
+export const getScoreFromRating = (
+  rating: number,
+  scores: GamificationConfig["ratingScores"],
+): number => {
+  const key = String(rating) as keyof typeof scores;
+  return scores[key] ?? 0;
 };
-
-    

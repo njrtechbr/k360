@@ -1,23 +1,23 @@
 "use client";
 
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { 
-  Bot, 
-  CheckCircle, 
-  Clock, 
-  AlertTriangle, 
-  RefreshCw, 
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Bot,
+  CheckCircle,
+  Clock,
+  AlertTriangle,
+  RefreshCw,
   Sparkles,
   MessageSquare,
   TrendingUp,
-  BarChart3
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import type { Evaluation, EvaluationAnalysis } from '@/lib/types';
+  BarChart3,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import type { Evaluation, EvaluationAnalysis } from "@/lib/types";
 
 export interface AnalysisProgressProps {
   evaluations: Evaluation[];
@@ -36,27 +36,34 @@ export default function AnalysisProgress({
   onStartAnalysis,
   onRetryAnalysis,
   showDetails = true,
-  className
+  className,
 }: AnalysisProgressProps) {
   // Calcular estatísticas
   const stats = React.useMemo(() => {
-    const evaluationsWithComments = evaluations.filter(e => e.comentario && e.comentario.trim());
+    const evaluationsWithComments = evaluations.filter(
+      (e) => e.comentario && e.comentario.trim(),
+    );
     const analyzedEvaluations = analysisResults.length;
-    const pendingAnalysis = evaluationsWithComments.length - analyzedEvaluations;
-    const progressPercentage = evaluationsWithComments.length > 0 
-      ? (analyzedEvaluations / evaluationsWithComments.length) * 100 
-      : 0;
+    const pendingAnalysis =
+      evaluationsWithComments.length - analyzedEvaluations;
+    const progressPercentage =
+      evaluationsWithComments.length > 0
+        ? (analyzedEvaluations / evaluationsWithComments.length) * 100
+        : 0;
 
     // Análise de sentimentos
-    const sentimentCounts = analysisResults.reduce((acc, analysis) => {
-      acc[analysis.sentiment] = (acc[analysis.sentiment] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const sentimentCounts = analysisResults.reduce(
+      (acc, analysis) => {
+        acc[analysis.sentiment] = (acc[analysis.sentiment] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
     // Análises recentes (últimas 24h)
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const recentAnalyses = analysisResults.filter(
-      analysis => new Date(analysis.createdAt) > oneDayAgo
+      (analysis) => new Date(analysis.createdAt) > oneDayAgo,
     ).length;
 
     return {
@@ -66,7 +73,7 @@ export default function AnalysisProgress({
       pendingAnalysis,
       progressPercentage,
       sentimentCounts,
-      recentAnalyses
+      recentAnalyses,
     };
   }, [evaluations, analysisResults]);
 
@@ -98,7 +105,8 @@ export default function AnalysisProgress({
 
   const getStatusVariant = () => {
     if (isAnalyzing) return "secondary";
-    if (stats.pendingAnalysis === 0 && stats.analyzedEvaluations > 0) return "default";
+    if (stats.pendingAnalysis === 0 && stats.analyzedEvaluations > 0)
+      return "default";
     if (stats.pendingAnalysis > 0) return "outline";
     return "secondary";
   };
@@ -111,20 +119,24 @@ export default function AnalysisProgress({
             <Sparkles className="h-5 w-5" />
             Análise de Sentimento (IA)
           </div>
-          <Badge variant={getStatusVariant()} className="flex items-center gap-1">
+          <Badge
+            variant={getStatusVariant()}
+            className="flex items-center gap-1"
+          >
             {getStatusIcon()}
             {getStatusText()}
           </Badge>
         </CardTitle>
       </CardHeader>
-      
+
       <CardContent className="space-y-6">
         {/* Progresso Geral */}
         <div className="space-y-3">
           <div className="flex items-center justify-between text-sm">
             <span>Progresso da Análise</span>
             <span className="font-medium">
-              {stats.analyzedEvaluations} / {stats.evaluationsWithComments} comentários
+              {stats.analyzedEvaluations} / {stats.evaluationsWithComments}{" "}
+              comentários
             </span>
           </div>
           <Progress value={stats.progressPercentage} className="h-2" />
@@ -137,14 +149,20 @@ export default function AnalysisProgress({
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="text-center">
             <div className="text-2xl font-bold">{stats.totalEvaluations}</div>
-            <div className="text-xs text-muted-foreground">Total de Avaliações</div>
+            <div className="text-xs text-muted-foreground">
+              Total de Avaliações
+            </div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold">{stats.evaluationsWithComments}</div>
+            <div className="text-2xl font-bold">
+              {stats.evaluationsWithComments}
+            </div>
             <div className="text-xs text-muted-foreground">Com Comentários</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold">{stats.analyzedEvaluations}</div>
+            <div className="text-2xl font-bold">
+              {stats.analyzedEvaluations}
+            </div>
             <div className="text-xs text-muted-foreground">Analisadas</div>
           </div>
           <div className="text-center">
@@ -161,41 +179,58 @@ export default function AnalysisProgress({
               Distribuição de Sentimentos
             </h4>
             <div className="space-y-2">
-              {Object.entries(stats.sentimentCounts).map(([sentiment, count]) => {
-                const percentage = (count / stats.analyzedEvaluations) * 100;
-                const getSentimentColor = (sentiment: string) => {
-                  switch (sentiment.toLowerCase()) {
-                    case 'positive': return 'bg-green-500';
-                    case 'negative': return 'bg-red-500';
-                    case 'neutral': return 'bg-gray-500';
-                    default: return 'bg-blue-500';
-                  }
-                };
-                
-                const getSentimentLabel = (sentiment: string) => {
-                  switch (sentiment.toLowerCase()) {
-                    case 'positive': return 'Positivo';
-                    case 'negative': return 'Negativo';
-                    case 'neutral': return 'Neutro';
-                    default: return sentiment;
-                  }
-                };
+              {Object.entries(stats.sentimentCounts).map(
+                ([sentiment, count]) => {
+                  const percentage = (count / stats.analyzedEvaluations) * 100;
+                  const getSentimentColor = (sentiment: string) => {
+                    switch (sentiment.toLowerCase()) {
+                      case "positive":
+                        return "bg-green-500";
+                      case "negative":
+                        return "bg-red-500";
+                      case "neutral":
+                        return "bg-gray-500";
+                      default:
+                        return "bg-blue-500";
+                    }
+                  };
 
-                return (
-                  <div key={sentiment} className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 w-20">
-                      <div className={cn("w-3 h-3 rounded-full", getSentimentColor(sentiment))} />
-                      <span className="text-sm">{getSentimentLabel(sentiment)}</span>
+                  const getSentimentLabel = (sentiment: string) => {
+                    switch (sentiment.toLowerCase()) {
+                      case "positive":
+                        return "Positivo";
+                      case "negative":
+                        return "Negativo";
+                      case "neutral":
+                        return "Neutro";
+                      default:
+                        return sentiment;
+                    }
+                  };
+
+                  return (
+                    <div key={sentiment} className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 w-20">
+                        <div
+                          className={cn(
+                            "w-3 h-3 rounded-full",
+                            getSentimentColor(sentiment),
+                          )}
+                        />
+                        <span className="text-sm">
+                          {getSentimentLabel(sentiment)}
+                        </span>
+                      </div>
+                      <div className="flex-1">
+                        <Progress value={percentage} className="h-2" />
+                      </div>
+                      <div className="text-sm text-muted-foreground w-16 text-right">
+                        {count} ({percentage.toFixed(1)}%)
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <Progress value={percentage} className="h-2" />
-                    </div>
-                    <div className="text-sm text-muted-foreground w-16 text-right">
-                      {count} ({percentage.toFixed(1)}%)
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                },
+              )}
             </div>
           </div>
         )}
@@ -203,7 +238,7 @@ export default function AnalysisProgress({
         {/* Ações */}
         <div className="flex flex-col sm:flex-row gap-3">
           {stats.pendingAnalysis > 0 && onStartAnalysis && (
-            <Button 
+            <Button
               onClick={onStartAnalysis}
               disabled={isAnalyzing}
               className="flex items-center gap-2"
@@ -213,12 +248,14 @@ export default function AnalysisProgress({
               ) : (
                 <Bot className="h-4 w-4" />
               )}
-              {isAnalyzing ? 'Analisando...' : `Analisar ${stats.pendingAnalysis} Comentários`}
+              {isAnalyzing
+                ? "Analisando..."
+                : `Analisar ${stats.pendingAnalysis} Comentários`}
             </Button>
           )}
-          
+
           {stats.analyzedEvaluations > 0 && onRetryAnalysis && (
-            <Button 
+            <Button
               variant="outline"
               onClick={onRetryAnalysis}
               disabled={isAnalyzing}
@@ -239,12 +276,13 @@ export default function AnalysisProgress({
             </span>
           </div>
         )}
-        
+
         {stats.pendingAnalysis > 10 && (
           <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
             <AlertTriangle className="h-4 w-4 text-yellow-600" />
             <span className="text-sm text-yellow-800">
-              Muitos comentários pendentes. Considere executar a análise em lotes.
+              Muitos comentários pendentes. Considere executar a análise em
+              lotes.
             </span>
           </div>
         )}

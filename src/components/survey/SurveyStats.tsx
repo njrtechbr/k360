@@ -1,19 +1,26 @@
 "use client";
 
-import { useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { BarChart3, Star, TrendingUp, TrendingDown, Users, MessageSquare } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { SurveyStatsProps } from './types';
-import RatingStars from './RatingStars';
+import { useMemo } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  BarChart3,
+  Star,
+  TrendingUp,
+  TrendingDown,
+  Users,
+  MessageSquare,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { SurveyStatsProps } from "./types";
+import RatingStars from "./RatingStars";
 
 const SurveyStats: React.FC<SurveyStatsProps> = ({
   analytics,
   loading = false,
   timeRange,
   showCharts = true, // TODO: Implementar funcionalidade de gráficos
-  className
+  className,
 }) => {
   const stats = useMemo(() => {
     if (!analytics) {
@@ -25,7 +32,7 @@ const SurveyStats: React.FC<SurveyStatsProps> = ({
         commentsCount: 0,
         satisfactionRate: 0,
         topRatedAttendant: null,
-        lowestRatedAttendant: null
+        lowestRatedAttendant: null,
       };
     }
 
@@ -36,14 +43,18 @@ const SurveyStats: React.FC<SurveyStatsProps> = ({
       evaluatedAttendants: analytics.evaluatedAttendants,
       commentsCount: analytics.commentsCount,
       satisfactionRate: analytics.satisfactionRate,
-      topRatedAttendant: analytics.topRatedAttendants?.[0] ? {
-        name: analytics.topRatedAttendants[0].attendantName,
-        averageRating: analytics.topRatedAttendants[0].averageRating
-      } : null,
-      lowestRatedAttendant: analytics.lowestRatedAttendants?.[0] ? {
-        name: analytics.lowestRatedAttendants[0].attendantName,
-        averageRating: analytics.lowestRatedAttendants[0].averageRating
-      } : null
+      topRatedAttendant: analytics.topRatedAttendants?.[0]
+        ? {
+            name: analytics.topRatedAttendants[0].attendantName,
+            averageRating: analytics.topRatedAttendants[0].averageRating,
+          }
+        : null,
+      lowestRatedAttendant: analytics.lowestRatedAttendants?.[0]
+        ? {
+            name: analytics.lowestRatedAttendants[0].attendantName,
+            averageRating: analytics.lowestRatedAttendants[0].averageRating,
+          }
+        : null,
     };
   }, [analytics]);
 
@@ -51,12 +62,12 @@ const SurveyStats: React.FC<SurveyStatsProps> = ({
     if (timeRange) {
       return `${timeRange.start.toLocaleDateString()} - ${timeRange.end.toLocaleDateString()}`;
     }
-    return 'Todo o período';
+    return "Todo o período";
   };
 
   if (loading) {
     return (
-      <div className={cn('space-y-6', className)}>
+      <div className={cn("space-y-6", className)}>
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold">Estatísticas da Pesquisa</h2>
           <Badge variant="outline">Carregando...</Badge>
@@ -80,7 +91,7 @@ const SurveyStats: React.FC<SurveyStatsProps> = ({
   }
 
   return (
-    <div className={cn('space-y-6', className)}>
+    <div className={cn("space-y-6", className)}>
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Estatísticas da Pesquisa</h2>
         <Badge variant="outline">{getTimeRangeLabel()}</Badge>
@@ -89,7 +100,9 @@ const SurveyStats: React.FC<SurveyStatsProps> = ({
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Avaliações</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total de Avaliações
+            </CardTitle>
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -106,18 +119,24 @@ const SurveyStats: React.FC<SurveyStatsProps> = ({
             <Star className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.averageRating.toFixed(2)}</div>
+            <div className="text-2xl font-bold">
+              {stats.averageRating.toFixed(2)}
+            </div>
             <RatingStars value={stats.averageRating} readOnly size="sm" />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Taxa de Satisfação</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Taxa de Satisfação
+            </CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.satisfactionRate.toFixed(1)}%</div>
+            <div className="text-2xl font-bold">
+              {stats.satisfactionRate.toFixed(1)}%
+            </div>
             <p className="text-xs text-muted-foreground">
               Notas 4 e 5 estrelas
             </p>
@@ -126,7 +145,9 @@ const SurveyStats: React.FC<SurveyStatsProps> = ({
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Atendentes Avaliados</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Atendentes Avaliados
+            </CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -146,29 +167,32 @@ const SurveyStats: React.FC<SurveyStatsProps> = ({
             <CardTitle className="text-lg">Distribuição de Notas</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {Object.entries(stats.ratingDistribution).reverse().map(([rating, count]) => {
-              const percentage = stats.totalEvaluations > 0
-                ? (count / stats.totalEvaluations) * 100
-                : 0;
+            {Object.entries(stats.ratingDistribution)
+              .reverse()
+              .map(([rating, count]) => {
+                const percentage =
+                  stats.totalEvaluations > 0
+                    ? (count / stats.totalEvaluations) * 100
+                    : 0;
 
-              return (
-                <div key={rating} className="flex items-center gap-3">
-                  <div className="flex items-center gap-1 w-16">
-                    <span className="text-sm font-medium">{rating}</span>
-                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                return (
+                  <div key={rating} className="flex items-center gap-3">
+                    <div className="flex items-center gap-1 w-16">
+                      <span className="text-sm font-medium">{rating}</span>
+                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                    </div>
+                    <div className="flex-1 bg-muted rounded-full h-2">
+                      <div
+                        className="bg-primary h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                    <div className="text-sm text-muted-foreground w-12 text-right">
+                      {count}
+                    </div>
                   </div>
-                  <div className="flex-1 bg-muted rounded-full h-2">
-                    <div
-                      className="bg-primary h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${percentage}%` }}
-                    />
-                  </div>
-                  <div className="text-sm text-muted-foreground w-12 text-right">
-                    {count}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
           </CardContent>
         </Card>
 
@@ -185,13 +209,16 @@ const SurveyStats: React.FC<SurveyStatsProps> = ({
 
               // 1. Melhor Avaliado (maior nota média)
               const topRated = analytics.topRatedAttendants
-                .filter(att => !usedAttendants.has(att.attendantId))
+                .filter((att) => !usedAttendants.has(att.attendantId))
                 .sort((a, b) => b.averageRating - a.averageRating)[0];
 
               if (topRated) {
                 usedAttendants.add(topRated.attendantId);
                 highlights.push(
-                  <div key="top-rated" className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                  <div
+                    key="top-rated"
+                    className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200"
+                  >
                     <div className="flex items-center justify-center w-8 h-8 bg-green-100 rounded-full">
                       <TrendingUp className="h-4 w-4 text-green-600" />
                     </div>
@@ -203,19 +230,22 @@ const SurveyStats: React.FC<SurveyStatsProps> = ({
                         Melhor avaliado: {topRated.averageRating.toFixed(2)} ⭐
                       </p>
                     </div>
-                  </div>
+                  </div>,
                 );
               }
 
               // 2. Mais Avaliações (maior volume, excluindo já usados)
               const mostEvaluated = analytics.topRatedAttendants
-                .filter(att => !usedAttendants.has(att.attendantId))
+                .filter((att) => !usedAttendants.has(att.attendantId))
                 .sort((a, b) => b.totalEvaluations - a.totalEvaluations)[0];
 
               if (mostEvaluated) {
                 usedAttendants.add(mostEvaluated.attendantId);
                 highlights.push(
-                  <div key="most-evaluated" className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div
+                    key="most-evaluated"
+                    className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200"
+                  >
                     <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full">
                       <MessageSquare className="h-4 w-4 text-blue-600" />
                     </div>
@@ -224,22 +254,30 @@ const SurveyStats: React.FC<SurveyStatsProps> = ({
                         📊 {mostEvaluated.attendantName}
                       </p>
                       <p className="text-sm text-blue-700">
-                        Mais avaliado: {mostEvaluated.totalEvaluations} avaliações
+                        Mais avaliado: {mostEvaluated.totalEvaluations}{" "}
+                        avaliações
                       </p>
                     </div>
-                  </div>
+                  </div>,
                 );
               }
 
               // 3. Alta Satisfação (≥90% satisfação, excluindo já usados)
               const highSatisfaction = analytics.topRatedAttendants
-                .filter(att => !usedAttendants.has(att.attendantId) && att.satisfactionRate >= 90)
+                .filter(
+                  (att) =>
+                    !usedAttendants.has(att.attendantId) &&
+                    att.satisfactionRate >= 90,
+                )
                 .sort((a, b) => b.satisfactionRate - a.satisfactionRate)[0];
 
               if (highSatisfaction) {
                 usedAttendants.add(highSatisfaction.attendantId);
                 highlights.push(
-                  <div key="high-satisfaction" className="flex items-center gap-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                  <div
+                    key="high-satisfaction"
+                    className="flex items-center gap-3 p-3 bg-purple-50 rounded-lg border border-purple-200"
+                  >
                     <div className="flex items-center justify-center w-8 h-8 bg-purple-100 rounded-full">
                       <Star className="h-4 w-4 text-purple-600" />
                     </div>
@@ -248,19 +286,21 @@ const SurveyStats: React.FC<SurveyStatsProps> = ({
                         💜 {highSatisfaction.attendantName}
                       </p>
                       <p className="text-sm text-purple-700">
-                        Alta satisfação: {highSatisfaction.satisfactionRate.toFixed(1)}%
+                        Alta satisfação:{" "}
+                        {highSatisfaction.satisfactionRate.toFixed(1)}%
                       </p>
                     </div>
-                  </div>
+                  </div>,
                 );
               }
 
               // 4. Consistente (≥5 avaliações e ≥4.0, excluindo já usados)
               const consistent = analytics.topRatedAttendants
-                .filter(att =>
-                  !usedAttendants.has(att.attendantId) &&
-                  att.totalEvaluations >= 5 &&
-                  att.averageRating >= 4.0
+                .filter(
+                  (att) =>
+                    !usedAttendants.has(att.attendantId) &&
+                    att.totalEvaluations >= 5 &&
+                    att.averageRating >= 4.0,
                 )
                 .sort((a, b) => {
                   // Prioriza equilíbrio entre volume e qualidade
@@ -272,7 +312,10 @@ const SurveyStats: React.FC<SurveyStatsProps> = ({
               if (consistent) {
                 usedAttendants.add(consistent.attendantId);
                 highlights.push(
-                  <div key="consistent" className="flex items-center gap-3 p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+                  <div
+                    key="consistent"
+                    className="flex items-center gap-3 p-3 bg-emerald-50 rounded-lg border border-emerald-200"
+                  >
                     <div className="flex items-center justify-center w-8 h-8 bg-emerald-100 rounded-full">
                       <BarChart3 className="h-4 w-4 text-emerald-600" />
                     </div>
@@ -281,27 +324,32 @@ const SurveyStats: React.FC<SurveyStatsProps> = ({
                         🎯 {consistent.attendantName}
                       </p>
                       <p className="text-sm text-emerald-700">
-                        Consistente: {consistent.averageRating.toFixed(2)} em {consistent.totalEvaluations} avaliações
+                        Consistente: {consistent.averageRating.toFixed(2)} em{" "}
+                        {consistent.totalEvaluations} avaliações
                       </p>
                     </div>
-                  </div>
+                  </div>,
                 );
               }
 
               // 5. Em Crescimento (melhor entre os que têm poucas avaliações, excluindo já usados)
               const growing = analytics.topRatedAttendants
-                .filter(att =>
-                  !usedAttendants.has(att.attendantId) &&
-                  att.totalEvaluations >= 3 &&
-                  att.totalEvaluations <= 10 &&
-                  att.averageRating >= 4.0
+                .filter(
+                  (att) =>
+                    !usedAttendants.has(att.attendantId) &&
+                    att.totalEvaluations >= 3 &&
+                    att.totalEvaluations <= 10 &&
+                    att.averageRating >= 4.0,
                 )
                 .sort((a, b) => b.averageRating - a.averageRating)[0];
 
               if (growing) {
                 usedAttendants.add(growing.attendantId);
                 highlights.push(
-                  <div key="growing" className="flex items-center gap-3 p-3 bg-cyan-50 rounded-lg border border-cyan-200">
+                  <div
+                    key="growing"
+                    className="flex items-center gap-3 p-3 bg-cyan-50 rounded-lg border border-cyan-200"
+                  >
                     <div className="flex items-center justify-center w-8 h-8 bg-cyan-100 rounded-full">
                       <TrendingUp className="h-4 w-4 text-cyan-600" />
                     </div>
@@ -310,19 +358,28 @@ const SurveyStats: React.FC<SurveyStatsProps> = ({
                         🌟 {growing.attendantName}
                       </p>
                       <p className="text-sm text-cyan-700">
-                        Em crescimento: {growing.averageRating.toFixed(2)} ⭐ ({growing.totalEvaluations} avaliações)
+                        Em crescimento: {growing.averageRating.toFixed(2)} ⭐ (
+                        {growing.totalEvaluations} avaliações)
                       </p>
                     </div>
-                  </div>
+                  </div>,
                 );
               }
 
               // Se não temos destaques suficientes, adicionar "Precisa de Atenção"
-              if (highlights.length < 4 && analytics?.lowestRatedAttendants?.[0] &&
+              if (
+                highlights.length < 4 &&
+                analytics?.lowestRatedAttendants?.[0] &&
                 analytics.lowestRatedAttendants[0].averageRating < 4 &&
-                !usedAttendants.has(analytics.lowestRatedAttendants[0].attendantId)) {
+                !usedAttendants.has(
+                  analytics.lowestRatedAttendants[0].attendantId,
+                )
+              ) {
                 highlights.push(
-                  <div key="needs-attention" className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
+                  <div
+                    key="needs-attention"
+                    className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg border border-orange-200"
+                  >
                     <div className="flex items-center justify-center w-8 h-8 bg-orange-100 rounded-full">
                       <TrendingDown className="h-4 w-4 text-orange-600" />
                     </div>
@@ -331,14 +388,20 @@ const SurveyStats: React.FC<SurveyStatsProps> = ({
                         ⚠️ {analytics.lowestRatedAttendants[0].attendantName}
                       </p>
                       <p className="text-sm text-orange-700">
-                        Precisa de atenção: {analytics.lowestRatedAttendants[0].averageRating.toFixed(2)} ⭐
+                        Precisa de atenção:{" "}
+                        {analytics.lowestRatedAttendants[0].averageRating.toFixed(
+                          2,
+                        )}{" "}
+                        ⭐
                       </p>
                     </div>
-                  </div>
+                  </div>,
                 );
               }
 
-              return highlights.length > 0 ? highlights : (
+              return highlights.length > 0 ? (
+                highlights
+              ) : (
                 <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
                   <Users className="h-5 w-5 text-gray-500" />
                   <div className="flex-1">

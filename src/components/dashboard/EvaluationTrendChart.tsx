@@ -1,8 +1,18 @@
 "use client";
 
 import { Area, AreaChart, XAxis, YAxis } from "recharts";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { TrendingUp } from "lucide-react";
 
 interface EvaluationTrendData {
@@ -27,7 +37,10 @@ const chartConfig = {
   },
 };
 
-export function EvaluationTrendChart({ data, isLoading }: EvaluationTrendChartProps) {
+export function EvaluationTrendChart({
+  data,
+  isLoading,
+}: EvaluationTrendChartProps) {
   if (isLoading) {
     return (
       <Card>
@@ -59,20 +72,20 @@ export function EvaluationTrendChart({ data, isLoading }: EvaluationTrendChartPr
       <CardContent>
         <ChartContainer config={chartConfig} className="h-[300px]">
           <AreaChart data={data}>
-            <XAxis 
-              dataKey="date" 
+            <XAxis
+              dataKey="date"
               tickLine={false}
               axisLine={false}
               tickMargin={8}
             />
-            <YAxis 
+            <YAxis
               yAxisId="count"
               orientation="left"
               tickLine={false}
               axisLine={false}
               tickMargin={8}
             />
-            <YAxis 
+            <YAxis
               yAxisId="rating"
               orientation="right"
               domain={[0, 5]}
@@ -80,12 +93,14 @@ export function EvaluationTrendChart({ data, isLoading }: EvaluationTrendChartPr
               axisLine={false}
               tickMargin={8}
             />
-            <ChartTooltip 
+            <ChartTooltip
               content={
-                <ChartTooltipContent 
+                <ChartTooltipContent
                   formatter={(value, name) => [
-                    name === 'count' ? `${value} avaliações` : `${Number(value).toFixed(1)} ⭐`,
-                    name === 'count' ? 'Avaliações' : 'Nota Média'
+                    name === "count"
+                      ? `${value} avaliações`
+                      : `${Number(value).toFixed(1)} ⭐`,
+                    name === "count" ? "Avaliações" : "Nota Média",
                   ]}
                 />
               }

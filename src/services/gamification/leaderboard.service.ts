@@ -1,6 +1,6 @@
-import type { User, XpEvent, GamificationSeason } from '@/lib/types';
-import { XpService } from './xp.service';
-import { SeasonsService } from './seasons.service';
+import type { User, XpEvent, GamificationSeason } from "@/lib/types";
+import { XpService } from "./xp.service";
+import { SeasonsService } from "./seasons.service";
 
 export interface LeaderboardEntry {
   attendant: User;
@@ -43,46 +43,56 @@ export class LeaderboardService {
   static generateLeaderboard(
     attendants: User[],
     xpEvents: XpEvent[],
-    filters: LeaderboardFilters = {}
+    filters: LeaderboardFilters = {},
   ): LeaderboardEntry[] {
     let filteredEvents = [...xpEvents];
-    
+
     // Aplicar filtros de data
     if (filters.dateRange) {
-      filteredEvents = filteredEvents.filter(event => {
+      filteredEvents = filteredEvents.filter((event) => {
         const eventDate = new Date(event.createdAt);
-        return eventDate >= filters.dateRange!.start && eventDate <= filters.dateRange!.end;
+        return (
+          eventDate >= filters.dateRange!.start &&
+          eventDate <= filters.dateRange!.end
+        );
       });
     }
 
     // Aplicar filtro de temporada
     if (filters.seasonId) {
-      filteredEvents = filteredEvents.filter(event => event.seasonId === filters.seasonId);
+      filteredEvents = filteredEvents.filter(
+        (event) => event.seasonId === filters.seasonId,
+      );
     }
 
     // Agrupar eventos por atendente
     const attendantStats = XpService.groupEventsByAttendant(filteredEvents);
-    
+
     // Criar entradas do leaderboard
     const entries: LeaderboardEntry[] = attendants
-      .filter(attendant => {
+      .filter((attendant) => {
         // Filtrar por departamento se especificado
-        if (filters.departmentId && attendant.departmentId !== filters.departmentId) {
+        if (
+          filters.departmentId &&
+          attendant.departmentId !== filters.departmentId
+        ) {
           return false;
         }
         return true;
       })
-      .map(attendant => {
+      .map((attendant) => {
         const stats = attendantStats[attendant.id] || {
           totalXp: 0,
           eventsCount: 0,
           evaluationsCount: 0,
           achievementsCount: 0,
           averageRating: 0,
-          lastActivity: undefined
+          lastActivity: undefined,
         };
 
-        const attendantEvents = filteredEvents.filter(event => event.attendantId === attendant.id);
+        const attendantEvents = filteredEvents.filter(
+          (event) => event.attendantId === attendant.id,
+        );
         const currentLevel = XpService.getLevelFromXp(stats.totalXp);
 
         return {
@@ -94,10 +104,10 @@ export class LeaderboardService {
           evaluationsCount: stats.evaluationsCount,
           achievementsCount: stats.achievementsCount,
           averageRating: stats.averageRating,
-          lastActivity: stats.lastActivity
+          lastActivity: stats.lastActivity,
         };
       })
-      .filter(entry => {
+      .filter((entry) => {
         // Aplicar filtros de nível
         if (filters.minLevel && entry.currentLevel < filters.minLevel) {
           return false;
@@ -128,7 +138,7 @@ export class LeaderboardService {
     // Aplicar paginação
     const start = filters.offset || 0;
     const end = filters.limit ? start + filters.limit : undefined;
-    
+
     return entries.slice(start, end);
   }
 
@@ -138,14 +148,20 @@ export class LeaderboardService {
   static generateDepartmentLeaderboard(
     attendants: User[],
     xpEvents: XpEvent[],
-    filters: LeaderboardFilters = {}
+    filters: LeaderboardFilters = {},
   ): Record<string, LeaderboardEntry[]> {
-    const departments = [...new Set(attendants.map(a => a.departmentId).filter(Boolean))];
+    const departments = [
+      ...new Set(attendants.map((a) => a.departmentId).filter(Boolean)),
+    ];
     const result: Record<string, LeaderboardEntry[]> = {};
 
-    departments.forEach(departmentId => {
+    departments.forEach((departmentId) => {
       const departmentFilters = { ...filters, departmentId };
-      result[departmentId] = this.generateLeaderboard(attendants, xpEvents, departmentFilters);
+      result[departmentId] = this.generateLeaderboard(
+        attendants,
+        xpEvents,
+        departmentFilters,
+      );
     });
 
     return result;
@@ -158,19 +174,19 @@ export class LeaderboardService {
     attendantId: string,
     attendants: User[],
     xpEvents: XpEvent[],
-    filters: LeaderboardFilters = {}
+    filters: LeaderboardFilters = {},
   ): {
     position: number;
     entry: LeaderboardEntry | null;
     totalAttendants: number;
   } {
     const leaderboard = this.generateLeaderboard(attendants, xpEvents, filters);
-    const entry = leaderboard.find(e => e.attendant.id === attendantId);
-    
+    const entry = leaderboard.find((e) => e.attendant.id === attendantId);
+
     return {
       position: entry?.position || 0,
       entry: entry || null,
-      totalAttendants: leaderboard.length
+      totalAttendants: leaderboard.length,
     };
   }
 
@@ -181,16 +197,16 @@ export class LeaderboardService {
     attendants: User[],
     xpEvents: XpEvent[],
     seasons: GamificationSeason[],
-    filters: LeaderboardFilters = {}
+    filters: LeaderboardFilters = {},
   ): LeaderboardStats {
     const leaderboard = this.generateLeaderboard(attendants, xpEvents, filters);
     const activeSeason = SeasonsService.findActiveSeason(seasons);
-    
+
     const totalXp = leaderboard.reduce((sum, entry) => sum + entry.totalXp, 0);
     const averageXp = leaderboard.length > 0 ? totalXp / leaderboard.length : 0;
-    
+
     const topPerformer = leaderboard[0] || null;
-    
+
     // Encontrar o mais melhorado (comparando com período anterior)
     const mostImproved = this.findMostImprovedAttendant(leaderboard, xpEvents);
 
@@ -200,7 +216,7 @@ export class LeaderboardService {
       averageXp,
       topPerformer,
       mostImproved,
-      activeSeason
+      activeSeason,
     };
   }
 
@@ -209,22 +225,26 @@ export class LeaderboardService {
    */
   private static findMostImprovedAttendant(
     leaderboard: LeaderboardEntry[],
-    xpEvents: XpEvent[]
+    xpEvents: XpEvent[],
   ): LeaderboardEntry | null {
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    
+
     let maxImprovement = 0;
     let mostImproved: LeaderboardEntry | null = null;
 
-    leaderboard.forEach(entry => {
-      const recentEvents = xpEvents.filter(event => 
-        event.attendantId === entry.attendant.id &&
-        new Date(event.createdAt) >= thirtyDaysAgo
+    leaderboard.forEach((entry) => {
+      const recentEvents = xpEvents.filter(
+        (event) =>
+          event.attendantId === entry.attendant.id &&
+          new Date(event.createdAt) >= thirtyDaysAgo,
       );
-      
-      const recentXp = recentEvents.reduce((sum, event) => sum + event.xpGained, 0);
-      
+
+      const recentXp = recentEvents.reduce(
+        (sum, event) => sum + event.xpGained,
+        0,
+      );
+
       if (recentXp > maxImprovement) {
         maxImprovement = recentXp;
         mostImproved = entry;
@@ -240,13 +260,13 @@ export class LeaderboardService {
   static generatePeriodRanking(
     attendants: User[],
     xpEvents: XpEvent[],
-    period: 'daily' | 'weekly' | 'monthly',
-    date: Date = new Date()
+    period: "daily" | "weekly" | "monthly",
+    date: Date = new Date(),
   ): LeaderboardEntry[] {
     const { start, end } = this.getPeriodRange(period, date);
-    
+
     const filters: LeaderboardFilters = {
-      dateRange: { start, end }
+      dateRange: { start, end },
     };
 
     return this.generateLeaderboard(attendants, xpEvents, filters);
@@ -255,7 +275,10 @@ export class LeaderboardService {
   /**
    * Calcula o range de datas para um período
    */
-  private static getPeriodRange(period: 'daily' | 'weekly' | 'monthly', date: Date): {
+  private static getPeriodRange(
+    period: "daily" | "weekly" | "monthly",
+    date: Date,
+  ): {
     start: Date;
     end: Date;
   } {
@@ -263,20 +286,20 @@ export class LeaderboardService {
     const end = new Date(date);
 
     switch (period) {
-      case 'daily':
+      case "daily":
         start.setHours(0, 0, 0, 0);
         end.setHours(23, 59, 59, 999);
         break;
-      
-      case 'weekly':
+
+      case "weekly":
         const dayOfWeek = start.getDay();
         start.setDate(start.getDate() - dayOfWeek);
         start.setHours(0, 0, 0, 0);
         end.setDate(start.getDate() + 6);
         end.setHours(23, 59, 59, 999);
         break;
-      
-      case 'monthly':
+
+      case "monthly":
         start.setDate(1);
         start.setHours(0, 0, 0, 0);
         end.setMonth(end.getMonth() + 1, 0);
@@ -295,7 +318,7 @@ export class LeaderboardService {
     attendants: User[],
     xpEvents: XpEvent[],
     currentPeriod: { start: Date; end: Date },
-    previousPeriod: { start: Date; end: Date }
+    previousPeriod: { start: Date; end: Date },
   ): {
     current: {
       xp: number;
@@ -317,14 +340,14 @@ export class LeaderboardService {
       attendantId,
       attendants,
       xpEvents,
-      { dateRange: currentPeriod }
+      { dateRange: currentPeriod },
     );
-    
+
     const previousStats = this.findAttendantPosition(
       attendantId,
       attendants,
       xpEvents,
-      { dateRange: previousPeriod }
+      { dateRange: previousPeriod },
     );
 
     const currentXp = currentStats.entry?.totalXp || 0;
@@ -336,18 +359,18 @@ export class LeaderboardService {
       current: {
         xp: currentXp,
         position: currentStats.position,
-        evaluations: currentEvaluations
+        evaluations: currentEvaluations,
       },
       previous: {
         xp: previousXp,
         position: previousStats.position,
-        evaluations: previousEvaluations
+        evaluations: previousEvaluations,
       },
       improvement: {
         xp: currentXp - previousXp,
         position: previousStats.position - currentStats.position, // Melhoria = posição anterior - atual
-        evaluations: currentEvaluations - previousEvaluations
-      }
+        evaluations: currentEvaluations - previousEvaluations,
+      },
     };
   }
 
@@ -356,7 +379,7 @@ export class LeaderboardService {
    */
   static generateInsights(
     leaderboard: LeaderboardEntry[],
-    previousLeaderboard?: LeaderboardEntry[]
+    previousLeaderboard?: LeaderboardEntry[],
   ): {
     topPerformers: LeaderboardEntry[];
     risingStars: LeaderboardEntry[];
@@ -368,30 +391,39 @@ export class LeaderboardService {
     };
   } {
     const topPerformers = leaderboard.slice(0, 3);
-    
+
     // Rising stars: atendentes que subiram mais posições
     const risingStars = previousLeaderboard
       ? this.findRisingStars(leaderboard, previousLeaderboard)
       : [];
-    
+
     // Atendentes que precisam de atenção (baixo XP ou sem atividade recente)
-    const needsAttention = leaderboard.filter(entry => {
-      const hasLowXp = entry.totalXp < (leaderboard[0]?.totalXp || 0) * 0.1;
-      const hasNoRecentActivity = !entry.lastActivity || 
-        (new Date().getTime() - entry.lastActivity.getTime()) > 7 * 24 * 60 * 60 * 1000;
-      
-      return hasLowXp || hasNoRecentActivity;
-    }).slice(0, 5);
+    const needsAttention = leaderboard
+      .filter((entry) => {
+        const hasLowXp = entry.totalXp < (leaderboard[0]?.totalXp || 0) * 0.1;
+        const hasNoRecentActivity =
+          !entry.lastActivity ||
+          new Date().getTime() - entry.lastActivity.getTime() >
+            7 * 24 * 60 * 60 * 1000;
+
+        return hasLowXp || hasNoRecentActivity;
+      })
+      .slice(0, 5);
 
     // Calcular tendências
-    const averageXp = leaderboard.reduce((sum, entry) => sum + entry.totalXp, 0) / leaderboard.length;
+    const averageXp =
+      leaderboard.reduce((sum, entry) => sum + entry.totalXp, 0) /
+      leaderboard.length;
     const previousAverageXp = previousLeaderboard
-      ? previousLeaderboard.reduce((sum, entry) => sum + entry.totalXp, 0) / previousLeaderboard.length
+      ? previousLeaderboard.reduce((sum, entry) => sum + entry.totalXp, 0) /
+        previousLeaderboard.length
       : averageXp;
-    
+
     const averageXpChange = averageXp - previousAverageXp;
-    const participationRate = leaderboard.filter(entry => entry.totalXp > 0).length / leaderboard.length;
-    
+    const participationRate =
+      leaderboard.filter((entry) => entry.totalXp > 0).length /
+      leaderboard.length;
+
     // Competitividade: quão próximos estão os top performers
     const topXp = leaderboard[0]?.totalXp || 0;
     const tenthXp = leaderboard[9]?.totalXp || 0;
@@ -404,8 +436,8 @@ export class LeaderboardService {
       trends: {
         averageXpChange,
         participationRate,
-        competitiveness
-      }
+        competitiveness,
+      },
     };
   }
 
@@ -414,12 +446,15 @@ export class LeaderboardService {
    */
   private static findRisingStars(
     current: LeaderboardEntry[],
-    previous: LeaderboardEntry[]
+    previous: LeaderboardEntry[],
   ): LeaderboardEntry[] {
-    const improvements: Array<LeaderboardEntry & { positionChange: number }> = [];
+    const improvements: Array<LeaderboardEntry & { positionChange: number }> =
+      [];
 
-    current.forEach(currentEntry => {
-      const previousEntry = previous.find(p => p.attendant.id === currentEntry.attendant.id);
+    current.forEach((currentEntry) => {
+      const previousEntry = previous.find(
+        (p) => p.attendant.id === currentEntry.attendant.id,
+      );
       if (previousEntry) {
         const positionChange = previousEntry.position - currentEntry.position;
         if (positionChange > 0) {

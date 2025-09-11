@@ -1,8 +1,17 @@
-import React from 'react';
-import { DataValidator, LoadingTable, ErrorTable, EmptyTable } from '@/components/ui/data-validator';
-import { useSafeState } from '@/hooks/useSafeState';
-import { isValidAttendantArray, isValidImportStatus, DEFAULT_IMPORT_STATUS } from '@/lib/data-validation';
-import type { Attendant, ImportStatus } from '@/lib/types';
+import React from "react";
+import {
+  DataValidator,
+  LoadingTable,
+  ErrorTable,
+  EmptyTable,
+} from "@/components/ui/data-validator";
+import { useSafeState } from "@/hooks/useSafeState";
+import {
+  isValidAttendantArray,
+  isValidImportStatus,
+  DEFAULT_IMPORT_STATUS,
+} from "@/lib/data-validation";
+import type { Attendant, ImportStatus } from "@/lib/types";
 
 /**
  * Exemplo 1: Uso básico com array de atendentes
@@ -11,17 +20,19 @@ export function AttendantsTableExample() {
   const attendantsState = useSafeState({
     initialValue: [] as Attendant[],
     validator: isValidAttendantArray,
-    fallback: []
+    fallback: [],
   });
 
   const fetchAttendants = async () => {
     attendantsState.setLoading(true);
     try {
-      const response = await fetch('/api/attendants');
+      const response = await fetch("/api/attendants");
       const data = await response.json();
       attendantsState.setData(data);
     } catch (error) {
-      attendantsState.setError(error instanceof Error ? error.message : 'Erro ao carregar atendentes');
+      attendantsState.setError(
+        error instanceof Error ? error.message : "Erro ao carregar atendentes",
+      );
     } finally {
       attendantsState.setLoading(false);
     }
@@ -30,7 +41,7 @@ export function AttendantsTableExample() {
   return (
     <div className="space-y-4">
       <h2 className="text-2xl font-bold">Lista de Atendentes</h2>
-      
+
       <DataValidator
         data={attendantsState.data}
         fallback={[]}
@@ -58,11 +69,13 @@ export function AttendantsTableExample() {
                     <td className="p-4">{attendant.email}</td>
                     <td className="p-4">{attendant.funcao}</td>
                     <td className="p-4">
-                      <span className={`px-2 py-1 rounded text-sm ${
-                        attendant.status === 'ativo' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
+                      <span
+                        className={`px-2 py-1 rounded text-sm ${
+                          attendant.status === "ativo"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
                         {attendant.status}
                       </span>
                     </td>
@@ -88,7 +101,9 @@ export function CustomComponentsExample() {
   const customLoadingComponent = (
     <div className="flex flex-col items-center justify-center p-8 space-y-4">
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      <p className="text-sm text-gray-600">Carregando dados dos atendentes...</p>
+      <p className="text-sm text-gray-600">
+        Carregando dados dos atendentes...
+      </p>
     </div>
   );
 
@@ -96,10 +111,12 @@ export function CustomComponentsExample() {
     <div className="bg-red-50 border border-red-200 rounded-lg p-6">
       <div className="flex items-center space-x-2">
         <div className="text-red-600">⚠️</div>
-        <h3 className="text-lg font-medium text-red-800">Ops! Algo deu errado</h3>
+        <h3 className="text-lg font-medium text-red-800">
+          Ops! Algo deu errado
+        </h3>
       </div>
       <p className="text-red-700 mt-2">{error}</p>
-      <button 
+      <button
         onClick={() => window.location.reload()}
         className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
       >
@@ -147,7 +164,7 @@ export function ImportStatusExample() {
   const importState = useSafeState({
     initialValue: DEFAULT_IMPORT_STATUS,
     validator: isValidImportStatus,
-    fallback: DEFAULT_IMPORT_STATUS
+    fallback: DEFAULT_IMPORT_STATUS,
   });
 
   return (
@@ -167,13 +184,15 @@ export function ImportStatusExample() {
             <div>Status: {importStatus.status}</div>
             <div>Progresso: {importStatus.progress}%</div>
             <div>Título: {importStatus.title}</div>
-            <div>Aberto: {importStatus.isOpen ? 'Sim' : 'Não'}</div>
+            <div>Aberto: {importStatus.isOpen ? "Sim" : "Não"}</div>
             {importStatus.logs.length > 0 && (
               <div>
                 <h4 className="font-medium">Logs:</h4>
                 <ul className="list-disc list-inside">
                   {importStatus.logs.map((log, index) => (
-                    <li key={index} className="text-sm text-gray-600">{log}</li>
+                    <li key={index} className="text-sm text-gray-600">
+                      {log}
+                    </li>
                   ))}
                 </ul>
               </div>
@@ -193,13 +212,19 @@ export function InlineValidationExample() {
   const [loading, setLoading] = React.useState(false);
 
   // Validador inline para usuários
-  const isValidUserArray = (data: any): data is Array<{id: string, name: string, email: string}> => {
-    return Array.isArray(data) && data.every(user => 
-      user && 
-      typeof user.id === 'string' &&
-      typeof user.name === 'string' &&
-      typeof user.email === 'string' &&
-      user.email.includes('@')
+  const isValidUserArray = (
+    data: any,
+  ): data is Array<{ id: string; name: string; email: string }> => {
+    return (
+      Array.isArray(data) &&
+      data.every(
+        (user) =>
+          user &&
+          typeof user.id === "string" &&
+          typeof user.name === "string" &&
+          typeof user.email === "string" &&
+          user.email.includes("@"),
+      )
     );
   };
 
@@ -213,7 +238,7 @@ export function InlineValidationExample() {
     >
       {(validUsers) => (
         <div className="grid gap-4">
-          {validUsers.map(user => (
+          {validUsers.map((user) => (
             <div key={user.id} className="border rounded p-4">
               <h3 className="font-medium">{user.name}</h3>
               <p className="text-sm text-gray-600">{user.email}</p>
@@ -242,17 +267,17 @@ export function PreDefinedComponentsExample() {
 
       <div>
         <h3 className="text-lg font-medium mb-4">Error Table</h3>
-        <ErrorTable 
-          error="Falha na conexão com o banco de dados" 
-          onRetry={() => console.log('Retry clicked')}
+        <ErrorTable
+          error="Falha na conexão com o banco de dados"
+          onRetry={() => console.log("Retry clicked")}
         />
       </div>
 
       <div>
         <h3 className="text-lg font-medium mb-4">Empty Table</h3>
-        <EmptyTable 
+        <EmptyTable
           message="Nenhum registro encontrado na consulta"
-          onRetry={() => console.log('Reload clicked')}
+          onRetry={() => console.log("Reload clicked")}
         />
       </div>
     </div>
@@ -280,13 +305,15 @@ export function NestedValidatorsExample() {
             <h2 className="text-xl font-bold mb-4">
               Avaliações dos Atendentes ({validAttendants.length})
             </h2>
-            
-            {validAttendants.map(attendant => (
+
+            {validAttendants.map((attendant) => (
               <div key={attendant.id} className="border rounded-lg p-4 mb-4">
                 <h3 className="font-medium mb-2">{attendant.name}</h3>
-                
+
                 <DataValidator
-                  data={evaluations?.filter(eval => eval.attendantId === attendant.id)}
+                  data={evaluations?.filter(
+                    (eval) => eval.attendantId === attendant.id,
+                  )}
                   fallback={[]}
                   emptyMessage={`Nenhuma avaliação para ${attendant.name}`}
                   treatEmptyArrayAsEmpty={true}

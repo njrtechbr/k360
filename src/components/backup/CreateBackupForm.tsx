@@ -4,12 +4,26 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Database, Download, Settings, Info, Loader2 } from "lucide-react";
 import type { BackupOptions } from "@/hooks/useBackupManager";
 
@@ -28,7 +42,11 @@ interface CreateBackupFormProps {
   onCreateBackup: (options?: BackupOptions) => Promise<any>;
 }
 
-export function CreateBackupForm({ onBackupCreated, isCreating, onCreateBackup }: CreateBackupFormProps) {
+export function CreateBackupForm({
+  onBackupCreated,
+  isCreating,
+  onCreateBackup,
+}: CreateBackupFormProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const form = useForm<BackupFormData>({
@@ -52,12 +70,12 @@ export function CreateBackupForm({ onBackupCreated, isCreating, onCreateBackup }
 
       await onCreateBackup(options);
       onBackupCreated();
-      
+
       // Reset form after successful backup
       form.reset();
     } catch (error) {
       // Error handling is done in the hook
-      console.error('Erro no formulário de backup:', error);
+      console.error("Erro no formulário de backup:", error);
     }
   };
 
@@ -94,7 +112,8 @@ export function CreateBackupForm({ onBackupCreated, isCreating, onCreateBackup }
                       />
                     </FormControl>
                     <FormDescription>
-                      Se não especificado, será gerado automaticamente com timestamp
+                      Se não especificado, será gerado automaticamente com
+                      timestamp
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -104,7 +123,7 @@ export function CreateBackupForm({ onBackupCreated, isCreating, onCreateBackup }
               {/* Opções básicas */}
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Conteúdo do Backup</h3>
-                
+
                 <FormField
                   control={form.control}
                   name="includeSchema"
@@ -182,7 +201,7 @@ export function CreateBackupForm({ onBackupCreated, isCreating, onCreateBackup }
                   disabled={isCreating}
                 >
                   <Settings className="h-4 w-4" />
-                  {showAdvanced ? 'Ocultar' : 'Mostrar'} Configurações Avançadas
+                  {showAdvanced ? "Ocultar" : "Mostrar"} Configurações Avançadas
                 </Button>
 
                 {showAdvanced && (
@@ -216,12 +235,14 @@ export function CreateBackupForm({ onBackupCreated, isCreating, onCreateBackup }
                     <div>
                       <strong>Formato:</strong>
                       <p className="text-muted-foreground">
-                        {watchedValues.compress ? 'SQL.gz' : 'SQL'}
+                        {watchedValues.compress ? "SQL.gz" : "SQL"}
                       </p>
                     </div>
                     <div>
                       <strong>Validação:</strong>
-                      <p className="text-muted-foreground">Checksum automático</p>
+                      <p className="text-muted-foreground">
+                        Checksum automático
+                      </p>
                     </div>
                   </div>
                 </CardContent>
@@ -231,7 +252,8 @@ export function CreateBackupForm({ onBackupCreated, isCreating, onCreateBackup }
               {!watchedValues.includeData && !watchedValues.includeSchema && (
                 <Alert>
                   <AlertDescription>
-                    Atenção: Você deve incluir pelo menos a estrutura ou os dados no backup.
+                    Atenção: Você deve incluir pelo menos a estrutura ou os
+                    dados no backup.
                   </AlertDescription>
                 </Alert>
               )}
@@ -248,7 +270,10 @@ export function CreateBackupForm({ onBackupCreated, isCreating, onCreateBackup }
                 </Button>
                 <Button
                   type="submit"
-                  disabled={isCreating || (!watchedValues.includeData && !watchedValues.includeSchema)}
+                  disabled={
+                    isCreating ||
+                    (!watchedValues.includeData && !watchedValues.includeSchema)
+                  }
                   className="flex items-center gap-2"
                 >
                   {isCreating ? (
@@ -275,26 +300,26 @@ export function CreateBackupForm({ onBackupCreated, isCreating, onCreateBackup }
 // Função auxiliar para calcular tamanho estimado
 function calculateEstimatedSize(options: BackupFormData): string {
   let baseSize = 0;
-  
+
   if (options.includeSchema) {
     baseSize += 2; // ~2MB para estrutura
   }
-  
+
   if (options.includeData) {
     baseSize += 50; // ~50MB para dados (estimativa)
   }
-  
+
   if (options.compress && baseSize > 0) {
     baseSize = baseSize * 0.3; // Compressão reduz ~70%
   }
-  
+
   if (baseSize === 0) {
     return "0 MB";
   }
-  
+
   if (baseSize < 1) {
     return `${Math.round(baseSize * 1024)} KB`;
   }
-  
+
   return `${Math.round(baseSize)} MB`;
 }

@@ -1,19 +1,54 @@
-
-
-import type { Achievement, Attendant, Evaluation, EvaluationAnalysis, LevelReward } from './types';
+import type {
+  Achievement,
+  Attendant,
+  Evaluation,
+  EvaluationAnalysis,
+  LevelReward,
+} from "./types";
 import {
-    Award, BarChart, BadgeCent, Crown, Sparkles, Target, Trophy, Zap, Rocket, StarHalf, Users, Smile, HeartHandshake, Gem, Medal, MessageSquareQuote, MessageSquarePlus, MessageSquareHeart, MessageSquareWarning, TrendingUp, ShieldCheck, Star, Component, Braces, UserCheck, BookOpen
+  Award,
+  BarChart,
+  BadgeCent,
+  Crown,
+  Sparkles,
+  Target,
+  Trophy,
+  Zap,
+  Rocket,
+  StarHalf,
+  Users,
+  Smile,
+  HeartHandshake,
+  Gem,
+  Medal,
+  MessageSquareQuote,
+  MessageSquarePlus,
+  MessageSquareHeart,
+  MessageSquareWarning,
+  TrendingUp,
+  ShieldCheck,
+  Star,
+  Component,
+  Braces,
+  UserCheck,
+  BookOpen,
 } from "lucide-react";
 
-
-const getAttendantSentimentCounts = (attendantId: string, evaluations: Evaluation[], analysisResults: EvaluationAnalysis[]) => {
-    const attendantEvaluationIds = new Set(evaluations.map(e => e.id));
-    return analysisResults
-        .filter(ar => attendantEvaluationIds.has(ar.evaluationId))
-        .reduce((acc, ar) => {
-            acc[ar.sentiment] = (acc[ar.sentiment] || 0) + 1;
-            return acc;
-        }, {} as Record<EvaluationAnalysis['sentiment'], number>);
+const getAttendantSentimentCounts = (
+  attendantId: string,
+  evaluations: Evaluation[],
+  analysisResults: EvaluationAnalysis[],
+) => {
+  const attendantEvaluationIds = new Set(evaluations.map((e) => e.id));
+  return analysisResults
+    .filter((ar) => attendantEvaluationIds.has(ar.evaluationId))
+    .reduce(
+      (acc, ar) => {
+        acc[ar.sentiment] = (acc[ar.sentiment] || 0) + 1;
+        return acc;
+      },
+      {} as Record<EvaluationAnalysis["sentiment"], number>,
+    );
 };
 
 export const INITIAL_ACHIEVEMENTS: Achievement[] = [
@@ -36,9 +71,13 @@ export const INITIAL_ACHIEVEMENTS: Achievement[] = [
     xp: 25,
     active: true,
     isUnlocked: (attendant, evaluations, allEval, allAtt, analysis) => {
-        if (!analysis) return false;
-        const counts = getAttendantSentimentCounts(attendant.id, evaluations, analysis);
-        return (counts.Positivo ?? 0) >= 1;
+      if (!analysis) return false;
+      const counts = getAttendantSentimentCounts(
+        attendant.id,
+        evaluations,
+        analysis,
+      );
+      return (counts.Positivo ?? 0) >= 1;
     },
   },
   {
@@ -52,15 +91,17 @@ export const INITIAL_ACHIEVEMENTS: Achievement[] = [
     isUnlocked: (attendant, evaluations) => evaluations.length >= 10,
   },
   {
-    id: 'trinca-perfeita',
-    title: 'Trinca Perfeita',
-    description: 'Receba 3 avaliações de 5 estrelas consecutivas',
+    id: "trinca-perfeita",
+    title: "Trinca Perfeita",
+    description: "Receba 3 avaliações de 5 estrelas consecutivas",
     icon: Smile,
-    color: 'text-pink-400',
+    color: "text-pink-400",
     xp: 100,
     active: true,
     isUnlocked: (attendant, evaluations) => {
-      const sortedEvals = [...evaluations].sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
+      const sortedEvals = [...evaluations].sort(
+        (a, b) => new Date(a.data).getTime() - new Date(b.data).getTime(),
+      );
       let consecutiveFives = 0;
       for (const ev of sortedEvals) {
         if (ev.nota === 5) {
@@ -76,15 +117,20 @@ export const INITIAL_ACHIEVEMENTS: Achievement[] = [
   {
     id: "ia-ouvinte-atento",
     title: "Ouvinte Atento (IA)",
-    description: "Receba um comentário 'Negativo', mostrando abertura a críticas.",
+    description:
+      "Receba um comentário 'Negativo', mostrando abertura a críticas.",
     icon: MessageSquareWarning,
     color: "text-amber-500",
     xp: 75,
     active: true,
     isUnlocked: (attendant, evaluations, allEval, allAtt, analysis) => {
-        if (!analysis) return false;
-        const counts = getAttendantSentimentCounts(attendant.id, evaluations, analysis);
-        return (counts.Negativo ?? 0) >= 1;
+      if (!analysis) return false;
+      const counts = getAttendantSentimentCounts(
+        attendant.id,
+        evaluations,
+        analysis,
+      );
+      return (counts.Negativo ?? 0) >= 1;
     },
   },
   {
@@ -106,9 +152,13 @@ export const INITIAL_ACHIEVEMENTS: Achievement[] = [
     xp: 200,
     active: true,
     isUnlocked: (attendant, evaluations, allEval, allAtt, analysis) => {
-        if (!analysis) return false;
-        const counts = getAttendantSentimentCounts(attendant.id, evaluations, analysis);
-        return (counts.Positivo ?? 0) >= 10;
+      if (!analysis) return false;
+      const counts = getAttendantSentimentCounts(
+        attendant.id,
+        evaluations,
+        analysis,
+      );
+      return (counts.Positivo ?? 0) >= 10;
     },
   },
   {
@@ -131,7 +181,7 @@ export const INITIAL_ACHIEVEMENTS: Achievement[] = [
     active: true,
     isUnlocked: (attendant, evaluations) => {
       if (evaluations.length < 20) return false; // Mínimo de 20 avaliações
-      const positiveCount = evaluations.filter(ev => ev.nota >= 4).length;
+      const positiveCount = evaluations.filter((ev) => ev.nota >= 4).length;
       return (positiveCount / evaluations.length) * 100 >= 90;
     },
   },
@@ -145,7 +195,8 @@ export const INITIAL_ACHIEVEMENTS: Achievement[] = [
     active: true,
     isUnlocked: (attendant, evaluations) => {
       if (evaluations.length < 50) return false;
-      const avg = evaluations.reduce((sum, ev) => sum + ev.nota, 0) / evaluations.length;
+      const avg =
+        evaluations.reduce((sum, ev) => sum + ev.nota, 0) / evaluations.length;
       return avg > 4.5;
     },
   },
@@ -169,20 +220,21 @@ export const INITIAL_ACHIEVEMENTS: Achievement[] = [
     active: true,
     isUnlocked: (attendant, evaluations) => {
       if (evaluations.length < 25) return false;
-      const avg = evaluations.reduce((sum, ev) => sum + ev.nota, 0) / evaluations.length;
+      const avg =
+        evaluations.reduce((sum, ev) => sum + ev.nota, 0) / evaluations.length;
       return avg === 5;
     },
   },
   {
-    id: 'mestre-qualidade',
-    title: 'Mestre da Qualidade',
-    description: 'Receba 50 avaliações de 5 estrelas',
+    id: "mestre-qualidade",
+    title: "Mestre da Qualidade",
+    description: "Receba 50 avaliações de 5 estrelas",
     icon: Gem,
-    color: 'text-sky-400',
+    color: "text-sky-400",
     xp: 1200,
     active: true,
     isUnlocked: (attendant, evaluations) => {
-      return evaluations.filter(ev => ev.nota === 5).length >= 50;
+      return evaluations.filter((ev) => ev.nota === 5).length >= 50;
     },
   },
   {
@@ -194,9 +246,13 @@ export const INITIAL_ACHIEVEMENTS: Achievement[] = [
     xp: 500,
     active: true,
     isUnlocked: (attendant, evaluations, allEval, allAtt, analysis) => {
-        if (!analysis) return false;
-        const counts = getAttendantSentimentCounts(attendant.id, evaluations, analysis);
-        return (counts.Negativo ?? 0) >= 5;
+      if (!analysis) return false;
+      const counts = getAttendantSentimentCounts(
+        attendant.id,
+        evaluations,
+        analysis,
+      );
+      return (counts.Negativo ?? 0) >= 5;
     },
   },
   {
@@ -211,80 +267,79 @@ export const INITIAL_ACHIEVEMENTS: Achievement[] = [
   },
 ];
 
-
 export const INITIAL_LEVEL_REWARDS: LevelReward[] = [
-    {
-        level: 1,
-        title: "Iniciante",
-        description: "Você começou sua jornada!",
-        icon: ShieldCheck,
-        color: "text-gray-400",
-        active: true,
-    },
-    {
-        level: 5,
-        title: "Selo de Bronze",
-        description: "Reconhecimento pelo seu esforço inicial.",
-        icon: Medal,
-        color: "text-orange-400",
-        active: true,
-    },
-    {
-        level: 10,
-        title: "Especialista em Treinamento",
-        description: "Acesso a novos materiais de treinamento.",
-        icon: BookOpen,
-        color: "text-blue-400",
-        active: true,
-    },
-    {
-        level: 15,
-        title: "Selo de Prata",
-        description: "Um marco de consistência e qualidade.",
-        icon: Medal,
-        color: "text-gray-400",
-        active: true,
-    },
-    {
-        level: 20,
-        title: "Mentor de Pares",
-        description: "Convidado para ajudar no treinamento de novos colegas.",
-        icon: Users,
-        color: "text-green-500",
-        active: true,
-    },
-    {
-        level: 25,
-        title: "Selo de Ouro",
-        description: "Prova de sua dedicação e excelência.",
-        icon: Medal,
-        color: "text-yellow-400",
-        active: true,
-    },
-    {
-        level: 30,
-        title: "Embaixador da Marca",
-        description: "Represente a equipe em eventos internos.",
-        icon: UserCheck,
-        color: "text-indigo-500",
-        active: true,
-    },
-    {
-        level: 40,
-        title: "Selo de Platina",
-        description: "Um dos pilares da excelência no atendimento.",
-        icon: Medal,
-        color: "text-cyan-400",
-        active: true,
-    },
-    {
-        level: 50,
-        title: "Lenda do Atendimento",
-        description: "Você alcançou o auge da maestria!",
-        icon: Crown,
-        color: "text-purple-500",
-        active: true,
-    }
+  {
+    level: 1,
+    title: "Iniciante",
+    description: "Você começou sua jornada!",
+    icon: ShieldCheck,
+    color: "text-gray-400",
+    active: true,
+  },
+  {
+    level: 5,
+    title: "Selo de Bronze",
+    description: "Reconhecimento pelo seu esforço inicial.",
+    icon: Medal,
+    color: "text-orange-400",
+    active: true,
+  },
+  {
+    level: 10,
+    title: "Especialista em Treinamento",
+    description: "Acesso a novos materiais de treinamento.",
+    icon: BookOpen,
+    color: "text-blue-400",
+    active: true,
+  },
+  {
+    level: 15,
+    title: "Selo de Prata",
+    description: "Um marco de consistência e qualidade.",
+    icon: Medal,
+    color: "text-gray-400",
+    active: true,
+  },
+  {
+    level: 20,
+    title: "Mentor de Pares",
+    description: "Convidado para ajudar no treinamento de novos colegas.",
+    icon: Users,
+    color: "text-green-500",
+    active: true,
+  },
+  {
+    level: 25,
+    title: "Selo de Ouro",
+    description: "Prova de sua dedicação e excelência.",
+    icon: Medal,
+    color: "text-yellow-400",
+    active: true,
+  },
+  {
+    level: 30,
+    title: "Embaixador da Marca",
+    description: "Represente a equipe em eventos internos.",
+    icon: UserCheck,
+    color: "text-indigo-500",
+    active: true,
+  },
+  {
+    level: 40,
+    title: "Selo de Platina",
+    description: "Um dos pilares da excelência no atendimento.",
+    icon: Medal,
+    color: "text-cyan-400",
+    active: true,
+  },
+  {
+    level: 50,
+    title: "Lenda do Atendimento",
+    description: "Você alcançou o auge da maestria!",
+    icon: Crown,
+    color: "text-purple-500",
+    active: true,
+  },
 ];
 // Alias para compatibilidade
 export const achievements = INITIAL_ACHIEVEMENTS;

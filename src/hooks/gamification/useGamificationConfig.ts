@@ -1,22 +1,37 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import { ConfigService, type GamificationSettings } from '@/services/gamification';
-import type { GamificationConfig, AchievementConfig, LevelTrackConfig } from '@/lib/types';
+import { useState, useEffect, useCallback } from "react";
+import { useToast } from "@/hooks/use-toast";
+import {
+  ConfigService,
+  type GamificationSettings,
+} from "@/services/gamification";
+import type {
+  GamificationConfig,
+  AchievementConfig,
+  LevelTrackConfig,
+} from "@/lib/types";
 
 export interface UseGamificationConfigReturn {
   // Estado
   config: GamificationSettings;
   isLoading: boolean;
   error: string | null;
-  
+
   // Ações
-  updateGamificationConfig: (config: Partial<GamificationConfig>) => Promise<void>;
-  updateAchievementConfig: (config: Partial<AchievementConfig>) => Promise<void>;
+  updateGamificationConfig: (
+    config: Partial<GamificationConfig>,
+  ) => Promise<void>;
+  updateAchievementConfig: (
+    config: Partial<AchievementConfig>,
+  ) => Promise<void>;
   updateLevelTrackConfig: (config: Partial<LevelTrackConfig>) => Promise<void>;
   resetToDefaults: () => Promise<void>;
-  validateConfig: () => { isValid: boolean; errors: string[]; warnings: string[] };
+  validateConfig: () => {
+    isValid: boolean;
+    errors: string[];
+    warnings: string[];
+  };
   exportConfig: () => string;
   importConfig: (configJson: string) => Promise<boolean>;
   refreshConfig: () => Promise<void>;
@@ -26,7 +41,7 @@ export function useGamificationConfig(): UseGamificationConfigReturn {
   const [config, setConfig] = useState<GamificationSettings>({
     gamificationConfig: ConfigService.getDefaultGamificationConfig(),
     achievementConfig: ConfigService.getDefaultAchievementConfig(),
-    levelTrackConfig: ConfigService.getDefaultLevelTrackConfig()
+    levelTrackConfig: ConfigService.getDefaultLevelTrackConfig(),
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,41 +51,43 @@ export function useGamificationConfig(): UseGamificationConfigReturn {
   const fetchConfig = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
-      const response = await fetch('/api/gamification/config');
+      const response = await fetch("/api/gamification/config");
       if (!response.ok) {
         throw new Error(`Erro na API: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       // Mesclar com valores padrão
       const mergedConfig: GamificationSettings = {
         gamificationConfig: ConfigService.mergeWithDefaults(
           data.gamificationConfig || {},
-          ConfigService.getDefaultGamificationConfig()
+          ConfigService.getDefaultGamificationConfig(),
         ),
         achievementConfig: ConfigService.mergeWithDefaults(
           data.achievementConfig || {},
-          ConfigService.getDefaultAchievementConfig()
+          ConfigService.getDefaultAchievementConfig(),
         ),
         levelTrackConfig: ConfigService.mergeWithDefaults(
           data.levelTrackConfig || {},
-          ConfigService.getDefaultLevelTrackConfig()
-        )
+          ConfigService.getDefaultLevelTrackConfig(),
+        ),
       };
-      
+
       setConfig(mergedConfig);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
+      const errorMessage =
+        err instanceof Error ? err.message : "Erro desconhecido";
       setError(errorMessage);
-      console.error('Erro ao buscar configurações de gamificação:', err);
-      
+      console.error("Erro ao buscar configurações de gamificação:", err);
+
       toast({
-        variant: 'destructive',
-        title: 'Erro',
-        description: 'Não foi possível carregar as configurações de gamificação.'
+        variant: "destructive",
+        title: "Erro",
+        description:
+          "Não foi possível carregar as configurações de gamificação.",
       });
     } finally {
       setIsLoading(false);
@@ -83,169 +100,185 @@ export function useGamificationConfig(): UseGamificationConfigReturn {
   }, [fetchConfig]);
 
   // Atualizar configuração de gamificação
-  const updateGamificationConfig = useCallback(async (newConfig: Partial<GamificationConfig>) => {
-    try {
-      setIsLoading(true);
-      
-      const response = await fetch('/api/gamification/config', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          type: 'gamification',
-          config: newConfig
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Falha ao atualizar configuração de gamificação');
+  const updateGamificationConfig = useCallback(
+    async (newConfig: Partial<GamificationConfig>) => {
+      try {
+        setIsLoading(true);
+
+        const response = await fetch("/api/gamification/config", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            type: "gamification",
+            config: newConfig,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Falha ao atualizar configuração de gamificação");
+        }
+
+        // Atualizar estado local
+        setConfig((prev) => ({
+          ...prev,
+          gamificationConfig: { ...prev.gamificationConfig, ...newConfig },
+        }));
+
+        toast({
+          title: "Configuração Salva!",
+          description: "As configurações de gamificação foram atualizadas.",
+        });
+      } catch (err) {
+        console.error("Erro ao atualizar configuração de gamificação:", err);
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Não foi possível salvar as configurações.",
+        });
+      } finally {
+        setIsLoading(false);
       }
-      
-      // Atualizar estado local
-      setConfig(prev => ({
-        ...prev,
-        gamificationConfig: { ...prev.gamificationConfig, ...newConfig }
-      }));
-      
-      toast({
-        title: 'Configuração Salva!',
-        description: 'As configurações de gamificação foram atualizadas.'
-      });
-    } catch (err) {
-      console.error('Erro ao atualizar configuração de gamificação:', err);
-      toast({
-        variant: 'destructive',
-        title: 'Erro',
-        description: 'Não foi possível salvar as configurações.'
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
+    },
+    [toast],
+  );
 
   // Atualizar configuração de conquistas
-  const updateAchievementConfig = useCallback(async (newConfig: Partial<AchievementConfig>) => {
-    try {
-      setIsLoading(true);
-      
-      const response = await fetch('/api/gamification/config', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          type: 'achievement',
-          config: newConfig
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Falha ao atualizar configuração de conquistas');
+  const updateAchievementConfig = useCallback(
+    async (newConfig: Partial<AchievementConfig>) => {
+      try {
+        setIsLoading(true);
+
+        const response = await fetch("/api/gamification/config", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            type: "achievement",
+            config: newConfig,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Falha ao atualizar configuração de conquistas");
+        }
+
+        // Atualizar estado local
+        setConfig((prev) => ({
+          ...prev,
+          achievementConfig: { ...prev.achievementConfig, ...newConfig },
+        }));
+
+        toast({
+          title: "Configuração Salva!",
+          description: "As configurações de conquistas foram atualizadas.",
+        });
+      } catch (err) {
+        console.error("Erro ao atualizar configuração de conquistas:", err);
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Não foi possível salvar as configurações.",
+        });
+      } finally {
+        setIsLoading(false);
       }
-      
-      // Atualizar estado local
-      setConfig(prev => ({
-        ...prev,
-        achievementConfig: { ...prev.achievementConfig, ...newConfig }
-      }));
-      
-      toast({
-        title: 'Configuração Salva!',
-        description: 'As configurações de conquistas foram atualizadas.'
-      });
-    } catch (err) {
-      console.error('Erro ao atualizar configuração de conquistas:', err);
-      toast({
-        variant: 'destructive',
-        title: 'Erro',
-        description: 'Não foi possível salvar as configurações.'
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
+    },
+    [toast],
+  );
 
   // Atualizar configuração de trilha de níveis
-  const updateLevelTrackConfig = useCallback(async (newConfig: Partial<LevelTrackConfig>) => {
-    try {
-      setIsLoading(true);
-      
-      const response = await fetch('/api/gamification/config', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          type: 'levelTrack',
-          config: newConfig
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Falha ao atualizar configuração de trilha de níveis');
+  const updateLevelTrackConfig = useCallback(
+    async (newConfig: Partial<LevelTrackConfig>) => {
+      try {
+        setIsLoading(true);
+
+        const response = await fetch("/api/gamification/config", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            type: "levelTrack",
+            config: newConfig,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(
+            "Falha ao atualizar configuração de trilha de níveis",
+          );
+        }
+
+        // Atualizar estado local
+        setConfig((prev) => ({
+          ...prev,
+          levelTrackConfig: { ...prev.levelTrackConfig, ...newConfig },
+        }));
+
+        toast({
+          title: "Configuração Salva!",
+          description:
+            "As configurações de trilha de níveis foram atualizadas.",
+        });
+      } catch (err) {
+        console.error(
+          "Erro ao atualizar configuração de trilha de níveis:",
+          err,
+        );
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Não foi possível salvar as configurações.",
+        });
+      } finally {
+        setIsLoading(false);
       }
-      
-      // Atualizar estado local
-      setConfig(prev => ({
-        ...prev,
-        levelTrackConfig: { ...prev.levelTrackConfig, ...newConfig }
-      }));
-      
-      toast({
-        title: 'Configuração Salva!',
-        description: 'As configurações de trilha de níveis foram atualizadas.'
-      });
-    } catch (err) {
-      console.error('Erro ao atualizar configuração de trilha de níveis:', err);
-      toast({
-        variant: 'destructive',
-        title: 'Erro',
-        description: 'Não foi possível salvar as configurações.'
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
+    },
+    [toast],
+  );
 
   // Resetar para valores padrão
   const resetToDefaults = useCallback(async () => {
     try {
       setIsLoading(true);
-      
+
       const defaultConfig: GamificationSettings = {
         gamificationConfig: ConfigService.getDefaultGamificationConfig(),
         achievementConfig: ConfigService.getDefaultAchievementConfig(),
-        levelTrackConfig: ConfigService.getDefaultLevelTrackConfig()
+        levelTrackConfig: ConfigService.getDefaultLevelTrackConfig(),
       };
-      
-      const response = await fetch('/api/gamification/config', {
-        method: 'PUT',
+
+      const response = await fetch("/api/gamification/config", {
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          type: 'reset',
-          config: defaultConfig
-        })
+          type: "reset",
+          config: defaultConfig,
+        }),
       });
-      
+
       if (!response.ok) {
-        throw new Error('Falha ao resetar configurações');
+        throw new Error("Falha ao resetar configurações");
       }
-      
+
       setConfig(defaultConfig);
-      
+
       toast({
-        title: 'Configurações Resetadas!',
-        description: 'Todas as configurações foram restauradas para os valores padrão.'
+        title: "Configurações Resetadas!",
+        description:
+          "Todas as configurações foram restauradas para os valores padrão.",
       });
     } catch (err) {
-      console.error('Erro ao resetar configurações:', err);
+      console.error("Erro ao resetar configurações:", err);
       toast({
-        variant: 'destructive',
-        title: 'Erro',
-        description: 'Não foi possível resetar as configurações.'
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível resetar as configurações.",
       });
     } finally {
       setIsLoading(false);
@@ -263,57 +296,63 @@ export function useGamificationConfig(): UseGamificationConfigReturn {
   }, [config]);
 
   // Importar configuração
-  const importConfig = useCallback(async (configJson: string) => {
-    try {
-      const importResult = ConfigService.importConfig(configJson);
-      
-      if (!importResult.success) {
+  const importConfig = useCallback(
+    async (configJson: string) => {
+      try {
+        const importResult = ConfigService.importConfig(configJson);
+
+        if (!importResult.success) {
+          toast({
+            variant: "destructive",
+            title: "Erro na Importação",
+            description: importResult.error,
+          });
+          return false;
+        }
+
+        if (!importResult.settings) {
+          throw new Error(
+            "Configurações não encontradas no resultado da importação",
+          );
+        }
+
+        // Salvar configurações importadas
+        const response = await fetch("/api/gamification/config", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            type: "import",
+            config: importResult.settings,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Falha ao salvar configurações importadas");
+        }
+
+        setConfig(importResult.settings);
+
         toast({
-          variant: 'destructive',
-          title: 'Erro na Importação',
-          description: importResult.error
+          title: "Configurações Importadas!",
+          description:
+            "As configurações foram importadas e salvas com sucesso.",
+        });
+
+        return true;
+      } catch (err) {
+        console.error("Erro ao importar configurações:", err);
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Não foi possível importar as configurações.",
         });
         return false;
       }
-      
-      if (!importResult.settings) {
-        throw new Error('Configurações não encontradas no resultado da importação');
-      }
-      
-      // Salvar configurações importadas
-      const response = await fetch('/api/gamification/config', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          type: 'import',
-          config: importResult.settings
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Falha ao salvar configurações importadas');
-      }
-      
-      setConfig(importResult.settings);
-      
-      toast({
-        title: 'Configurações Importadas!',
-        description: 'As configurações foram importadas e salvas com sucesso.'
-      });
-      
-      return true;
-    } catch (err) {
-      console.error('Erro ao importar configurações:', err);
-      toast({
-        variant: 'destructive',
-        title: 'Erro',
-        description: 'Não foi possível importar as configurações.'
-      });
-      return false;
-    }
-  }, [toast]);
+    },
+    [toast],
+  );
 
   // Atualizar configurações manualmente
   const refreshConfig = useCallback(async () => {
@@ -331,6 +370,6 @@ export function useGamificationConfig(): UseGamificationConfigReturn {
     validateConfig,
     exportConfig,
     importConfig,
-    refreshConfig
+    refreshConfig,
   };
 }

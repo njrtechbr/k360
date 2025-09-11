@@ -1,5 +1,5 @@
-import type { Evaluation, Attendant, EvaluationAnalysis } from '@/lib/types';
-import type { EvaluationAnalytics } from '@/hooks/survey/types';
+import type { Evaluation, Attendant, EvaluationAnalysis } from "@/lib/types";
+import type { EvaluationAnalytics } from "@/hooks/survey/types";
 
 // Props para SurveyForm
 export interface SurveyFormProps {
@@ -14,7 +14,7 @@ export interface RatingStarsProps {
   value: number;
   onChange?: (value: number) => void;
   readOnly?: boolean;
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
   showValue?: boolean;
   className?: string;
 }
@@ -60,7 +60,7 @@ export interface SentimentBadgeProps {
   /** Nível de confiança da análise (0-1) */
   confidence?: number;
   /** Tamanho do badge */
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
   /** Se deve mostrar o nível de confiança */
   showConfidence?: boolean;
   /** Classe CSS adicional */
@@ -68,7 +68,7 @@ export interface SentimentBadgeProps {
   /** Se deve mostrar ícone */
   showIcon?: boolean;
   /** Variante do badge */
-  variant?: 'default' | 'outline' | 'subtle';
+  variant?: "default" | "outline" | "subtle";
   /** Tooltip personalizado */
   tooltip?: string | null;
 }
@@ -130,7 +130,7 @@ export interface SurveyFiltersProps {
 export interface SurveyFilters {
   attendantId?: string;
   rating?: number;
-  sentiment?: 'Positivo' | 'Negativo' | 'Neutro';
+  sentiment?: "Positivo" | "Negativo" | "Neutro";
   dateFrom?: string;
   dateTo?: string;
   hasComment?: boolean;

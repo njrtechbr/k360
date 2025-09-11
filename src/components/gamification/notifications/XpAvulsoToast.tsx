@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from 'react';
-import { toast } from '@/hooks/use-toast';
-import { Gift, Trophy, Award, Zap } from 'lucide-react';
+import { useEffect } from "react";
+import { toast } from "@/hooks/use-toast";
+import { Gift, Trophy, Award, Zap } from "lucide-react";
 
 interface XpAvulsoNotificationData {
   xpAmount: number;
@@ -25,11 +25,16 @@ interface XpAvulsoToastProps {
   attendantName?: string;
 }
 
-export default function XpAvulsoToast({ attendantId, attendantName }: XpAvulsoToastProps) {
+export default function XpAvulsoToast({
+  attendantId,
+  attendantName,
+}: XpAvulsoToastProps) {
   useEffect(() => {
-    const handleXpAvulsoGranted = (event: CustomEvent<XpAvulsoNotificationData>) => {
+    const handleXpAvulsoGranted = (
+      event: CustomEvent<XpAvulsoNotificationData>,
+    ) => {
       const data = event.detail;
-      
+
       // Toast principal de XP recebido
       toast({
         title: (
@@ -43,7 +48,8 @@ export default function XpAvulsoToast({ attendantId, attendantName }: XpAvulsoTo
             <div className="flex items-center gap-2">
               <Zap className="h-4 w-4 text-yellow-500" />
               <span>
-                {attendantName ? `${attendantName} recebeu` : 'Você recebeu'} <strong>{data.xpAmount} XP</strong> por "{data.typeName}"
+                {attendantName ? `${attendantName} recebeu` : "Você recebeu"}{" "}
+                <strong>{data.xpAmount} XP</strong> por "{data.typeName}"
               </span>
             </div>
             {data.justification && (
@@ -54,7 +60,7 @@ export default function XpAvulsoToast({ attendantId, attendantName }: XpAvulsoTo
           </div>
         ),
         duration: 6000,
-        className: "border-l-4 border-l-blue-500"
+        className: "border-l-4 border-l-blue-500",
       });
 
       // Toast de subida de nível (com delay)
@@ -70,7 +76,11 @@ export default function XpAvulsoToast({ attendantId, attendantName }: XpAvulsoTo
             description: (
               <div className="space-y-1">
                 <div>
-                  Parabéns! {attendantName ? `${attendantName} alcançou` : 'Você alcançou'} o <strong>nível {data.levelUp.newLevel}</strong>!
+                  Parabéns!{" "}
+                  {attendantName
+                    ? `${attendantName} alcançou`
+                    : "Você alcançou"}{" "}
+                  o <strong>nível {data.levelUp.newLevel}</strong>!
                 </div>
                 <div className="text-sm text-muted-foreground">
                   Total de XP: {data.levelUp.totalXp.toLocaleString()}
@@ -78,7 +88,8 @@ export default function XpAvulsoToast({ attendantId, attendantName }: XpAvulsoTo
               </div>
             ),
             duration: 8000,
-            className: "border-l-4 border-l-yellow-500 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20"
+            className:
+              "border-l-4 border-l-yellow-500 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20",
           });
         }, 1500);
       }
@@ -86,42 +97,52 @@ export default function XpAvulsoToast({ attendantId, attendantName }: XpAvulsoTo
       // Toasts de conquistas desbloqueadas (com delays escalonados)
       if (data.achievementsUnlocked && data.achievementsUnlocked.length > 0) {
         data.achievementsUnlocked.forEach((achievement, index) => {
-          setTimeout(() => {
-            toast({
-              title: (
-                <div className="flex items-center gap-2">
-                  <Award className="h-5 w-5 text-green-500" />
-                  <span>🏆 Conquista Desbloqueada!</span>
-                </div>
-              ),
-              description: (
-                <div className="space-y-1">
-                  <div className="font-semibold text-green-700 dark:text-green-300">
-                    {achievement.title}
+          setTimeout(
+            () => {
+              toast({
+                title: (
+                  <div className="flex items-center gap-2">
+                    <Award className="h-5 w-5 text-green-500" />
+                    <span>🏆 Conquista Desbloqueada!</span>
                   </div>
-                  <div className="text-sm text-green-600 dark:text-green-400">
-                    {achievement.description}
-                  </div>
-                  {attendantName && (
-                    <div className="text-xs text-muted-foreground">
-                      Desbloqueada por {attendantName}
+                ),
+                description: (
+                  <div className="space-y-1">
+                    <div className="font-semibold text-green-700 dark:text-green-300">
+                      {achievement.title}
                     </div>
-                  )}
-                </div>
-              ),
-              duration: 10000,
-              className: "border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20"
-            });
-          }, (data.levelUp ? 3000 : 1500) + (index * 1500)); // Delay adicional se houver level up
+                    <div className="text-sm text-green-600 dark:text-green-400">
+                      {achievement.description}
+                    </div>
+                    {attendantName && (
+                      <div className="text-xs text-muted-foreground">
+                        Desbloqueada por {attendantName}
+                      </div>
+                    )}
+                  </div>
+                ),
+                duration: 10000,
+                className:
+                  "border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20",
+              });
+            },
+            (data.levelUp ? 3000 : 1500) + index * 1500,
+          ); // Delay adicional se houver level up
         });
       }
     };
 
     // Adicionar listener
-    window.addEventListener('xp-avulso-granted', handleXpAvulsoGranted as EventListener);
+    window.addEventListener(
+      "xp-avulso-granted",
+      handleXpAvulsoGranted as EventListener,
+    );
 
     return () => {
-      window.removeEventListener('xp-avulso-granted', handleXpAvulsoGranted as EventListener);
+      window.removeEventListener(
+        "xp-avulso-granted",
+        handleXpAvulsoGranted as EventListener,
+      );
     };
   }, [attendantId, attendantName]);
 
@@ -132,9 +153,11 @@ export default function XpAvulsoToast({ attendantId, attendantName }: XpAvulsoTo
 // Componente para usar em contextos administrativos
 export function XpAvulsoAdminToast() {
   useEffect(() => {
-    const handleXpAvulsoGranted = (event: CustomEvent<XpAvulsoNotificationData & { attendantName?: string }>) => {
+    const handleXpAvulsoGranted = (
+      event: CustomEvent<XpAvulsoNotificationData & { attendantName?: string }>,
+    ) => {
       const data = event.detail;
-      
+
       // Toast de confirmação para administrador
       toast({
         title: (
@@ -146,7 +169,8 @@ export function XpAvulsoAdminToast() {
         description: (
           <div className="space-y-2">
             <div>
-              <strong>{data.xpAmount} XP</strong> concedido para <strong>{data.attendantName || 'atendente'}</strong>
+              <strong>{data.xpAmount} XP</strong> concedido para{" "}
+              <strong>{data.attendantName || "atendente"}</strong>
             </div>
             <div className="text-sm text-muted-foreground">
               Tipo: {data.typeName}
@@ -161,23 +185,31 @@ export function XpAvulsoAdminToast() {
                 🎉 Atendente subiu para o nível {data.levelUp.newLevel}!
               </div>
             )}
-            {data.achievementsUnlocked && data.achievementsUnlocked.length > 0 && (
-              <div className="text-sm font-medium text-green-600 dark:text-green-400">
-                🏆 {data.achievementsUnlocked.length} conquista(s) desbloqueada(s)!
-              </div>
-            )}
+            {data.achievementsUnlocked &&
+              data.achievementsUnlocked.length > 0 && (
+                <div className="text-sm font-medium text-green-600 dark:text-green-400">
+                  🏆 {data.achievementsUnlocked.length} conquista(s)
+                  desbloqueada(s)!
+                </div>
+              )}
           </div>
         ),
         duration: 8000,
-        className: "border-l-4 border-l-blue-500"
+        className: "border-l-4 border-l-blue-500",
       });
     };
 
     // Adicionar listener
-    window.addEventListener('xp-avulso-admin-granted', handleXpAvulsoGranted as EventListener);
+    window.addEventListener(
+      "xp-avulso-admin-granted",
+      handleXpAvulsoGranted as EventListener,
+    );
 
     return () => {
-      window.removeEventListener('xp-avulso-admin-granted', handleXpAvulsoGranted as EventListener);
+      window.removeEventListener(
+        "xp-avulso-admin-granted",
+        handleXpAvulsoGranted as EventListener,
+      );
     };
   }, []);
 
@@ -185,7 +217,9 @@ export function XpAvulsoAdminToast() {
 }
 
 // Função para disparar notificação administrativa
-export const triggerXpAvulsoAdminNotification = (data: XpAvulsoNotificationData & { attendantName?: string }) => {
-  const event = new CustomEvent('xp-avulso-admin-granted', { detail: data });
+export const triggerXpAvulsoAdminNotification = (
+  data: XpAvulsoNotificationData & { attendantName?: string },
+) => {
+  const event = new CustomEvent("xp-avulso-admin-granted", { detail: data });
   window.dispatchEvent(event);
 };

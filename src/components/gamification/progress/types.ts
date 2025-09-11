@@ -4,8 +4,8 @@ export interface ProgressProps {
   showPercentage?: boolean;
   showValue?: boolean;
   label?: string;
-  variant?: 'default' | 'success' | 'warning' | 'danger';
-  size?: 'sm' | 'md' | 'lg';
+  variant?: "default" | "success" | "warning" | "danger";
+  size?: "sm" | "md" | "lg";
   animated?: boolean;
   className?: string;
 }

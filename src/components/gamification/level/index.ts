@@ -1,2 +1,2 @@
-export { default as LevelBadge } from './LevelBadge';
-export * from './types';
+export { default as LevelBadge } from "./LevelBadge";
+export * from "./types";

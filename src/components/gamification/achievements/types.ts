@@ -1,11 +1,11 @@
-import { Achievement, AttendantAchievement } from '../types';
+import { Achievement, AttendantAchievement } from "../types";
 
 export interface AchievementProps {
   achievement: Achievement;
   attendantAchievement?: AttendantAchievement;
   showProgress?: boolean;
-  variant?: 'card' | 'badge' | 'compact';
-  size?: 'sm' | 'md' | 'lg';
+  variant?: "card" | "badge" | "compact";
+  size?: "sm" | "md" | "lg";
   className?: string;
 }
 
@@ -21,7 +21,7 @@ export interface AchievementCardProps {
 export interface AchievementBadgeProps {
   achievement: Achievement;
   isUnlocked?: boolean;
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
   showTooltip?: boolean;
   className?: string;
 }
@@ -31,7 +31,7 @@ export interface AchievementProgressProps {
   max: number;
   showPercentage?: boolean;
   showNumbers?: boolean;
-  variant?: 'bar' | 'circle' | 'compact';
+  variant?: "bar" | "circle" | "compact";
   className?: string;
 }
 
@@ -43,7 +43,7 @@ export interface AchievementListProps {
     difficulty?: string;
     unlockedOnly?: boolean;
   };
-  groupBy?: 'category' | 'difficulty' | 'status';
+  groupBy?: "category" | "difficulty" | "status";
   showSearch?: boolean;
   className?: string;
 }

@@ -1,5 +1,10 @@
-import type { Evaluation, XpEvent, GamificationConfig, GamificationSeason } from '@/lib/types';
-import { getScoreFromRating } from '@/lib/gamification';
+import type {
+  Evaluation,
+  XpEvent,
+  GamificationConfig,
+  GamificationSeason,
+} from "@/lib/types";
+import { getScoreFromRating } from "@/lib/gamification";
 
 export class XpService {
   /**
@@ -15,7 +20,7 @@ export class XpService {
   static calculateFinalXp(
     baseXp: number,
     globalMultiplier: number = 1,
-    seasonMultiplier: number = 1
+    seasonMultiplier: number = 1,
   ): number {
     return Math.round(baseXp * globalMultiplier * seasonMultiplier);
   }
@@ -26,12 +31,16 @@ export class XpService {
   static createXpEventFromEvaluation(
     evaluation: Evaluation,
     config: GamificationConfig,
-    activeSeason?: GamificationSeason | null
-  ): Omit<XpEvent, 'id'> {
+    activeSeason?: GamificationSeason | null,
+  ): Omit<XpEvent, "id"> {
     const baseXp = this.calculateBaseXp(evaluation.nota, config);
     const globalMultiplier = config.globalXpMultiplier || 1;
     const seasonMultiplier = activeSeason?.xpMultiplier || 1;
-    const finalXp = this.calculateFinalXp(baseXp, globalMultiplier, seasonMultiplier);
+    const finalXp = this.calculateFinalXp(
+      baseXp,
+      globalMultiplier,
+      seasonMultiplier,
+    );
 
     return {
       attendantId: evaluation.attendantId,
@@ -40,7 +49,7 @@ export class XpService {
       multiplier: globalMultiplier * seasonMultiplier,
       reason: `Avaliação ${evaluation.nota} estrelas`,
       date: evaluation.data,
-      type: 'evaluation',
+      type: "evaluation",
       relatedId: evaluation.id,
     };
   }
@@ -54,11 +63,15 @@ export class XpService {
     achievementXp: number,
     achievementTitle: string,
     config: GamificationConfig,
-    activeSeason?: GamificationSeason | null
-  ): Omit<XpEvent, 'id'> {
+    activeSeason?: GamificationSeason | null,
+  ): Omit<XpEvent, "id"> {
     const globalMultiplier = config.globalXpMultiplier || 1;
     const seasonMultiplier = activeSeason?.xpMultiplier || 1;
-    const finalXp = this.calculateFinalXp(achievementXp, globalMultiplier, seasonMultiplier);
+    const finalXp = this.calculateFinalXp(
+      achievementXp,
+      globalMultiplier,
+      seasonMultiplier,
+    );
 
     return {
       attendantId,
@@ -67,7 +80,7 @@ export class XpService {
       multiplier: globalMultiplier * seasonMultiplier,
       reason: `Troféu desbloqueado: ${achievementTitle}`,
       date: new Date().toISOString(),
-      type: 'achievement',
+      type: "achievement",
       relatedId: achievementId,
     };
   }
@@ -84,12 +97,12 @@ export class XpService {
    */
   static filterEventsBySeason(
     xpEvents: XpEvent[],
-    season: GamificationSeason
+    season: GamificationSeason,
   ): XpEvent[] {
     const seasonStart = new Date(season.startDate);
     const seasonEnd = new Date(season.endDate);
 
-    return xpEvents.filter(event => {
+    return xpEvents.filter((event) => {
       const eventDate = new Date(event.date);
       return eventDate >= seasonStart && eventDate <= seasonEnd;
     });
@@ -100,8 +113,8 @@ export class XpService {
    */
   static groupEventsByAttendant(xpEvents: XpEvent[]): Map<string, XpEvent[]> {
     const grouped = new Map<string, XpEvent[]>();
-    
-    xpEvents.forEach(event => {
+
+    xpEvents.forEach((event) => {
       const attendantEvents = grouped.get(event.attendantId) || [];
       attendantEvents.push(event);
       grouped.set(event.attendantId, attendantEvents);
@@ -119,13 +132,16 @@ export class XpService {
     achievementCount: number;
     averageXpPerEvaluation: number;
   } {
-    const evaluationEvents = xpEvents.filter(e => e.type === 'evaluation');
-    const achievementEvents = xpEvents.filter(e => e.type === 'achievement');
+    const evaluationEvents = xpEvents.filter((e) => e.type === "evaluation");
+    const achievementEvents = xpEvents.filter((e) => e.type === "achievement");
     const totalXp = this.calculateTotalXp(xpEvents);
     const evaluationCount = evaluationEvents.length;
     const achievementCount = achievementEvents.length;
-    const averageXpPerEvaluation = evaluationCount > 0 ? 
-      evaluationEvents.reduce((sum, e) => sum + e.points, 0) / evaluationCount : 0;
+    const averageXpPerEvaluation =
+      evaluationCount > 0
+        ? evaluationEvents.reduce((sum, e) => sum + e.points, 0) /
+          evaluationCount
+        : 0;
 
     return {
       totalXp,

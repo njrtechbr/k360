@@ -1,23 +1,27 @@
-
-'use server';
+"use server";
 /**
  * @fileOverview Flow de Análise de Sentimento de Avaliações
- * 
+ *
  * - analyzeEvaluation - Função que analisa o sentimento de um comentário de avaliação.
  */
 
-import { ai } from '@/ai/genkit';
-import { AnalyzeEvaluationInputSchema, type AnalyzeEvaluationInput, AnalyzeEvaluationOutputSchema, type AnalyzeEvaluationOutput } from '@/lib/types';
-
+import { ai } from "@/ai/genkit";
+import {
+  AnalyzeEvaluationInputSchema,
+  type AnalyzeEvaluationInput,
+  AnalyzeEvaluationOutputSchema,
+  type AnalyzeEvaluationOutput,
+} from "@/lib/types";
 
 // Função exportada que será chamada pelo aplicativo
-export async function analyzeEvaluation(input: AnalyzeEvaluationInput): Promise<AnalyzeEvaluationOutput> {
+export async function analyzeEvaluation(
+  input: AnalyzeEvaluationInput,
+): Promise<AnalyzeEvaluationOutput> {
   return analyzeEvaluationFlow(input);
 }
 
-
 const prompt = ai.definePrompt({
-  name: 'analyzeEvaluationPrompt',
+  name: "analyzeEvaluationPrompt",
   input: { schema: AnalyzeEvaluationInputSchema },
   output: { schema: AnalyzeEvaluationOutputSchema },
   prompt: `
@@ -38,15 +42,15 @@ const prompt = ai.definePrompt({
 
 const analyzeEvaluationFlow = ai.defineFlow(
   {
-    name: 'analyzeEvaluationFlow',
+    name: "analyzeEvaluationFlow",
     inputSchema: AnalyzeEvaluationInputSchema,
     outputSchema: AnalyzeEvaluationOutputSchema,
   },
   async (input) => {
     const { output } = await prompt(input);
     if (!output) {
-      throw new Error('A análise da IA não retornou uma resposta válida.');
+      throw new Error("A análise da IA não retornou uma resposta válida.");
     }
     return output;
-  }
+  },
 );

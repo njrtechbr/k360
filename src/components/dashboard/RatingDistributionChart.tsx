@@ -1,8 +1,18 @@
 "use client";
 
 import { Bar, BarChart, XAxis, YAxis } from "recharts";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { BarChart3 } from "lucide-react";
 
 interface RatingDistributionData {
@@ -23,7 +33,10 @@ const chartConfig = {
   },
 };
 
-export function RatingDistributionChart({ data, isLoading }: RatingDistributionChartProps) {
+export function RatingDistributionChart({
+  data,
+  isLoading,
+}: RatingDistributionChartProps) {
   if (isLoading) {
     return (
       <Card>
@@ -43,9 +56,9 @@ export function RatingDistributionChart({ data, isLoading }: RatingDistributionC
     );
   }
 
-  const formattedData = data.map(item => ({
+  const formattedData = data.map((item) => ({
     ...item,
-    ratingLabel: `${item.rating} ⭐`
+    ratingLabel: `${item.rating} ⭐`,
   }));
 
   return (
@@ -60,23 +73,19 @@ export function RatingDistributionChart({ data, isLoading }: RatingDistributionC
       <CardContent>
         <ChartContainer config={chartConfig} className="h-[300px]">
           <BarChart data={formattedData}>
-            <XAxis 
-              dataKey="ratingLabel" 
+            <XAxis
+              dataKey="ratingLabel"
               tickLine={false}
               axisLine={false}
               tickMargin={8}
             />
-            <YAxis 
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-            />
-            <ChartTooltip 
+            <YAxis tickLine={false} axisLine={false} tickMargin={8} />
+            <ChartTooltip
               content={
-                <ChartTooltipContent 
+                <ChartTooltipContent
                   formatter={(value) => [
-                    `${value} avaliações (${formattedData.find(d => d.count === value)?.percentage.toFixed(1)}%)`,
-                    'Quantidade'
+                    `${value} avaliações (${formattedData.find((d) => d.count === value)?.percentage.toFixed(1)}%)`,
+                    "Quantidade",
                   ]}
                 />
               }

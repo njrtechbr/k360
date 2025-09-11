@@ -1,19 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-
-const prisma = new PrismaClient();
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Não autorizado' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
     const body = await request.json();
@@ -21,22 +16,22 @@ export async function POST(request: NextRequest) {
 
     if (!evaluations || !Array.isArray(evaluations)) {
       return NextResponse.json(
-        { error: 'Lista de avaliações é obrigatória' },
-        { status: 400 }
+        { error: "Lista de avaliações é obrigatória" },
+        { status: 400 },
       );
     }
 
     if (!fileName) {
       return NextResponse.json(
-        { error: 'Nome do arquivo é obrigatório' },
-        { status: 400 }
+        { error: "Nome do arquivo é obrigatório" },
+        { status: 400 },
       );
     }
 
-    if (!agentMap || typeof agentMap !== 'object') {
+    if (!agentMap || typeof agentMap !== "object") {
       return NextResponse.json(
-        { error: 'Mapeamento de agentes é obrigatório' },
-        { status: 400 }
+        { error: "Mapeamento de agentes é obrigatório" },
+        { status: 400 },
       );
     }
 
@@ -44,8 +39,8 @@ export async function POST(request: NextRequest) {
     const gamificationConfigRaw = await prisma.gamificationConfig.findFirst();
     if (!gamificationConfigRaw) {
       return NextResponse.json(
-        { error: 'Configuração de gamificação não encontrada' },
-        { status: 500 }
+        { error: "Configuração de gamificação não encontrada" },
+        { status: 500 },
       );
     }
 
@@ -53,12 +48,12 @@ export async function POST(request: NextRequest) {
     const gamificationConfig = {
       ...gamificationConfigRaw,
       ratingScores: {
-        '1': gamificationConfigRaw.ratingScore1,
-        '2': gamificationConfigRaw.ratingScore2,
-        '3': gamificationConfigRaw.ratingScore3,
-        '4': gamificationConfigRaw.ratingScore4,
-        '5': gamificationConfigRaw.ratingScore5,
-      }
+        "1": gamificationConfigRaw.ratingScore1,
+        "2": gamificationConfigRaw.ratingScore2,
+        "3": gamificationConfigRaw.ratingScore3,
+        "4": gamificationConfigRaw.ratingScore4,
+        "5": gamificationConfigRaw.ratingScore5,
+      },
     };
 
     // Buscar temporada ativa (se houver)
@@ -71,37 +66,49 @@ export async function POST(request: NextRequest) {
 
     // Função para obter XP baseado na nota
     const getXpFromRating = (rating: number): number => {
-      const ratingStr = rating.toString() as keyof typeof gamificationConfig.ratingScores;
+      const ratingStr =
+        rating.toString() as keyof typeof gamificationConfig.ratingScores;
       return gamificationConfig.ratingScores[ratingStr] || 0;
     };
 
     // Mapeamento de nomes de agentes para corrigir diferenças entre CSV e banco
     const nameMapping: { [key: string]: string } = {
-      'Ana Flávia Felix de Souza': 'Ana Flávia de Souza',
-      'CLAUDIANA SP': 'Claudiana da Silva Pereira',
-      'Rangell Nunes': 'Rangell Nunes de Miranda',
-      'rangell nunes': 'Rangell Nunes de Miranda', // variação em minúscula
-      'Bruna Mendes': 'Bruna Mendes da Silva',
+      "Ana Flávia Felix de Souza": "Ana Flávia de Souza",
+      "CLAUDIANA SP": "Claudiana da Silva Pereira",
+      "Rangell Nunes": "Rangell Nunes de Miranda",
+      "rangell nunes": "Rangell Nunes de Miranda", // variação em minúscula
+      "Bruna Mendes": "Bruna Mendes da Silva",
     };
 
     // Processar em lotes para evitar timeout de transação
     const BATCH_SIZE = 50; // Processar 50 avaliações por vez
     const evaluationBatches = [];
-    
+
     // Preparar dados das avaliações com validação prévia
     const validEvaluations = [];
     let skippedCount = 0;
-    
+
     for (const evaluation of evaluations) {
       // Aplicar mapeamento de nomes se necessário
-      const normalizedAgentName = nameMapping[evaluation.agente] || evaluation.agente;
-      
+      const normalizedAgentName =
+        nameMapping[evaluation.agente] || evaluation.agente;
+
       // Mapear agente para attendantId usando agentMap
-      let attendantId = agentMap[normalizedAgentName] || agentMap[evaluation.agente] || evaluation.attendantId;
-      
+      let attendantId =
+        agentMap[normalizedAgentName] ||
+        agentMap[evaluation.agente] ||
+        evaluation.attendantId;
+
       // Ignorar avaliações onde não conseguimos identificar o atendente
-      if (!attendantId || attendantId === 'null' || attendantId === 'undefined' || attendantId.trim() === '') {
-        console.log(`Ignorando avaliação do agente "${evaluation.agente}" - atendente não identificado`);
+      if (
+        !attendantId ||
+        attendantId === "null" ||
+        attendantId === "undefined" ||
+        attendantId.trim() === ""
+      ) {
+        console.log(
+          `Ignorando avaliação do agente "${evaluation.agente}" - atendente não identificado`,
+        );
         skippedCount++;
         continue;
       }
@@ -109,11 +116,13 @@ export async function POST(request: NextRequest) {
       // Verificar se o attendantId existe na tabela Attendant (fora da transação)
       const attendantExists = await prisma.attendant.findUnique({
         where: { id: attendantId },
-        select: { id: true }
+        select: { id: true },
       });
 
       if (!attendantExists) {
-        console.log(`Ignorando avaliação do agente "${evaluation.agente}" - atendente com ID "${attendantId}" não encontrado`);
+        console.log(
+          `Ignorando avaliação do agente "${evaluation.agente}" - atendente com ID "${attendantId}" não encontrado`,
+        );
         skippedCount++;
         continue;
       }
@@ -137,9 +146,9 @@ export async function POST(request: NextRequest) {
           multiplier: globalMultiplier * seasonMultiplier,
           reason: `Avaliação ${evaluation.nota} estrelas`,
           date: new Date(evaluation.data),
-          type: 'EVALUATION',
-          relatedId: '',
-        }
+          type: "EVALUATION",
+          relatedId: "",
+        },
       });
     }
 
@@ -159,43 +168,46 @@ export async function POST(request: NextRequest) {
     });
 
     let totalProcessedCount = 0;
-    
+
     // Processar cada lote em uma transação separada com timeout aumentado
     for (const batch of evaluationBatches) {
-      await prisma.$transaction(async (tx) => {
-        const evaluationsData = batch.map(evaluation => ({
-          attendantId: evaluation.attendantId,
-          nota: evaluation.nota,
-          comentario: evaluation.comentario,
-          data: evaluation.data,
-          importId: evaluationImport.id,
-          xpGained: evaluation.xpGained,
-        }));
+      await prisma.$transaction(
+        async (tx) => {
+          const evaluationsData = batch.map((evaluation) => ({
+            attendantId: evaluation.attendantId,
+            nota: evaluation.nota,
+            comentario: evaluation.comentario,
+            data: evaluation.data,
+            importId: evaluationImport.id,
+            xpGained: evaluation.xpGained,
+          }));
 
-        // Criar avaliações em lote
-        const createdEvaluations = [];
-        for (const evalData of evaluationsData) {
-          const createdEvaluation = await tx.evaluation.create({
-            data: evalData,
+          // Criar avaliações em lote
+          const createdEvaluations = [];
+          for (const evalData of evaluationsData) {
+            const createdEvaluation = await tx.evaluation.create({
+              data: evalData,
+            });
+            createdEvaluations.push(createdEvaluation);
+          }
+
+          // Preparar eventos XP com IDs das avaliações criadas
+          const xpEventsData = batch.map((evaluation, index) => ({
+            ...evaluation.xpEvent,
+            relatedId: createdEvaluations[index].id,
+          }));
+
+          // Criar eventos XP em lote
+          await tx.xpEvent.createMany({
+            data: xpEventsData,
           });
-          createdEvaluations.push(createdEvaluation);
-        }
 
-        // Preparar eventos XP com IDs das avaliações criadas
-        const xpEventsData = batch.map((evaluation, index) => ({
-          ...evaluation.xpEvent,
-          relatedId: createdEvaluations[index].id,
-        }));
-
-        // Criar eventos XP em lote
-        await tx.xpEvent.createMany({
-          data: xpEventsData,
-        });
-
-        totalProcessedCount += createdEvaluations.length;
-      }, {
-        timeout: 15000, // 15 segundos por lote
-      });
+          totalProcessedCount += createdEvaluations.length;
+        },
+        {
+          timeout: 15000, // 15 segundos por lote
+        },
+      );
     }
 
     const result = {
@@ -213,14 +225,14 @@ export async function POST(request: NextRequest) {
       importId: result.importId,
       message: `${result.evaluationsCount} avaliações importadas com sucesso. ${result.skippedCount} avaliações ignoradas (atendente não identificado).`,
     });
-
   } catch (error) {
-    console.error('Erro ao importar avaliações do WhatsApp:', error);
+    console.error("Erro ao importar avaliações do WhatsApp:", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Erro interno do servidor' },
-      { status: 500 }
+      {
+        error:
+          error instanceof Error ? error.message : "Erro interno do servidor",
+      },
+      { status: 500 },
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

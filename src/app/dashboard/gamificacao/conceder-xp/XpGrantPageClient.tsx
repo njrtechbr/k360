@@ -3,11 +3,26 @@
 import { useState, useEffect } from "react";
 import { XpGrantInterface } from "@/components/gamification/xp/XpGrantInterface";
 import { useActiveSeason } from "@/hooks/useActiveSeason";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, CheckCircle, RefreshCw, Users, Gift, Zap, Clock, XCircle } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle,
+  RefreshCw,
+  Users,
+  Gift,
+  Zap,
+  Clock,
+  XCircle,
+} from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { XpAvulsoAdminToast } from "@/components/gamification/notifications/XpAvulsoToast";
 
@@ -23,12 +38,18 @@ interface Statistics {
 }
 
 export function XpGrantPageClient({ userId }: XpGrantPageClientProps) {
-  const { activeSeason, isLoading: seasonLoading, error: seasonError, refetch: refetchSeason, hasActiveSeason } = useActiveSeason();
+  const {
+    activeSeason,
+    isLoading: seasonLoading,
+    error: seasonError,
+    refetch: refetchSeason,
+    hasActiveSeason,
+  } = useActiveSeason();
   const [statistics, setStatistics] = useState<Statistics>({
     activeAttendants: 0,
     availableTypes: 0,
     todayGrants: 0,
-    remainingPoints: 1000
+    remainingPoints: 1000,
   });
   const [isLoadingStats, setIsLoadingStats] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -40,13 +61,14 @@ export function XpGrantPageClient({ userId }: XpGrantPageClientProps) {
   const fetchStatistics = async () => {
     try {
       setIsLoadingStats(true);
-      
+
       // Buscar estatísticas em paralelo
-      const [attendantsResponse, xpTypesResponse, grantsResponse] = await Promise.all([
-        fetch('/api/attendants'),
-        fetch('/api/gamification/xp-types'),
-        fetch(`/api/gamification/xp-grants/daily-stats?userId=${userId}`)
-      ]);
+      const [attendantsResponse, xpTypesResponse, grantsResponse] =
+        await Promise.all([
+          fetch("/api/attendants"),
+          fetch("/api/gamification/xp-types"),
+          fetch(`/api/gamification/xp-grants/daily-stats?userId=${userId}`),
+        ]);
 
       let activeAttendants = 0;
       let availableTypes = 0;
@@ -55,14 +77,18 @@ export function XpGrantPageClient({ userId }: XpGrantPageClientProps) {
 
       if (attendantsResponse.ok) {
         const attendantsData = await attendantsResponse.json();
-        activeAttendants = attendantsData.filter((a: any) => a.status === 'Ativo').length;
+        activeAttendants = attendantsData.filter(
+          (a: any) => a.status === "Ativo",
+        ).length;
       }
 
       if (xpTypesResponse.ok) {
         const xpTypesData = await xpTypesResponse.json();
         // O endpoint retorna { success: true, data: xpTypes, stats }
         const xpTypes = xpTypesData.data || [];
-        availableTypes = Array.isArray(xpTypes) ? xpTypes.filter((type: any) => type.active).length : 0;
+        availableTypes = Array.isArray(xpTypes)
+          ? xpTypes.filter((type: any) => type.active).length
+          : 0;
       }
 
       if (grantsResponse.ok) {
@@ -75,10 +101,10 @@ export function XpGrantPageClient({ userId }: XpGrantPageClientProps) {
         activeAttendants,
         availableTypes,
         todayGrants,
-        remainingPoints
+        remainingPoints,
       });
     } catch (error) {
-      console.error('Erro ao carregar estatísticas:', error);
+      console.error("Erro ao carregar estatísticas:", error);
     } finally {
       setIsLoadingStats(false);
     }
@@ -86,22 +112,23 @@ export function XpGrantPageClient({ userId }: XpGrantPageClientProps) {
 
   const handleGrantSuccess = () => {
     // Atualizar estatísticas após concessão bem-sucedida
-    setRefreshKey(prev => prev + 1);
-    
+    setRefreshKey((prev) => prev + 1);
+
     toast({
       title: "XP Concedido!",
-      description: "O XP foi concedido com sucesso e as estatísticas foram atualizadas.",
+      description:
+        "O XP foi concedido com sucesso e as estatísticas foram atualizadas.",
       action: (
         <div className="flex items-center gap-2">
           <CheckCircle className="h-4 w-4 text-green-600" />
         </div>
-      )
+      ),
     });
   };
 
   const handleRefreshSeason = () => {
     refetchSeason();
-    setRefreshKey(prev => prev + 1);
+    setRefreshKey((prev) => prev + 1);
   };
 
   // Loading state
@@ -112,7 +139,9 @@ export function XpGrantPageClient({ userId }: XpGrantPageClientProps) {
           <CardContent className="p-6">
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              <span className="ml-3 text-muted-foreground">Carregando informações...</span>
+              <span className="ml-3 text-muted-foreground">
+                Carregando informações...
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -127,7 +156,9 @@ export function XpGrantPageClient({ userId }: XpGrantPageClientProps) {
         <Alert variant="destructive">
           <XCircle className="h-4 w-4" />
           <AlertDescription className="flex items-center justify-between">
-            <span>Erro ao carregar informações da temporada: {seasonError}</span>
+            <span>
+              Erro ao carregar informações da temporada: {seasonError}
+            </span>
             <Button variant="outline" size="sm" onClick={handleRefreshSeason}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Tentar Novamente
@@ -146,8 +177,9 @@ export function XpGrantPageClient({ userId }: XpGrantPageClientProps) {
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription className="flex items-center justify-between">
             <div>
-              <strong>Temporada Inativa:</strong> Não é possível conceder XP avulso sem uma temporada ativa. 
-              Entre em contato com um administrador para ativar uma temporada.
+              <strong>Temporada Inativa:</strong> Não é possível conceder XP
+              avulso sem uma temporada ativa. Entre em contato com um
+              administrador para ativar uma temporada.
             </div>
             <Button variant="outline" size="sm" onClick={handleRefreshSeason}>
               <RefreshCw className="h-4 w-4 mr-2" />
@@ -155,7 +187,7 @@ export function XpGrantPageClient({ userId }: XpGrantPageClientProps) {
             </Button>
           </AlertDescription>
         </Alert>
-        
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-muted-foreground">
@@ -163,7 +195,8 @@ export function XpGrantPageClient({ userId }: XpGrantPageClientProps) {
               Interface de Concessão Indisponível
             </CardTitle>
             <CardDescription>
-              A interface de concessão de XP estará disponível quando uma temporada estiver ativa.
+              A interface de concessão de XP estará disponível quando uma
+              temporada estiver ativa.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -181,14 +214,14 @@ export function XpGrantPageClient({ userId }: XpGrantPageClientProps) {
     <div className="space-y-6">
       {/* Componente de Toast Administrativo */}
       <XpAvulsoAdminToast />
-      
+
       {/* Informações da Temporada Ativa */}
       <Alert>
         <CheckCircle className="h-4 w-4" />
         <AlertDescription>
           <div className="flex items-center justify-between">
             <div>
-              <strong>Temporada Ativa:</strong> {activeSeason?.name} 
+              <strong>Temporada Ativa:</strong> {activeSeason?.name}
               {activeSeason?.xpMultiplier && activeSeason.xpMultiplier > 1 && (
                 <Badge variant="secondary" className="ml-2">
                   Multiplicador {activeSeason.xpMultiplier}x
@@ -211,13 +244,17 @@ export function XpGrantPageClient({ userId }: XpGrantPageClientProps) {
                 <Users size={20} />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Atendentes Ativos</p>
-                <p className="text-2xl font-bold">{statistics.activeAttendants}</p>
+                <p className="text-sm text-muted-foreground">
+                  Atendentes Ativos
+                </p>
+                <p className="text-2xl font-bold">
+                  {statistics.activeAttendants}
+                </p>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -225,13 +262,17 @@ export function XpGrantPageClient({ userId }: XpGrantPageClientProps) {
                 <Gift size={20} />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Tipos Disponíveis</p>
-                <p className="text-2xl font-bold">{statistics.availableTypes}</p>
+                <p className="text-sm text-muted-foreground">
+                  Tipos Disponíveis
+                </p>
+                <p className="text-2xl font-bold">
+                  {statistics.availableTypes}
+                </p>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -239,30 +280,38 @@ export function XpGrantPageClient({ userId }: XpGrantPageClientProps) {
                 <Zap size={20} />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Suas Concessões Hoje</p>
+                <p className="text-sm text-muted-foreground">
+                  Suas Concessões Hoje
+                </p>
                 <p className="text-2xl font-bold">{statistics.todayGrants}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${
-                statistics.remainingPoints > 200 
-                  ? 'bg-purple-100 text-purple-600' 
-                  : statistics.remainingPoints > 0 
-                    ? 'bg-orange-100 text-orange-600'
-                    : 'bg-red-100 text-red-600'
-              }`}>
+              <div
+                className={`p-2 rounded-lg ${
+                  statistics.remainingPoints > 200
+                    ? "bg-purple-100 text-purple-600"
+                    : statistics.remainingPoints > 0
+                      ? "bg-orange-100 text-orange-600"
+                      : "bg-red-100 text-red-600"
+                }`}
+              >
                 <Clock size={20} />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Pontos Restantes</p>
-                <p className={`text-2xl font-bold ${
-                  statistics.remainingPoints === 0 ? 'text-red-600' : ''
-                }`}>
+                <p className="text-sm text-muted-foreground">
+                  Pontos Restantes
+                </p>
+                <p
+                  className={`text-2xl font-bold ${
+                    statistics.remainingPoints === 0 ? "text-red-600" : ""
+                  }`}
+                >
                   {statistics.remainingPoints}
                 </p>
               </div>
@@ -276,8 +325,9 @@ export function XpGrantPageClient({ userId }: XpGrantPageClientProps) {
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            <strong>Limite Diário Atingido:</strong> Você já concedeu o limite máximo de 1.000 pontos hoje. 
-            Tente novamente amanhã ou entre em contato com um superadministrador.
+            <strong>Limite Diário Atingido:</strong> Você já concedeu o limite
+            máximo de 1.000 pontos hoje. Tente novamente amanhã ou entre em
+            contato com um superadministrador.
           </AlertDescription>
         </Alert>
       )}
@@ -287,14 +337,15 @@ export function XpGrantPageClient({ userId }: XpGrantPageClientProps) {
         <Alert>
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            <strong>Atenção:</strong> Você tem apenas {statistics.remainingPoints} pontos restantes para conceder hoje. 
+            <strong>Atenção:</strong> Você tem apenas{" "}
+            {statistics.remainingPoints} pontos restantes para conceder hoje.
             Use com moderação.
           </AlertDescription>
         </Alert>
       )}
 
       {/* Interface de Concessão */}
-      <XpGrantInterface 
+      <XpGrantInterface
         userId={userId}
         onGrantSuccess={handleGrantSuccess}
         disabled={statistics.remainingPoints === 0}

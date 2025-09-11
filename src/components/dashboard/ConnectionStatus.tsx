@@ -1,16 +1,19 @@
-'use client';
+"use client";
 
-import { ConnectionStatus as ConnectionStatusType } from '@/types/dashboard';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Wifi, WifiOff, RefreshCw } from 'lucide-react';
+import { ConnectionStatus as ConnectionStatusType } from "@/types/dashboard";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Wifi, WifiOff, RefreshCw } from "lucide-react";
 
 interface ConnectionStatusProps {
   status: ConnectionStatusType;
   onReconnect?: () => void;
 }
 
-export function ConnectionStatus({ status, onReconnect }: ConnectionStatusProps) {
+export function ConnectionStatus({
+  status,
+  onReconnect,
+}: ConnectionStatusProps) {
   const { connected, lastConnected, reconnectAttempts, error } = status;
 
   return (
@@ -28,13 +31,13 @@ export function ConnectionStatus({ status, onReconnect }: ConnectionStatusProps)
           <Badge variant="outline" className="text-red-700 border-red-200">
             Desconectado
           </Badge>
-          
+
           {reconnectAttempts > 0 && (
             <span className="text-sm text-muted-foreground">
               Tentativas: {reconnectAttempts}
             </span>
           )}
-          
+
           {onReconnect && (
             <Button
               variant="outline"
@@ -48,13 +51,13 @@ export function ConnectionStatus({ status, onReconnect }: ConnectionStatusProps)
           )}
         </>
       )}
-      
+
       {lastConnected && (
         <span className="text-xs text-muted-foreground">
           Última conexão: {lastConnected.toLocaleTimeString()}
         </span>
       )}
-      
+
       {error && (
         <span className="text-xs text-red-500" title={error}>
           Erro de conexão

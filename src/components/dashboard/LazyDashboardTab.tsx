@@ -1,7 +1,7 @@
-import { useEffect, useState, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2 } from 'lucide-react';
+import { useEffect, useState, useCallback } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Loader2 } from "lucide-react";
 
 interface LazyDashboardTabProps {
   tabName: string;
@@ -10,22 +10,27 @@ interface LazyDashboardTabProps {
   isActive: boolean;
 }
 
-export function LazyDashboardTab({ tabName, children, onTabActive, isActive }: LazyDashboardTabProps) {
+export function LazyDashboardTab({
+  tabName,
+  children,
+  onTabActive,
+  isActive,
+}: LazyDashboardTabProps) {
   const [hasLoaded, setHasLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const loadTabData = useCallback(async () => {
     if (hasLoaded || !isActive) return;
-    
+
     setIsLoading(true);
     try {
       // Simular delay para carregamento progressivo
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
       if (onTabActive) {
         await onTabActive();
       }
-      
+
       setHasLoaded(true);
     } catch (error) {
       console.error(`Erro ao carregar dados da aba ${tabName}:`, error);

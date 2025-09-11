@@ -1,2 +1,2 @@
-export { default as LeaderboardCard } from './LeaderboardCard';
-export * from './types';
+export { default as LeaderboardCard } from "./LeaderboardCard";
+export * from "./types";

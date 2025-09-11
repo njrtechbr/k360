@@ -1,8 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
-
-const prisma = new PrismaClient();
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,47 +9,59 @@ export async function POST(request: NextRequest) {
 
     if (!email || !password) {
       return NextResponse.json(
-        { error: 'Email e senha são obrigatórios' },
-        { status: 400 }
+        {
+          success: false,
+          error: "Email e senha são obrigatórios",
+        },
+        { status: 400 },
       );
     }
 
-    // Buscar usuário pelo email
-    const user = await prisma.user.findFirst({
-      where: { email }
+    // Buscar usuário por email
+    const user = await prisma.user.findUnique({
+      where: { email },
     });
 
     if (!user) {
       return NextResponse.json(
-        { error: 'Credenciais inválidas' },
-        { status: 401 }
+        {
+          success: false,
+          error: "Credenciais inválidas",
+        },
+        { status: 401 },
       );
     }
 
     // Verificar senha
     const isPasswordValid = await bcrypt.compare(password, user.password);
-    
+
     if (!isPasswordValid) {
       return NextResponse.json(
-        { error: 'Credenciais inválidas' },
-        { status: 401 }
+        {
+          success: false,
+          error: "Credenciais inválidas",
+        },
+        { status: 401 },
       );
     }
 
     // Retornar dados do usuário (sem a senha)
     const { password: _, ...userWithoutPassword } = user;
-    
+
     return NextResponse.json({
       success: true,
-      user: userWithoutPassword
+      data: userWithoutPassword,
+      message: "Login realizado com sucesso",
     });
   } catch (error) {
-    console.error('Erro ao fazer login:', error);
+    console.error("Erro ao fazer login:", error);
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
+      {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Erro interno do servidor",
+      },
+      { status: 500 },
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

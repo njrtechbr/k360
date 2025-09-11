@@ -21,7 +21,7 @@ export interface XpGrantStatsResponse {
   };
 }
 
-export function useXpGrantStats(period: string = '1d') {
+export function useXpGrantStats(period: string = "1d") {
   const [stats, setStats] = useState<XpGrantStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,17 +30,19 @@ export function useXpGrantStats(period: string = '1d') {
     try {
       setIsLoading(true);
       setError(null);
-      
-      const response = await fetch(`/api/gamification/xp-grants/statistics?period=${period}`);
-      
+
+      const response = await fetch(
+        `/api/gamification/xp-grants/statistics?period=${period}`,
+      );
+
       if (!response.ok) {
-        throw new Error('Erro ao carregar estatísticas');
+        throw new Error("Erro ao carregar estatísticas");
       }
-      
+
       const data: XpGrantStatsResponse = await response.json();
       setStats(data.data.overview);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro desconhecido');
+      setError(err instanceof Error ? err.message : "Erro desconhecido");
       setStats(null);
     } finally {
       setIsLoading(false);
@@ -55,6 +57,6 @@ export function useXpGrantStats(period: string = '1d') {
     stats,
     isLoading,
     error,
-    refetch: fetchStats
+    refetch: fetchStats,
   };
 }

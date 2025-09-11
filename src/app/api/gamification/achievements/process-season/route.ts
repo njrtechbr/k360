@@ -1,7 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 // POST /api/gamification/achievements/process-season
 // Processar conquistas para a temporada atual
@@ -12,20 +10,20 @@ export async function POST(request: NextRequest) {
 
     if (!seasonId) {
       return NextResponse.json(
-        { error: 'seasonId é obrigatório' },
-        { status: 400 }
+        { error: "seasonId é obrigatório" },
+        { status: 400 },
       );
     }
 
     // Buscar temporada
     const season = await prisma.gamificationSeason.findUnique({
-      where: { id: seasonId }
+      where: { id: seasonId },
     });
 
     if (!season) {
       return NextResponse.json(
-        { error: 'Temporada não encontrada' },
-        { status: 404 }
+        { error: "Temporada não encontrada" },
+        { status: 404 },
       );
     }
 
@@ -34,12 +32,12 @@ export async function POST(request: NextRequest) {
 
     // Buscar conquistas ativas
     const achievements = await prisma.achievementConfig.findMany({
-      where: { active: true }
+      where: { active: true },
     });
 
     // Buscar atendentes (específico ou todos)
     const attendants = await prisma.attendant.findMany({
-      where: attendantId ? { id: attendantId } : undefined
+      where: attendantId ? { id: attendantId } : undefined,
     });
 
     let unlockedCount = 0;
@@ -51,12 +49,12 @@ export async function POST(request: NextRequest) {
           attendantId: attendant.id,
           unlockedAt: {
             gte: seasonStart,
-            lte: seasonEnd
-          }
-        }
+            lte: seasonEnd,
+          },
+        },
       });
 
-      const unlockedIds = new Set(existingUnlocked.map(u => u.achievementId));
+      const unlockedIds = new Set(existingUnlocked.map((u) => u.achievementId));
 
       // Verificar cada conquista
       for (const achievement of achievements) {
@@ -65,10 +63,10 @@ export async function POST(request: NextRequest) {
         }
 
         const shouldUnlock = await checkAchievementCriteria(
-          attendant.id, 
-          achievement.id, 
-          seasonStart, 
-          seasonEnd
+          attendant.id,
+          achievement.id,
+          seasonStart,
+          seasonEnd,
         );
 
         if (shouldUnlock) {
@@ -80,8 +78,8 @@ export async function POST(request: NextRequest) {
                 achievementId: achievement.id,
                 xpGained: achievement.xp,
                 unlockedAt: new Date(),
-                seasonId: season.id
-              }
+                seasonId: season.id,
+              },
             });
 
             // Criar evento XP
@@ -94,41 +92,43 @@ export async function POST(request: NextRequest) {
                   multiplier: season.xpMultiplier || 1,
                   reason: `Conquista desbloqueada: ${achievement.title}`,
                   date: new Date(),
-                  type: 'ACHIEVEMENT',
+                  type: "ACHIEVEMENT",
                   relatedId: unlocked.id,
-                  seasonId: season.id
-                }
+                  seasonId: season.id,
+                },
               });
             }
 
             unlockedCount++;
           } catch (error) {
-            console.error(`Erro ao desbloquear conquista ${achievement.id} para ${attendant.name}:`, error);
+            console.error(
+              `Erro ao desbloquear conquista ${achievement.id} para ${attendant.name}:`,
+              error,
+            );
           }
         }
       }
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       unlockedCount,
-      message: `${unlockedCount} conquistas desbloqueadas com sucesso`
+      message: `${unlockedCount} conquistas desbloqueadas com sucesso`,
     });
-
   } catch (error) {
-    console.error('Erro ao processar conquistas:', error);
+    console.error("Erro ao processar conquistas:", error);
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
+      { error: "Erro interno do servidor" },
+      { status: 500 },
     );
   }
 }
 
 async function checkAchievementCriteria(
-  attendantId: string, 
-  achievementId: string, 
-  seasonStart: Date, 
-  seasonEnd: Date
+  attendantId: string,
+  achievementId: string,
+  seasonStart: Date,
+  seasonEnd: Date,
 ): Promise<boolean> {
   try {
     // Buscar dados da temporada
@@ -137,16 +137,16 @@ async function checkAchievementCriteria(
         where: {
           attendantId,
           date: { gte: seasonStart, lte: seasonEnd },
-          type: { not: 'ACHIEVEMENT' } // Excluir XP de conquistas
-        }
+          type: { not: "ACHIEVEMENT" }, // Excluir XP de conquistas
+        },
       }),
       prisma.evaluation.findMany({
         where: {
           attendantId,
-          data: { gte: seasonStart, lte: seasonEnd }
+          data: { gte: seasonStart, lte: seasonEnd },
         },
-        orderBy: { data: 'asc' }
-      })
+        orderBy: { data: "asc" },
+      }),
     ]);
 
     const seasonXp = xpEvents.reduce((sum, e) => sum + (e.points || 0), 0);
@@ -154,43 +154,46 @@ async function checkAchievementCriteria(
 
     // Critérios baseados no ID da conquista
     switch (achievementId) {
-      case 'first_evaluation':
+      case "first_evaluation":
         return evaluationCount >= 1;
-      case 'ten_evaluations':
+      case "ten_evaluations":
         return evaluationCount >= 10;
-      case 'fifty_evaluations':
+      case "fifty_evaluations":
         return evaluationCount >= 50;
-      case 'hundred_evaluations':
+      case "hundred_evaluations":
         return evaluationCount >= 100;
-      case 'hundred_xp':
+      case "hundred_xp":
         return seasonXp >= 100;
-      case 'thousand_xp':
+      case "thousand_xp":
         return seasonXp >= 1000;
-      case 'five_thousand_xp':
+      case "five_thousand_xp":
         return seasonXp >= 5000;
-      case 'ten_thousand_xp':
+      case "ten_thousand_xp":
         return seasonXp >= 10000;
-      case 'five_star_streak_5':
+      case "five_star_streak_5":
         return checkFiveStarStreak(evaluations, 5);
-      case 'five_star_streak_10':
+      case "five_star_streak_10":
         return checkFiveStarStreak(evaluations, 10);
-      case 'high_average_50':
+      case "high_average_50":
         return checkHighAverage(evaluations, 4.5, 50);
       default:
         return false;
     }
   } catch (error) {
-    console.error('Erro ao verificar critérios:', error);
+    console.error("Erro ao verificar critérios:", error);
     return false;
   }
 }
 
-function checkFiveStarStreak(evaluations: any[], requiredStreak: number): boolean {
+function checkFiveStarStreak(
+  evaluations: any[],
+  requiredStreak: number,
+): boolean {
   if (evaluations.length < requiredStreak) return false;
-  
+
   let currentStreak = 0;
   let maxStreak = 0;
-  
+
   for (const evaluation of evaluations) {
     if (evaluation.nota === 5) {
       currentStreak++;
@@ -199,12 +202,17 @@ function checkFiveStarStreak(evaluations: any[], requiredStreak: number): boolea
       currentStreak = 0;
     }
   }
-  
+
   return maxStreak >= requiredStreak;
 }
 
-function checkHighAverage(evaluations: any[], requiredAverage: number, minEvaluations: number): boolean {
+function checkHighAverage(
+  evaluations: any[],
+  requiredAverage: number,
+  minEvaluations: number,
+): boolean {
   if (evaluations.length < minEvaluations) return false;
-  const average = evaluations.reduce((sum, e) => sum + e.nota, 0) / evaluations.length;
+  const average =
+    evaluations.reduce((sum, e) => sum + e.nota, 0) / evaluations.length;
   return average >= requiredAverage;
 }

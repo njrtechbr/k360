@@ -1,110 +1,115 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Smile, Frown, Meh, TrendingUp, AlertCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { SentimentBadgeProps } from './types';
+import React from "react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Smile, Frown, Meh, TrendingUp, AlertCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { SentimentBadgeProps } from "./types";
 
 const sentimentConfig = {
   positive: {
-    label: 'Positivo',
+    label: "Positivo",
     icon: Smile,
     colors: {
-      default: 'bg-green-500 text-white hover:bg-green-600',
-      outline: 'border-green-500 text-green-700 hover:bg-green-50',
-      subtle: 'bg-green-50 text-green-700 hover:bg-green-100'
-    }
+      default: "bg-green-500 text-white hover:bg-green-600",
+      outline: "border-green-500 text-green-700 hover:bg-green-50",
+      subtle: "bg-green-50 text-green-700 hover:bg-green-100",
+    },
   },
   negative: {
-    label: 'Negativo',
+    label: "Negativo",
     icon: Frown,
     colors: {
-      default: 'bg-red-500 text-white hover:bg-red-600',
-      outline: 'border-red-500 text-red-700 hover:bg-red-50',
-      subtle: 'bg-red-50 text-red-700 hover:bg-red-100'
-    }
+      default: "bg-red-500 text-white hover:bg-red-600",
+      outline: "border-red-500 text-red-700 hover:bg-red-50",
+      subtle: "bg-red-50 text-red-700 hover:bg-red-100",
+    },
   },
   neutral: {
-    label: 'Neutro',
+    label: "Neutro",
     icon: Meh,
     colors: {
-      default: 'bg-gray-500 text-white hover:bg-gray-600',
-      outline: 'border-gray-500 text-gray-700 hover:bg-gray-50',
-      subtle: 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-    }
+      default: "bg-gray-500 text-white hover:bg-gray-600",
+      outline: "border-gray-500 text-gray-700 hover:bg-gray-50",
+      subtle: "bg-gray-50 text-gray-700 hover:bg-gray-100",
+    },
   },
   // Compatibilidade com valores antigos
-  'Positivo': {
-    label: 'Positivo',
+  Positivo: {
+    label: "Positivo",
     icon: Smile,
     colors: {
-      default: 'bg-green-500 text-white hover:bg-green-600',
-      outline: 'border-green-500 text-green-700 hover:bg-green-50',
-      subtle: 'bg-green-50 text-green-700 hover:bg-green-100'
-    }
+      default: "bg-green-500 text-white hover:bg-green-600",
+      outline: "border-green-500 text-green-700 hover:bg-green-50",
+      subtle: "bg-green-50 text-green-700 hover:bg-green-100",
+    },
   },
-  'Negativo': {
-    label: 'Negativo',
+  Negativo: {
+    label: "Negativo",
     icon: Frown,
     colors: {
-      default: 'bg-red-500 text-white hover:bg-red-600',
-      outline: 'border-red-500 text-red-700 hover:bg-red-50',
-      subtle: 'bg-red-50 text-red-700 hover:bg-red-100'
-    }
+      default: "bg-red-500 text-white hover:bg-red-600",
+      outline: "border-red-500 text-red-700 hover:bg-red-50",
+      subtle: "bg-red-50 text-red-700 hover:bg-red-100",
+    },
   },
-  'Neutro': {
-    label: 'Neutro',
+  Neutro: {
+    label: "Neutro",
     icon: Meh,
     colors: {
-      default: 'bg-gray-500 text-white hover:bg-gray-600',
-      outline: 'border-gray-500 text-gray-700 hover:bg-gray-50',
-      subtle: 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-    }
-  }
+      default: "bg-gray-500 text-white hover:bg-gray-600",
+      outline: "border-gray-500 text-gray-700 hover:bg-gray-50",
+      subtle: "bg-gray-50 text-gray-700 hover:bg-gray-100",
+    },
+  },
 };
 
 const sizeClasses = {
   sm: {
-    badge: 'text-xs px-2 py-1',
-    icon: 'w-3 h-3',
-    confidence: 'text-xs'
+    badge: "text-xs px-2 py-1",
+    icon: "w-3 h-3",
+    confidence: "text-xs",
   },
   md: {
-    badge: 'text-sm px-2.5 py-1.5',
-    icon: 'w-4 h-4',
-    confidence: 'text-sm'
+    badge: "text-sm px-2.5 py-1.5",
+    icon: "w-4 h-4",
+    confidence: "text-sm",
   },
   lg: {
-    badge: 'text-base px-3 py-2',
-    icon: 'w-5 h-5',
-    confidence: 'text-base'
-  }
+    badge: "text-base px-3 py-2",
+    icon: "w-5 h-5",
+    confidence: "text-base",
+  },
 };
 
 function getConfidenceLevel(confidence: number): {
-  level: 'low' | 'medium' | 'high';
+  level: "low" | "medium" | "high";
   label: string;
   color: string;
 } {
   if (confidence >= 0.8) {
     return {
-      level: 'high',
-      label: 'Alta confiança',
-      color: 'text-green-600'
+      level: "high",
+      label: "Alta confiança",
+      color: "text-green-600",
     };
   } else if (confidence >= 0.6) {
     return {
-      level: 'medium',
-      label: 'Média confiança',
-      color: 'text-yellow-600'
+      level: "medium",
+      label: "Média confiança",
+      color: "text-yellow-600",
     };
   } else {
     return {
-      level: 'low',
-      label: 'Baixa confiança',
-      color: 'text-red-600'
+      level: "low",
+      label: "Baixa confiança",
+      color: "text-red-600",
     };
   }
 }
@@ -112,32 +117,33 @@ function getConfidenceLevel(confidence: number): {
 const SentimentBadge: React.FC<SentimentBadgeProps> = ({
   sentiment,
   confidence,
-  size = 'md',
+  size = "md",
   showConfidence = false,
   className,
   showIcon = true,
-  variant = 'default',
-  tooltip
+  variant = "default",
+  tooltip,
 }) => {
   const config = sentimentConfig[sentiment as keyof typeof sentimentConfig];
   const sizeConfig = sizeClasses[size];
   const Icon = config?.icon || Meh;
-  
-  const confidenceInfo = confidence !== undefined ? getConfidenceLevel(confidence) : null;
-  
+
+  const confidenceInfo =
+    confidence !== undefined ? getConfidenceLevel(confidence) : null;
+
   const badgeContent = (
     <Badge
       className={cn(
-        'inline-flex items-center gap-1.5 font-medium transition-colors',
+        "inline-flex items-center gap-1.5 font-medium transition-colors",
         config?.colors[variant] || sentimentConfig.neutral.colors[variant],
         sizeConfig.badge,
-        className
+        className,
       )}
     >
       {showIcon && <Icon className={sizeConfig.icon} />}
-      <span>{config?.label || 'Neutro'}</span>
+      <span>{config?.label || "Neutro"}</span>
       {showConfidence && confidence !== undefined && (
-        <span className={cn('font-normal opacity-90', sizeConfig.confidence)}>
+        <span className={cn("font-normal opacity-90", sizeConfig.confidence)}>
           ({Math.round(confidence * 100)}%)
         </span>
       )}
@@ -146,9 +152,7 @@ const SentimentBadge: React.FC<SentimentBadgeProps> = ({
 
   const tooltipContent = tooltip || (
     <div className="space-y-1">
-      <div className="font-medium">
-        Sentimento: {config?.label || 'Neutro'}
-      </div>
+      <div className="font-medium">Sentimento: {config?.label || "Neutro"}</div>
       {confidence !== undefined && confidenceInfo && (
         <div className="text-sm">
           <div className={confidenceInfo.color}>
@@ -163,12 +167,8 @@ const SentimentBadge: React.FC<SentimentBadgeProps> = ({
     return (
       <TooltipProvider>
         <Tooltip>
-          <TooltipTrigger asChild>
-            {badgeContent}
-          </TooltipTrigger>
-          <TooltipContent>
-            {tooltipContent}
-          </TooltipContent>
+          <TooltipTrigger asChild>{badgeContent}</TooltipTrigger>
+          <TooltipContent>{tooltipContent}</TooltipContent>
         </Tooltip>
       </TooltipProvider>
     );
@@ -180,16 +180,16 @@ const SentimentBadge: React.FC<SentimentBadgeProps> = ({
 // Componente para mostrar confiança separadamente
 export function ConfidenceBadge({
   confidence,
-  size = 'sm',
-  className
+  size = "sm",
+  className,
 }: {
   confidence: number;
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
   className?: string;
 }) {
   const confidenceInfo = getConfidenceLevel(confidence);
   const sizeConfig = sizeClasses[size];
-  
+
   return (
     <TooltipProvider>
       <Tooltip>
@@ -197,10 +197,10 @@ export function ConfidenceBadge({
           <Badge
             variant="outline"
             className={cn(
-              'inline-flex items-center gap-1',
+              "inline-flex items-center gap-1",
               confidenceInfo.color,
               sizeConfig.badge,
-              className
+              className,
             )}
           >
             <TrendingUp className={sizeConfig.icon} />
@@ -208,9 +208,7 @@ export function ConfidenceBadge({
           </Badge>
         </TooltipTrigger>
         <TooltipContent>
-          <div className="text-sm">
-            {confidenceInfo.label}
-          </div>
+          <div className="text-sm">{confidenceInfo.label}</div>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -221,20 +219,21 @@ export function ConfidenceBadge({
 export function SentimentAnalysis({
   sentiment,
   confidence,
-  size = 'md',
+  size = "md",
   showDetails = false,
-  className
+  className,
 }: {
   sentiment: string;
   confidence?: number;
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
   showDetails?: boolean;
   className?: string;
 }) {
-  const confidenceInfo = confidence !== undefined ? getConfidenceLevel(confidence) : null;
-  
+  const confidenceInfo =
+    confidence !== undefined ? getConfidenceLevel(confidence) : null;
+
   return (
-    <div className={cn('flex items-center gap-2', className)}>
+    <div className={cn("flex items-center gap-2", className)}>
       <SentimentBadge
         sentiment={sentiment}
         confidence={showDetails ? confidence : undefined}
@@ -242,30 +241,33 @@ export function SentimentAnalysis({
         showConfidence={showDetails}
         showIcon
       />
-      
+
       {!showDetails && confidence !== undefined && (
         <ConfidenceBadge
           confidence={confidence}
-          size={size === 'lg' ? 'md' : 'sm'}
+          size={size === "lg" ? "md" : "sm"}
         />
       )}
-      
-      {showDetails && confidenceInfo && confidence !== undefined && confidence < 0.6 && (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <AlertCircle className="w-4 h-4 text-yellow-500" />
-            </TooltipTrigger>
-            <TooltipContent>
-              <div className="text-sm">
-                Análise com baixa confiança.
-                <br />
-                Recomenda-se revisão manual.
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      )}
+
+      {showDetails &&
+        confidenceInfo &&
+        confidence !== undefined &&
+        confidence < 0.6 && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <AlertCircle className="w-4 h-4 text-yellow-500" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <div className="text-sm">
+                  Análise com baixa confiança.
+                  <br />
+                  Recomenda-se revisão manual.
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
     </div>
   );
 }

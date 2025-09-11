@@ -3,7 +3,13 @@
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotifications } from "@/providers/NotificationProvider";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Shield, Database, History, Settings, Activity } from "lucide-react";
@@ -31,13 +37,18 @@ export function BackupManager({}: BackupManagerProps) {
     downloadBackup,
     deleteBackup,
     cancelBackup,
-    updateProgress
+    updateProgress,
   } = useBackupManager();
 
   // Controle de acesso baseado em roles
-  const canCreateBackup = user?.role === ROLES.SUPERADMIN || user?.role === ROLES.ADMIN;
-  const canViewBackups = user?.role === ROLES.SUPERADMIN || user?.role === ROLES.ADMIN || user?.role === ROLES.SUPERVISOR;
-  const canDeleteBackup = user?.role === ROLES.SUPERADMIN || user?.role === ROLES.ADMIN;
+  const canCreateBackup =
+    user?.role === ROLES.SUPERADMIN || user?.role === ROLES.ADMIN;
+  const canViewBackups =
+    user?.role === ROLES.SUPERADMIN ||
+    user?.role === ROLES.ADMIN ||
+    user?.role === ROLES.SUPERVISOR;
+  const canDeleteBackup =
+    user?.role === ROLES.SUPERADMIN || user?.role === ROLES.ADMIN;
 
   useEffect(() => {
     if (isAuthenticated && canViewBackups) {
@@ -50,15 +61,19 @@ export function BackupManager({}: BackupManagerProps) {
     try {
       await createBackup(options);
       addNotification({
-        type: 'success',
-        title: 'Backup Iniciado',
-        message: 'O processo de backup foi iniciado com sucesso. Você será notificado quando concluído.'
+        type: "success",
+        title: "Backup Iniciado",
+        message:
+          "O processo de backup foi iniciado com sucesso. Você será notificado quando concluído.",
       });
     } catch (error) {
       addNotification({
-        type: 'error',
-        title: 'Erro ao Criar Backup',
-        message: error instanceof Error ? error.message : 'Erro desconhecido ao criar backup'
+        type: "error",
+        title: "Erro ao Criar Backup",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Erro desconhecido ao criar backup",
       });
     }
   };
@@ -67,15 +82,18 @@ export function BackupManager({}: BackupManagerProps) {
     try {
       await downloadBackup(backupId);
       addNotification({
-        type: 'success',
-        title: 'Download Iniciado',
-        message: 'O download do backup foi iniciado com sucesso.'
+        type: "success",
+        title: "Download Iniciado",
+        message: "O download do backup foi iniciado com sucesso.",
       });
     } catch (error) {
       addNotification({
-        type: 'error',
-        title: 'Erro no Download',
-        message: error instanceof Error ? error.message : 'Erro desconhecido ao fazer download'
+        type: "error",
+        title: "Erro no Download",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Erro desconhecido ao fazer download",
       });
     }
   };
@@ -84,15 +102,18 @@ export function BackupManager({}: BackupManagerProps) {
     try {
       await deleteBackup(backupId);
       addNotification({
-        type: 'success',
-        title: 'Backup Excluído',
-        message: 'O backup foi excluído com sucesso.'
+        type: "success",
+        title: "Backup Excluído",
+        message: "O backup foi excluído com sucesso.",
       });
     } catch (error) {
       addNotification({
-        type: 'error',
-        title: 'Erro ao Excluir',
-        message: error instanceof Error ? error.message : 'Erro desconhecido ao excluir backup'
+        type: "error",
+        title: "Erro ao Excluir",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Erro desconhecido ao excluir backup",
       });
     }
   };
@@ -113,7 +134,8 @@ export function BackupManager({}: BackupManagerProps) {
       <Alert>
         <Shield className="h-4 w-4" />
         <AlertDescription>
-          Você não tem permissão para acessar o sistema de backup. Apenas administradores e supervisores podem visualizar backups.
+          Você não tem permissão para acessar o sistema de backup. Apenas
+          administradores e supervisores podem visualizar backups.
         </AlertDescription>
       </Alert>
     );
@@ -228,8 +250,9 @@ export function BackupManager({}: BackupManagerProps) {
                 </div>
                 <Alert>
                   <AlertDescription>
-                    As configurações do sistema são gerenciadas através de variáveis de ambiente.
-                    Entre em contato com o administrador do sistema para alterações.
+                    As configurações do sistema são gerenciadas através de
+                    variáveis de ambiente. Entre em contato com o administrador
+                    do sistema para alterações.
                   </AlertDescription>
                 </Alert>
               </div>

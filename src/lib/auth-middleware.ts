@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 // Tipos de roles permitidos
-export type UserRole = 'SUPERADMIN' | 'ADMIN' | 'SUPERVISOR' | 'USUARIO';
+export type UserRole = "SUPERADMIN" | "ADMIN" | "SUPERVISOR" | "USUARIO";
 
 // Interface para configuração de autorização
 interface AuthConfig {
@@ -30,7 +30,7 @@ export class AuthMiddleware {
    */
   static async checkAuth(
     request: NextRequest,
-    config: AuthConfig
+    config: AuthConfig,
   ): Promise<{
     authorized: boolean;
     session?: AuthSession;
@@ -44,14 +44,16 @@ export class AuthMiddleware {
       }
 
       // Obter sessão
-      const session = await getServerSession(authOptions) as AuthSession | null;
+      const session = (await getServerSession(
+        authOptions,
+      )) as AuthSession | null;
 
       // Verificar se está autenticado
       if (!session?.user) {
         return {
           authorized: false,
-          error: 'Não autorizado. Faça login para continuar.',
-          statusCode: 401
+          error: "Não autorizado. Faça login para continuar.",
+          statusCode: 401,
         };
       }
 
@@ -59,21 +61,21 @@ export class AuthMiddleware {
       if (!config.requiredRoles.includes(session.user.role)) {
         return {
           authorized: false,
-          error: `Acesso negado. Roles permitidos: ${config.requiredRoles.join(', ')}`,
-          statusCode: 403
+          error: `Acesso negado. Roles permitidos: ${config.requiredRoles.join(", ")}`,
+          statusCode: 403,
         };
       }
 
       return {
         authorized: true,
-        session
+        session,
       };
     } catch (error) {
-      console.error('Erro na verificação de autenticação:', error);
+      console.error("Erro na verificação de autenticação:", error);
       return {
         authorized: false,
-        error: 'Erro interno de autenticação',
-        statusCode: 500
+        error: "Erro interno de autenticação",
+        statusCode: 500,
       };
     }
   }
@@ -83,7 +85,11 @@ export class AuthMiddleware {
    */
   static withAuth(
     config: AuthConfig,
-    handler: (request: NextRequest, session: AuthSession, ...args: any[]) => Promise<Response>
+    handler: (
+      request: NextRequest,
+      session: AuthSession,
+      ...args: any[]
+    ) => Promise<Response>,
   ) {
     return async (request: NextRequest, ...args: any[]): Promise<Response> => {
       // Verificar autenticação
@@ -92,7 +98,7 @@ export class AuthMiddleware {
       if (!authResult.authorized) {
         return NextResponse.json(
           { error: authResult.error },
-          { status: authResult.statusCode || 401 }
+          { status: authResult.statusCode || 401 },
         );
       }
 
@@ -112,14 +118,14 @@ export class AuthMiddleware {
    * Verificar se usuário é administrador
    */
   static isAdmin(userRole: UserRole): boolean {
-    return ['ADMIN', 'SUPERADMIN'].includes(userRole);
+    return ["ADMIN", "SUPERADMIN"].includes(userRole);
   }
 
   /**
    * Verificar se usuário é superadministrador
    */
   static isSuperAdmin(userRole: UserRole): boolean {
-    return userRole === 'SUPERADMIN';
+    return userRole === "SUPERADMIN";
   }
 
   /**
@@ -127,10 +133,10 @@ export class AuthMiddleware {
    */
   static getPermissionLevel(userRole: UserRole): number {
     const levels = {
-      'USUARIO': 1,
-      'SUPERVISOR': 2,
-      'ADMIN': 3,
-      'SUPERADMIN': 4
+      USUARIO: 1,
+      SUPERVISOR: 2,
+      ADMIN: 3,
+      SUPERADMIN: 4,
     };
     return levels[userRole] || 0;
   }
@@ -149,33 +155,38 @@ export class AuthMiddleware {
 export const AuthConfigs = {
   // Apenas administradores (ADMIN e SUPERADMIN)
   adminOnly: {
-    requiredRoles: ['ADMIN', 'SUPERADMIN'] as UserRole[],
-    requireAuth: true
+    requiredRoles: ["ADMIN", "SUPERADMIN"] as UserRole[],
+    requireAuth: true,
   },
 
   // Apenas superadministradores
   superAdminOnly: {
-    requiredRoles: ['SUPERADMIN'] as UserRole[],
-    requireAuth: true
+    requiredRoles: ["SUPERADMIN"] as UserRole[],
+    requireAuth: true,
   },
 
   // Supervisores e acima
   supervisorAndAbove: {
-    requiredRoles: ['SUPERVISOR', 'ADMIN', 'SUPERADMIN'] as UserRole[],
-    requireAuth: true
+    requiredRoles: ["SUPERVISOR", "ADMIN", "SUPERADMIN"] as UserRole[],
+    requireAuth: true,
   },
 
   // Qualquer usuário autenticado
   authenticated: {
-    requiredRoles: ['USUARIO', 'SUPERVISOR', 'ADMIN', 'SUPERADMIN'] as UserRole[],
-    requireAuth: true
+    requiredRoles: [
+      "USUARIO",
+      "SUPERVISOR",
+      "ADMIN",
+      "SUPERADMIN",
+    ] as UserRole[],
+    requireAuth: true,
   },
 
   // Público (sem autenticação)
   public: {
     requiredRoles: [] as UserRole[],
-    requireAuth: false
-  }
+    requireAuth: false,
+  },
 };
 
 /**
@@ -189,7 +200,7 @@ export class AuditLogger {
     action: string,
     userId: string,
     details: Record<string, any>,
-    request: NextRequest
+    request: NextRequest,
   ): Promise<void> {
     try {
       const logEntry = {
@@ -198,13 +209,13 @@ export class AuditLogger {
         userId,
         details,
         ip: this.getClientIP(request),
-        userAgent: request.headers.get('user-agent') || 'unknown'
+        userAgent: request.headers.get("user-agent") || "unknown",
       };
 
       // Em produção, salvar no banco de dados ou serviço de logs
-      console.log('AUDIT LOG:', JSON.stringify(logEntry, null, 2));
+      console.log("AUDIT LOG:", JSON.stringify(logEntry, null, 2));
     } catch (error) {
-      console.error('Erro ao registrar log de auditoria:', error);
+      console.error("Erro ao registrar log de auditoria:", error);
     }
   }
 
@@ -212,9 +223,9 @@ export class AuditLogger {
    * Obter IP do cliente
    */
   private static getClientIP(request: NextRequest): string {
-    const forwarded = request.headers.get('x-forwarded-for');
-    const realIp = request.headers.get('x-real-ip');
-    return forwarded?.split(',')[0] || realIp || 'unknown';
+    const forwarded = request.headers.get("x-forwarded-for");
+    const realIp = request.headers.get("x-real-ip");
+    return forwarded?.split(",")[0] || realIp || "unknown";
   }
 }
 
@@ -224,27 +235,33 @@ export class AuditLogger {
 export function withAuthAndRateLimit(
   authConfig: AuthConfig,
   rateLimiter: any,
-  handler: (request: NextRequest, session: AuthSession, ...args: any[]) => Promise<Response>
+  handler: (
+    request: NextRequest,
+    session: AuthSession,
+    ...args: any[]
+  ) => Promise<Response>,
 ) {
   return async (request: NextRequest, ...args: any[]): Promise<Response> => {
     // 1. Verificar rate limiting
     if (rateLimiter) {
       const limitResult = await rateLimiter.checkLimit(request);
-      
+
       if (!limitResult.allowed) {
         return NextResponse.json(
           {
-            error: 'Muitas tentativas. Tente novamente em alguns instantes.',
-            retryAfter: Math.ceil((limitResult.resetTime - Date.now()) / 1000)
+            error: "Muitas tentativas. Tente novamente em alguns instantes.",
+            retryAfter: Math.ceil((limitResult.resetTime - Date.now()) / 1000),
           },
-          { 
+          {
             status: 429,
             headers: {
-              'X-RateLimit-Limit': rateLimiter.config.maxRequests.toString(),
-              'X-RateLimit-Remaining': limitResult.remaining.toString(),
-              'X-RateLimit-Reset': Math.ceil(limitResult.resetTime / 1000).toString()
-            }
-          }
+              "X-RateLimit-Limit": rateLimiter.config.maxRequests.toString(),
+              "X-RateLimit-Remaining": limitResult.remaining.toString(),
+              "X-RateLimit-Reset": Math.ceil(
+                limitResult.resetTime / 1000,
+              ).toString(),
+            },
+          },
         );
       }
     }
@@ -255,7 +272,7 @@ export function withAuthAndRateLimit(
     if (!authResult.authorized) {
       return NextResponse.json(
         { error: authResult.error },
-        { status: authResult.statusCode || 401 }
+        { status: authResult.statusCode || 401 },
       );
     }
 
@@ -265,9 +282,18 @@ export function withAuthAndRateLimit(
     // 4. Adicionar headers de rate limiting se aplicável
     if (rateLimiter) {
       const limitResult = await rateLimiter.checkLimit(request);
-      response.headers.set('X-RateLimit-Limit', rateLimiter.config.maxRequests.toString());
-      response.headers.set('X-RateLimit-Remaining', limitResult.remaining.toString());
-      response.headers.set('X-RateLimit-Reset', Math.ceil(limitResult.resetTime / 1000).toString());
+      response.headers.set(
+        "X-RateLimit-Limit",
+        rateLimiter.config.maxRequests.toString(),
+      );
+      response.headers.set(
+        "X-RateLimit-Remaining",
+        limitResult.remaining.toString(),
+      );
+      response.headers.set(
+        "X-RateLimit-Reset",
+        Math.ceil(limitResult.resetTime / 1000).toString(),
+      );
     }
 
     return response;

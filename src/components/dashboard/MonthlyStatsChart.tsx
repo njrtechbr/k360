@@ -1,8 +1,18 @@
 "use client";
 
 import { Line, LineChart, XAxis, YAxis } from "recharts";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Calendar } from "lucide-react";
 
 interface MonthlyStatsData {
@@ -64,20 +74,20 @@ export function MonthlyStatsChart({ data, isLoading }: MonthlyStatsChartProps) {
       <CardContent>
         <ChartContainer config={chartConfig} className="h-[350px]">
           <LineChart data={data}>
-            <XAxis 
-              dataKey="month" 
+            <XAxis
+              dataKey="month"
               tickLine={false}
               axisLine={false}
               tickMargin={8}
             />
-            <YAxis 
+            <YAxis
               yAxisId="left"
               orientation="left"
               tickLine={false}
               axisLine={false}
               tickMargin={8}
             />
-            <YAxis 
+            <YAxis
               yAxisId="right"
               orientation="right"
               domain={[0, 5]}
@@ -85,17 +95,17 @@ export function MonthlyStatsChart({ data, isLoading }: MonthlyStatsChartProps) {
               axisLine={false}
               tickMargin={8}
             />
-            <ChartTooltip 
+            <ChartTooltip
               content={
-                <ChartTooltipContent 
+                <ChartTooltipContent
                   formatter={(value, name) => {
                     switch (name) {
-                      case 'evaluations':
-                        return [`${value} avaliações`, 'Avaliações'];
-                      case 'averageRating':
-                        return [`${Number(value).toFixed(1)} ⭐`, 'Nota Média'];
-                      case 'xpGenerated':
-                        return [`${value} XP`, 'XP Gerado'];
+                      case "evaluations":
+                        return [`${value} avaliações`, "Avaliações"];
+                      case "averageRating":
+                        return [`${Number(value).toFixed(1)} ⭐`, "Nota Média"];
+                      case "xpGenerated":
+                        return [`${value} XP`, "XP Gerado"];
                       default:
                         return [value, name];
                     }
