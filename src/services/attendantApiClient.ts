@@ -30,13 +30,24 @@ export const CreateAttendantSchema = z.object({
   setor: z.string().min(1, "Setor é obrigatório"),
   status: z.string().min(1, "Status é obrigatório"),
   avatarUrl: z.string().optional(),
-  telefone: z.string().min(1, "Telefone é obrigatório"),
+  telefone: z
+    .string()
+    .min(1, "Telefone é obrigatório")
+    .refine(
+      (val) => {
+        const digits = val.replace(/\D/g, "");
+        return digits.length === 11 || digits.length === 13;
+      },
+      "Telefone inválido",
+    ),
   portaria: z.string().optional(),
   situacao: z.string().optional(),
   dataAdmissao: z.date(),
   dataNascimento: z.date(),
   rg: z.string().min(1, "RG é obrigatório"),
-  cpf: z.string().min(11, "CPF deve ter 11 dígitos"),
+  cpf: z
+    .string()
+    .refine((val) => /^\d{11}$/.test(val), "CPF inválido"),
   importId: z.string().optional(),
 });
 
@@ -47,13 +58,26 @@ export const UpdateAttendantSchema = z.object({
   setor: z.string().min(1, "Setor é obrigatório").optional(),
   status: z.string().min(1, "Status é obrigatório").optional(),
   avatarUrl: z.string().optional(),
-  telefone: z.string().min(1, "Telefone é obrigatório").optional(),
+  telefone: z
+    .string()
+    .min(1, "Telefone é obrigatório")
+    .refine(
+      (val) => {
+        const digits = val.replace(/\D/g, "");
+        return digits.length === 11 || digits.length === 13;
+      },
+      "Telefone inválido",
+    )
+    .optional(),
   portaria: z.string().optional(),
   situacao: z.string().optional(),
   dataAdmissao: z.date().optional(),
   dataNascimento: z.date().optional(),
   rg: z.string().min(1, "RG é obrigatório").optional(),
-  cpf: z.string().min(11, "CPF deve ter 11 dígitos").optional(),
+  cpf: z
+    .string()
+    .refine((val) => /^\d{11}$/.test(val), "CPF inválido")
+    .optional(),
 });
 
 export type CreateAttendantData = z.infer<typeof CreateAttendantSchema>;
@@ -79,6 +103,9 @@ export class AttendantApiClient {
 
   // Buscar atendente por ID
   static async findById(id: string): Promise<Attendant | null> {
+    if (!id || id.trim() === "") {
+      throw new Error("ID do atendente é obrigatório");
+    }
     try {
       const response = await httpClient.get<Attendant>(`/api/attendants/${id}`);
       return response.data;
@@ -301,6 +328,31 @@ export class AttendantApiClient {
         throw new Error(error.message);
       }
       throw new Error("Erro ao buscar atendentes por função");
+    }
+  }
+
+  // Estatísticas de atendentes
+  static async getStatistics(
+    filters?: { setor?: string; funcao?: string; status?: string },
+  ): Promise<unknown> {
+    try {
+      const params = new URLSearchParams();
+      if (filters) {
+        if (filters.setor) params.append("setor", filters.setor);
+        if (filters.funcao) params.append("funcao", filters.funcao);
+        if (filters.status) params.append("status", filters.status);
+      }
+      const query = params.toString();
+      const url = query
+        ? `/api/attendants/statistics?${query}`
+        : "/api/attendants/statistics";
+      const response = await httpClient.get(url);
+      return response.data;
+    } catch (error) {
+      if (error instanceof HttpClientError) {
+        throw new Error(error.message);
+      }
+      throw new Error("Erro ao buscar estatísticas de atendentes");
     }
   }
 
